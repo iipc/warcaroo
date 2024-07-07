@@ -1,132 +1,90 @@
 package org.netpreserve.warcbot;
 
-import com.fasterxml.uuid.impl.UUIDUtil;
-import org.intellij.lang.annotations.Language;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+import org.jdbi.v3.core.Handle;
+import org.jdbi.v3.core.HandleCallback;
+import org.jdbi.v3.core.Jdbi;
+import org.jdbi.v3.core.argument.AbstractArgumentFactory;
+import org.jdbi.v3.core.argument.Argument;
+import org.jdbi.v3.core.config.ConfigRegistry;
+import org.jdbi.v3.core.mapper.ColumnMapper;
+import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.netpreserve.jwarc.WarcDigest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
-import java.time.Instant;
+import java.sql.*;
 import java.util.Objects;
-import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class Database implements AutoCloseable, StorageDB {
-    private final Connection connection;
+public class Database implements AutoCloseable {
+    private final Logger log = LoggerFactory.getLogger(Database.class);
+    private final Jdbi jdbi;
+    private final HikariDataSource dataSource;
 
     public Database(Path path) throws SQLException, IOException {
-        Files.createDirectories(path.getParent());
-        this.connection = DriverManager.getConnection("jdbc:sqlite:" + path);
+        this("jdbc:sqlite:" + path);
+    }
+
+    public Database(String jdbcUrl) throws SQLException, IOException {
+        HikariConfig config = new HikariConfig();
+        config.setJdbcUrl(jdbcUrl);
+        this.dataSource = new HikariDataSource(config);
+        this.jdbi = Jdbi.create(dataSource);
+        jdbi.installPlugin(new SqlObjectPlugin());
+        jdbi.registerArgument(new AbstractArgumentFactory<Url>(Types.VARCHAR) {
+            @Override
+            protected Argument build(Url value, ConfigRegistry config) {
+                return ((position, statement, ctx) -> statement.setString(position, value.toString()));
+            }
+        });
+        jdbi.registerColumnMapper(Url.class, (ColumnMapper<Url>) (r, columnNumber, ctx) -> new Url(r.getString(columnNumber)));
+        jdbi.registerArgument(new AbstractArgumentFactory<WarcDigest>(Types.VARCHAR) {
+            @Override
+            protected Argument build(WarcDigest value, ConfigRegistry config) {
+                return ((position, statement, ctx) -> statement.setString(position, value.prefixedBase32()));
+            }
+        });
+        jdbi.registerColumnMapper(WarcDigest.class, (r, columnNumber, ctx) -> new WarcDigest(r.getString(columnNumber)));
         init();
     }
 
     public void init() throws SQLException, IOException {
+        var regex = Pattern.compile("(?is)(CREATE\\s+TRIGGER\\b.+?END\\s*;)|((?:(?!CREATE\\s+TRIGGER\\b).)+?;)", Pattern.DOTALL);
         try (var stream = Objects.requireNonNull(getClass().getResourceAsStream("schema.sql"), "Missing schema.sql");) {
             String schema = new String(stream.readAllBytes(), UTF_8);
-            for (String sql : schema.split(";")) {
-                sql = sql.trim();
+            Matcher matcher = regex.matcher(schema);
+            while (matcher.find()) {
+                var sql = matcher.group().trim();
                 if (sql.isBlank()) continue;
-//                System.err.println("SQL: " + sql);
-                try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                    statement.execute();
-                }
+                jdbi.withHandle(handle -> handle.execute(sql));
             }
         }
+
+        // release any leftover locks on startup after a crash
+        frontier().unlockAllQueues();
+        frontier().resetAllInProgressCandidates();
+    }
+
+    public FrontierDAO frontier() {
+        return jdbi.onDemand(FrontierDAO.class);
+    }
+
+    public StorageDAO storage() {
+        return jdbi.onDemand(StorageDAO.class);
     }
 
     public void close() throws SQLException {
-        connection.close();
+        dataSource.close();
     }
 
-    private long exec(@Language("SQLite") String sql, Object... params) throws SQLException {
-        try (PreparedStatement statement = connection.prepareStatement(sql)) {
-            for (int i = 0; i < params.length; i++) {
-                statement.setObject(i + 1, params[i]);
-            }
-            return statement.executeLargeUpdate();
-        }
+    public RobotsTxtDAO robotsTxt() {
+        return jdbi.onDemand(RobotsTxtDAO.class);
     }
-
-    public void frontierInsert(@NotNull String queue, int depth, @NotNull Url url, @Nullable Url via,
-                               @NotNull Instant timeAdded, FrontierUrl.Status status) throws SQLException {
-        exec("INSERT INTO frontier (queue, depth, url, via, time_added, status) VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(url) DO NOTHING",
-                queue, depth, url.toString(), via != null ? via.toString() : null, timeAdded.toEpochMilli(),
-                status.name());
-    }
-
-    public @Nullable FrontierUrl frontierNext() throws SQLException {
-        try (var statement = connection.prepareStatement(
-                "SELECT * FROM frontier WHERE status = 'PENDING' ORDER BY depth DESC LIMIT 1");
-             var resultSet = statement.executeQuery()) {
-            if (!resultSet.next()) return null;
-            return new FrontierUrl(
-                    resultSet.getString("queue"),
-                    new Url(resultSet.getString("url")),
-                    resultSet.getInt("depth"),
-                    Url.orNull(resultSet.getString("via")),
-                    Instant.ofEpochMilli(resultSet.getLong("time_added")),
-                    FrontierUrl.Status.valueOf(resultSet.getString("status")));
-        }
-    }
-
-    public void frontierSetUrlStatus(@NotNull Url url, @NotNull FrontierUrl.Status status) throws SQLException {
-        long rows = exec("UPDATE frontier SET status = ? WHERE url = ?", status.name(), url);
-        if (rows == 0) throw new SQLException("URL not found in frontier: " + url);
-    }
-
-    public void queuesInsert(@NotNull String name) throws SQLException {
-        exec("INSERT INTO queues (name) VALUES (?) ON CONFLICT(name) DO NOTHING", name);
-    }
-
-    public void insertResource(@NotNull UUID id, @NotNull UUID pageId, @NotNull String url, @NotNull Instant date,
-                               long responseOffset, long responseLength, long requestLength, int status,
-                               @Nullable String redirect,
-                               String payloadType, long payloadSize, WarcDigest payloadDigest) throws SQLException {
-        exec("""
-                        INSERT INTO resources (id, page_id, url, date, response_offset, response_length, request_length,
-                        status, redirect, payload_type, payload_size, payload_digest) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        """,
-                UUIDUtil.asByteArray(id), pageId.toString(), url, date.toEpochMilli(), responseOffset, responseLength,
-                requestLength, status, redirect, payloadType, payloadSize,
-                payloadDigest == null ? null : payloadDigest.prefixedBase32());
-    }
-
-    public void insertPage(@NotNull UUID id, @NotNull Url url, @NotNull Instant date, String title) throws SQLException {
-        exec("INSERT INTO pages (id, url, date, title) VALUES (?, ?, ?, ?)",
-                UUIDUtil.asByteArray(id), url, date.toEpochMilli(), title);
-    }
-
-    public RobotsTxt robotsGet(String url) throws SQLException {
-        try (var statement = connection.prepareStatement("SELECT * FROM robotstxt WHERE url = ?")) {
-            statement.setString(1, url);
-            var resultSet = statement.executeQuery();
-            if (!resultSet.next()) return null;
-            return new RobotsTxt(
-                    resultSet.getString("url"),
-                    Instant.ofEpochMilli(resultSet.getLong("date")),
-                    Instant.ofEpochMilli(resultSet.getLong("last_checked")),
-                    resultSet.getBytes("body")
-            );
-        }
-    }
-
-    public void robotsUpsert(String url, Instant date, byte[] body) throws SQLException {
-        exec("INSERT INTO robotstxt (url, date, last_checked, body) VALUES (?, ?, ?, ?) " +
-             "ON CONFLICT (url) DO UPDATE SET date = excluded.date, " +
-             " last_checked = excluded.last_checked, body = excluded.body",
-                url, date.toEpochMilli(), date.toEpochMilli(), body);
-    }
-
-    public void robotsUpdateLastChecked(String url, Instant lastChecked) throws SQLException {
-        exec("UPDATE robotstxt SET last_checked = ? WHERE url = ?", url);
-    }
-
 }

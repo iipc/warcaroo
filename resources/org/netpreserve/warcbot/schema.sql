@@ -2,24 +2,75 @@ create table if not exists queues
 (
     name         TEXT PRIMARY KEY NOT NULL,
     size         INTEGER          NOT NULL DEFAULT 0,
-    last_visited INTEGER
+    last_visited INTEGER,
+    worker_id    INTEGER,
+    next_visit   INTEGER                   DEFAULT 0
 ) STRICT;
 
 create table if not exists frontier
 (
-    queue      TEXT                                       NOT NULL,
-    depth      INTEGER                                    NOT NULL,
-    status     TEXT CHECK (status IN ('PENDING', 'IN_PROGRESS', 'CRAWLED', 'FAILED',
-                                      'ROBOTS_EXCLUDED')) NOT NULL DEFAULT 'PENDING',
-    url        TEXT                                       NOT NULL UNIQUE,
+    queue      TEXT                                      NOT NULL,
+    depth      INTEGER                                   NOT NULL,
+    state      TEXT CHECK (state IN ('PENDING', 'IN_PROGRESS', 'CRAWLED', 'FAILED',
+                                     'ROBOTS_EXCLUDED')) NOT NULL DEFAULT 'PENDING',
+    url        TEXT                                      NOT NULL UNIQUE,
     via        TEXT,
     time_added INTEGER,
     FOREIGN KEY (queue) references queues (name)
 ) STRICT;
 
+CREATE TABLE IF NOT EXISTS queue_state_counts
+(
+    queue TEXT,
+    state TEXT,
+    count INTEGER NOT NULL,
+    PRIMARY KEY (queue, state)
+) STRICT;
+
+--region Triggers
+
+CREATE TRIGGER IF NOT EXISTS after_frontier_insert
+    AFTER INSERT
+    ON frontier
+BEGIN
+    INSERT INTO queue_state_counts (queue, state, count)
+    VALUES (NEW.queue, NEW.state, 1)
+    ON CONFLICT(queue, state) DO UPDATE SET count = count + 1;
+END;
+
+CREATE TRIGGER IF NOT EXISTS after_frontier_update
+    AFTER UPDATE OF queue, state
+    ON frontier
+BEGIN
+    UPDATE queue_state_counts
+    SET count = count - 1
+    WHERE queue = OLD.queue
+      AND state = OLD.state;
+
+    DELETE FROM queue_state_counts WHERE queue = OLD.queue AND state = OLD.state AND count = 0;
+
+    INSERT INTO queue_state_counts (queue, state, count)
+    VALUES (NEW.queue, NEW.state, 1)
+    ON CONFLICT(queue, state) DO UPDATE SET count = count + 1;
+END;
+
+CREATE TRIGGER IF NOT EXISTS after_frontier_delete
+    AFTER DELETE
+    ON frontier
+BEGIN
+    UPDATE queue_state_counts
+    SET count = count - 1
+    WHERE queue = OLD.queue
+      AND state = OLD.state;
+
+    DELETE FROM queue_state_counts WHERE queue = OLD.queue AND state = OLD.state AND count = 0;
+END;
+
+--endregion
+
 create table if not exists resources
 (
-    id              BLOB PRIMARY KEY NOT NULL CHECK ( length(id) == 16 ),
+    id              TEXT NOT NULL,
     url             TEXT             NOT NULL,
     date            INTEGER          NOT NULL,
     page_id         TEXT             NOT NULL,
@@ -35,7 +86,7 @@ create table if not exists resources
 
 create table if not exists pages
 (
-    id    BLOB PRIMARY KEY NOT NULL CHECK ( length(id) == 16 ),
+    id    TEXT PRIMARY KEY NOT NULL,
     url   TEXT             NOT NULL,
     date  INTEGER          NOT NULL,
     title TEXT

@@ -12,12 +12,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 
 public class Browser implements AutoCloseable {
     private final Logger log = LoggerFactory.getLogger(Browser.class);
     public final ChromeDriver webDriver;
+
+    static {
+        // suppress noisy selenium logging
+        java.util.logging.Logger.getLogger("org.openqa.selenium").setLevel(Level.WARNING);
+    }
 
     public Browser() {
         var options = new ChromeOptions();
@@ -43,7 +48,7 @@ public class Browser implements AutoCloseable {
     public NetworkInterceptor recordResources(Storage storage, UUID pageId) {
         var interceptor = new NetworkInterceptor(webDriver, (Filter) next -> request -> {
             HttpResponse response = next.execute(request);
-            System.out.println(response.getStatus() + " " + request.getUri());
+            log.debug("Resource {} {} {}", pageId, response.getStatus(), request.getUri());
             if (response.getStatus() == 304) return response;
             try {
                 storage.save(pageId, request, response);

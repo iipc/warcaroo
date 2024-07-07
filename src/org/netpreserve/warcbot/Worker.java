@@ -2,7 +2,6 @@ package org.netpreserve.warcbot;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
-import org.openqa.selenium.StaleElementReferenceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,14 +11,17 @@ import java.time.Instant;
 
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
-    private final Browser browser;
+    final int id;
+    final Browser browser;
     private final Frontier frontier;
     private final Storage storage;
     private final Database database;
     private final NoArgGenerator pageIdGenerator = Generators.timeBasedEpochGenerator();
     private final RobotsTxtChecker robotsTxtChecker;
+    private Thread thread;
 
-    public Worker(Browser browser, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker) {
+    public Worker(int id, Browser browser, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker) {
+        this.id = id;
         this.browser = browser;
         this.frontier = frontier;
         this.storage = storage;
@@ -29,8 +31,16 @@ public class Worker {
 
     void run() throws SQLException, IOException {
         while (true) {
-            var candidate = frontier.next();
-            if (candidate == null) break;
+            var candidate = frontier.next(id);
+            if (candidate == null) {
+                log.info("No work available for worker {}", id);
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+                continue;
+            }
 
             var pageId = pageIdGenerator.generate();
 
@@ -46,7 +56,7 @@ public class Worker {
                     browser.navigateTo(candidate.url());
 
                     for (var link : browser.extractLinks()) {
-                        System.err.println("LINK: " + link);
+                        log.debug("Link {}", link);
                         Url url = new Url(link);
                         frontier.addUrl(url, candidate.depth() + 1, candidate.url());
                     }
@@ -57,7 +67,7 @@ public class Worker {
                         throw new RuntimeException(e);
                     }
 
-                    database.insertPage(pageId, browser.currentUrl(), Instant.now(), browser.title());
+                    storage.dao.addPage(pageId, browser.currentUrl(), Instant.now(), browser.title());
 
                     browser.navigateToBlank();
                 }
@@ -67,5 +77,17 @@ public class Worker {
             }
             frontier.markCrawled(candidate);
         }
+    }
+
+    public synchronized void start() {
+        log.info("Starting worker {}", id);
+        thread = new Thread(() -> {
+            try {
+                run();
+            } catch (Exception e) {
+                log.error("Worker error", e);
+            }
+        }, "worker-" + id);
+        thread.start();
     }
 }

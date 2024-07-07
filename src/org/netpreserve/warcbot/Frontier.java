@@ -10,11 +10,11 @@ import java.util.function.Predicate;
 
 public class Frontier {
     private static final Logger log = LoggerFactory.getLogger(Frontier.class);
-    private final Database db;
+    private final FrontierDAO dao;
     private final Predicate<String> scope;
 
-    public Frontier(Database db, Predicate<String> scope) {
-        this.db = db;
+    public Frontier(FrontierDAO dao, Predicate<String> scope) {
+        this.dao = dao;
         this.scope = scope;
     }
 
@@ -27,30 +27,38 @@ public class Frontier {
             log.warn("No queue for URL {}", url);
             return false;
         }
-        db.queuesInsert(queue);
-        db.frontierInsert(queue, depth, url, via, Instant.now(), FrontierUrl.Status.PENDING);
+        dao.queuesInsert(queue);
+
+        var candidate = new Candidate(queue, url, depth, via, Instant.now(), Candidate.State.PENDING);
+        boolean didAdd = dao.addCandidate(candidate);
+        if (didAdd) {
+            dao.incrementQueueCount(queue);
+        }
         return true;
     }
 
-    public @Nullable FrontierUrl next() throws SQLException {
-        FrontierUrl frontierUrl = db.frontierNext();
-        db.frontierSetUrlStatus(frontierUrl.url(), FrontierUrl.Status.IN_PROGRESS);
-        return frontierUrl;
+    public @Nullable Candidate next(int workerId) throws SQLException {
+        String queue = dao.takeNextQueue(workerId);
+        if (queue == null) return null;
+        return dao.takeNextUrlFromQueue(queue);
     }
 
     private String queueForUrl(Url url) {
         return url.host();
     }
 
-    public void markFailed(FrontierUrl candidate) throws SQLException {
-        db.frontierSetUrlStatus(candidate.url(), FrontierUrl.Status.FAILED);
+    public void markFailed(Candidate candidate) throws SQLException {
+        dao.setCandidateState(candidate.url(), Candidate.State.FAILED);
+        dao.releaseQueue(candidate.queue(), Instant.now());
     }
 
-    public void markCrawled(FrontierUrl candidate) throws SQLException {
-        db.frontierSetUrlStatus(candidate.url(), FrontierUrl.Status.CRAWLED);
+    public void markCrawled(Candidate candidate) throws SQLException {
+        dao.setCandidateState(candidate.url(), Candidate.State.CRAWLED);
+        dao.releaseQueue(candidate.queue(), Instant.now());
     }
 
-    public void markRobotsExcluded(FrontierUrl candidate) throws SQLException {
-        db.frontierSetUrlStatus(candidate.url(), FrontierUrl.Status.ROBOTS_EXCLUDED);
+    public void markRobotsExcluded(Candidate candidate) throws SQLException {
+        dao.setCandidateState(candidate.url(), Candidate.State.ROBOTS_EXCLUDED);
+        dao.releaseQueue(candidate.queue(), Instant.now());
     }
 }

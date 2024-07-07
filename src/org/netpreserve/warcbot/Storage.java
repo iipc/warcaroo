@@ -22,12 +22,12 @@ import java.util.*;
 
 public class Storage implements Closeable {
     private final WarcWriter warcWriter;
-    private final StorageDB db;
+    final StorageDAO dao;
     private final TimeBasedEpochGenerator uuidGenerator;
 
-    public Storage(Path directory, StorageDB db) throws IOException {
+    public Storage(Path directory, StorageDAO dao) throws IOException {
         warcWriter = new WarcWriter(directory.resolve("test.warc"));
-        this.db = db;
+        this.dao = dao;
         this.uuidGenerator = Generators.timeBasedEpochGenerator();
     }
 
@@ -166,11 +166,11 @@ public class Storage implements Closeable {
             requestLength = warcWriter.position() - responseOffset - responseLength;
         }
 
-        db.insertResource(responseUuid, pageId,
+        dao.addResource(new Resource(responseUuid, pageId,
                 warcResponse.target(), warcResponse.date(), responseOffset, responseLength, requestLength,
                 httpResponse.status(), httpResponse.headers().first("Location").orElse(null),
                 httpResponse.contentType().base().toString(),
                 httpResponse.body().size(),
-                responseDigest);
+                responseDigest));
     }
 }

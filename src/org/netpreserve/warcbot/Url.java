@@ -50,4 +50,18 @@ public class Url {
         }
         return new Url(url.substring(0, i));
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Url url1 = (Url) o;
+        return url.equals(url1.url);
+    }
+
+    @Override
+    public int hashCode() {
+        return url.hashCode();
+    }
 }

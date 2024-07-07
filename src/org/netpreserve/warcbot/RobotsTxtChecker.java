@@ -13,13 +13,13 @@ import java.util.List;
 import java.util.UUID;
 
 public class RobotsTxtChecker {
-    private final Database db;
+    private final RobotsTxtDAO dao;
     private final HttpClient httpClient;
     private final Storage storage;
     private final List<String> userAgents;
 
-    public RobotsTxtChecker(Database db, HttpClient httpClient, Storage storage, List<String> userAgents) {
-        this.db = db;
+    public RobotsTxtChecker(RobotsTxtDAO dao, HttpClient httpClient, Storage storage, List<String> userAgents) {
+        this.dao = dao;
         this.httpClient = httpClient;
         this.storage = storage;
         this.userAgents = userAgents;
@@ -27,7 +27,7 @@ public class RobotsTxtChecker {
 
     boolean checkAllowed(UUID pageId, Url url) throws SQLException, IOException {
         URI robotsUri = url.toURI().resolve("/robots.txt");
-        var robots = db.robotsGet(robotsUri.toString());
+        var robots = dao.getRobotsTxt(robotsUri.toString());
         if (robots == null || robots.lastChecked().isBefore(Instant.now().minus(Duration.ofDays(1)))) {
             robots = fetch(pageId, robotsUri, robots);
         }
@@ -53,7 +53,7 @@ public class RobotsTxtChecker {
         if (status < 200 || status == 429 || status >= 500) {
             // server error, reuse stale value unless older than 30 days
             if (prev != null && prev.date().isAfter(now.minus(Period.ofDays(30)))) {
-                db.robotsUpdateLastChecked(robotsUri.toString(), now);
+                dao.updateRobotsTxtLastChecked(robotsUri.toString(), now);
                 return prev;
             }
 
@@ -64,7 +64,7 @@ public class RobotsTxtChecker {
             body = new byte[0];
         }
 
-        db.robotsUpsert(robotsUri.toString(), now, body);
+        dao.saveRobotsTxt(robotsUri.toString(), now, body);
         return new RobotsTxt(robotsUri.toString(), now, now, body);
     }
 }
