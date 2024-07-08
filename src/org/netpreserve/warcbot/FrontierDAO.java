@@ -57,7 +57,7 @@ public interface FrontierDAO {
 
     @SqlUpdate("UPDATE queues SET last_visited = :now, next_visit = :now, worker_id = NULL WHERE name = :queue")
     @MustUpdate
-    void releaseQueue(String queue, Instant now);
+    void releaseQueue(String queue, Instant now, Instant nextVisit);
 
     @SqlUpdate("INSERT INTO queues (name) VALUES (?) ON CONFLICT(name) DO NOTHING")
     void queuesInsert(@NotNull String name);

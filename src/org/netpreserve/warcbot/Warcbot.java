@@ -25,7 +25,7 @@ public class Warcbot implements AutoCloseable, Crawl {
         this.config = config;
         this.db = new Database(dataPath.resolve("db.sqlite3"));
         this.httpClient = HttpClient.newHttpClient();
-        this.frontier = new Frontier(db.frontier(), config.getScope());
+        this.frontier = new Frontier(db.frontier(), config.getScope(), config);
         this.storage = new Storage(dataPath, db.storage());
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage, List.of("nla.gov.au_bot", "warcbot"));
     }
@@ -33,9 +33,9 @@ public class Warcbot implements AutoCloseable, Crawl {
     public void close() {
         for (Worker worker : workers) {
             try {
-                worker.browser.close();
+                worker.close();
             } catch (Exception e) {
-                log.error("Failed to close browser for worker {}", worker.id, e);
+                log.error("Failed to close worker {}", worker.id, e);
             }
         }
         try {
@@ -75,6 +75,7 @@ public class Warcbot implements AutoCloseable, Crawl {
                                 Usage: warcbot [options] seed-url...
                                 
                                 Options:
+                                  --crawl-delay MILLIS      Wait this long before crawling another page from the same queue.
                                   --include REGEX           Include pages that match the specified REGEX pattern in the crawl scope.
                                   -A, --user-agent STR      Set the User-Agent string to identify the crawler to the server.
                                   -w, --workers INT         Specify the number of browser and worker threads to use (default is %d).
@@ -84,6 +85,7 @@ public class Warcbot implements AutoCloseable, Crawl {
                                 """, config.getWorkers());
                         return;
                     }
+                    case "--crawl-delay" -> config.setCrawlDelay(Integer.parseInt(args[++i]));
                     case "--include" -> config.addInclude(args[++i]);
                     case "-A", "--user-agent", "--userAgent" -> config.setUserAgent(args[++i]);
                     case "-w", "--workers" -> config.setWorkers(Integer.parseInt(args[++i]));

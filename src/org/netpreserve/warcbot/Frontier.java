@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.sql.SQLException;
 import java.time.Instant;
 import java.util.UUID;
 import java.util.function.Predicate;
@@ -15,10 +14,12 @@ public class Frontier {
     private static final Logger log = LoggerFactory.getLogger(Frontier.class);
     private final FrontierDAO dao;
     private final Predicate<String> scope;
+    private final Config config;
 
-    public Frontier(FrontierDAO dao, Predicate<String> scope) {
+    public Frontier(FrontierDAO dao, Predicate<String> scope, Config config) {
         this.dao = dao;
         this.scope = scope;
+        this.config = config;
     }
 
     public boolean addUrl(Url url, int depth, Url via) {
@@ -51,9 +52,9 @@ public class Frontier {
     }
 
     public void markFailed(Candidate candidate, UUID pageId, Throwable e) {
-        Instant now = Instant.now();
         dao.setCandidateState(candidate.url(), Candidate.State.FAILED);
-        dao.releaseQueue(candidate.queue(), now);
+        releaseQueueForCandidate(candidate);
+        Instant now = Instant.now();
         var stringWriter = new StringWriter();
         e.printStackTrace(new PrintWriter(stringWriter));
         dao.addError(pageId, candidate.url(), now, stringWriter.toString());
@@ -61,11 +62,21 @@ public class Frontier {
 
     public void markCrawled(Candidate candidate) {
         dao.setCandidateState(candidate.url(), Candidate.State.CRAWLED);
-        dao.releaseQueue(candidate.queue(), Instant.now());
+        releaseQueueForCandidate(candidate);
+    }
+
+    public void markPending(Candidate candidate) {
+        dao.setCandidateState(candidate.url(), Candidate.State.PENDING);
+        releaseQueueForCandidate(candidate);
     }
 
     public void markRobotsExcluded(Candidate candidate) {
         dao.setCandidateState(candidate.url(), Candidate.State.ROBOTS_EXCLUDED);
-        dao.releaseQueue(candidate.queue(), Instant.now());
+        releaseQueueForCandidate(candidate);
+    }
+
+    private void releaseQueueForCandidate(Candidate candidate) {
+        Instant now = Instant.now();
+        dao.releaseQueue(candidate.queue(), now, now.plusMillis(config.getCrawlDelay()));
     }
 }

@@ -15,6 +15,7 @@ public class Config {
     private final List<Pattern> includes = new ArrayList<>();
     private String userAgent = "warcbot";
     private int workers = 1;
+    private int crawlDelay = 2000;
 
     public int getWorkers() {
         return workers;
@@ -68,5 +69,14 @@ public class Config {
 
     public void load(Path path) throws IOException {
         MAPPER.readerForUpdating(this).readValue(path.toFile());
+    }
+
+    public int getCrawlDelay() {
+        return crawlDelay;
+    }
+
+    public void setCrawlDelay(int crawlDelay) {
+        if (crawlDelay <= 0) throw new IllegalArgumentException("Crawl delay can't be negative");
+        this.crawlDelay = crawlDelay;
     }
 }

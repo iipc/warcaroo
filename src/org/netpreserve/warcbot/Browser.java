@@ -39,7 +39,7 @@ public class Browser implements AutoCloseable {
     public void close() {
         log.debug("Closing web driver");
         try {
-            webDriver.close();
+            webDriver.quit();
         } catch (NoSuchSessionException e) {
             // ignore
         }
