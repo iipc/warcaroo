@@ -72,7 +72,7 @@ public class Worker {
                     browser.navigateToBlank();
                 }
             } catch (Throwable e) {
-                frontier.markFailed(candidate);
+                frontier.markFailed(candidate, pageId, e);
                 throw e;
             }
             frontier.markCrawled(candidate);

@@ -9,6 +9,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
 
 @RegisterConstructorMapper(Candidate.class)
 public interface FrontierDAO {
@@ -69,4 +71,9 @@ public interface FrontierDAO {
     @SqlUpdate("UPDATE frontier SET state = 'PENDING' WHERE state = 'IN_PROGRESS'")
     void resetAllInProgressCandidates();
 
+    @SqlQuery("SELECT * FROM frontier WHERE queue = ?")
+    List<Candidate> findCandidatesByQueue(String queue);
+
+    @SqlUpdate("INSERT INTO errors (page_id, url, date, stacktrace) VALUES (?, ?, ?, ?)")
+    void addError(UUID pageId, Url url, Instant date, String stacktrace);
 }

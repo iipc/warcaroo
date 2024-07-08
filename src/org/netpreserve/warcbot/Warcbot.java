@@ -8,12 +8,10 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 
-public class Warcbot implements AutoCloseable {
+public class Warcbot implements AutoCloseable, Crawl {
     private static final Logger log = LoggerFactory.getLogger(Warcbot.class);
     private final Database db;
     private final Frontier frontier;
@@ -21,15 +19,15 @@ public class Warcbot implements AutoCloseable {
     private final HttpClient httpClient;
     private final RobotsTxtChecker robotsTxtChecker;
     private final List<Worker> workers = new ArrayList<>();
+    private Config config;
 
-    public Warcbot(Path dataPath, Predicate<String> scope) throws SQLException, IOException {
+    public Warcbot(Path dataPath, Config config) throws SQLException, IOException {
+        this.config = config;
         this.db = new Database(dataPath.resolve("db.sqlite3"));
         this.httpClient = HttpClient.newHttpClient();
-        this.frontier = new Frontier(db.frontier(), scope);
+        this.frontier = new Frontier(db.frontier(), config.getScope());
         this.storage = new Storage(dataPath, db.storage());
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage, List.of("nla.gov.au_bot", "warcbot"));
-        workers.add(new Worker(0, new Browser(), frontier, storage, db, robotsTxtChecker));
-        workers.add(new Worker(1, new Browser(), frontier, storage, db, robotsTxtChecker));
     }
 
     public void close() {
@@ -58,14 +56,58 @@ public class Warcbot implements AutoCloseable {
     }
 
     public void start() {
+        for (int i = 0; i < config.getWorkers(); i++) {
+            workers.add(new Worker(i, new Browser(), frontier, storage, db, robotsTxtChecker));
+        }
         for (Worker worker : workers) {
             worker.start();
         }
     }
 
     public static void main(String[] args) throws Exception {
-        var scope = Pattern.compile("https?://([^/]+\\.)nla.gov.au(|/.*)").asPredicate();
-        Warcbot warcbot = new Warcbot(Path.of("data"), scope);
+        Config config = new Config();
+
+        for (int i = 0; i < args.length; i++) {
+            try {
+                switch (args[i]) {
+                    case "-h", "--help" -> {
+                        System.out.printf("""
+                                Usage: warcbot [options] seed-url...
+                                
+                                Options:
+                                  --include REGEX           Include pages that match the specified REGEX pattern in the crawl scope.
+                                  -A, --user-agent STR      Set the User-Agent string to identify the crawler to the server.
+                                  -w, --workers INT         Specify the number of browser and worker threads to use (default is %d).
+                                
+                                Examples:
+                                  warcbot --include "https?://([^/]+\\.)example\\.com/.*" -A "MyCrawler/1.0" -w 5
+                                """, config.getWorkers());
+                        return;
+                    }
+                    case "--include" -> config.addInclude(args[++i]);
+                    case "-A", "--user-agent", "--userAgent" -> config.setUserAgent(args[++i]);
+                    case "-w", "--workers" -> config.setWorkers(Integer.parseInt(args[++i]));
+                    default -> {
+                        if (args[i].startsWith("-")) {
+                            System.err.println("warcbot: unknown option " + args[i]);
+                            System.exit(1);
+                        }
+                        config.addSeed(args[i]);
+                    }
+                }
+            } catch (ArrayIndexOutOfBoundsException e) {
+                System.err.println("warcbot: Missing value for option " + args[i - 1]);
+                System.exit(1);
+            } catch (NumberFormatException e) {
+                System.err.println("warcbot: Invalid number format for option " + args[i - 1]);
+                System.exit(1);
+            } catch (IllegalArgumentException e) {
+                System.err.println("warcbot: " + e.getMessage() + " for option " + args[i - 1]);
+                System.exit(1);
+            }
+        }
+
+        Warcbot warcbot = new Warcbot(Path.of("data"), config);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 warcbot.close();
@@ -75,5 +117,30 @@ public class Warcbot implements AutoCloseable {
         }, "shutdown-hook"));
         warcbot.frontier.addUrl(new Url("https://www.nla.gov.au/"), 0, null);
         warcbot.start();
+    }
+
+    @Override
+    public Config getConfig() {
+        return config;
+    }
+
+    @Override
+    public void setConfig(Config config) {
+        this.config = config;
+    }
+
+    @Override
+    public void pause() {
+
+    }
+
+    @Override
+    public void unpause() {
+
+    }
+
+    @Override
+    public List<Candidate> listQueue(String queue) {
+        return db.frontier().findCandidatesByQueue(queue);
     }
 }

@@ -4,8 +4,11 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.util.UUID;
 import java.util.function.Predicate;
 
 public class Frontier {
@@ -18,7 +21,7 @@ public class Frontier {
         this.scope = scope;
     }
 
-    public boolean addUrl(Url url, int depth, Url via) throws SQLException {
+    public boolean addUrl(Url url, int depth, Url via) {
         if (!url.isHttp()) return false;
         url = url.withoutFragment();
         if (!scope.test(url.toString())) return false;
@@ -37,7 +40,7 @@ public class Frontier {
         return true;
     }
 
-    public @Nullable Candidate next(int workerId) throws SQLException {
+    public @Nullable Candidate next(int workerId) {
         String queue = dao.takeNextQueue(workerId);
         if (queue == null) return null;
         return dao.takeNextUrlFromQueue(queue);
@@ -47,17 +50,21 @@ public class Frontier {
         return url.host();
     }
 
-    public void markFailed(Candidate candidate) throws SQLException {
+    public void markFailed(Candidate candidate, UUID pageId, Throwable e) {
+        Instant now = Instant.now();
         dao.setCandidateState(candidate.url(), Candidate.State.FAILED);
-        dao.releaseQueue(candidate.queue(), Instant.now());
+        dao.releaseQueue(candidate.queue(), now);
+        var stringWriter = new StringWriter();
+        e.printStackTrace(new PrintWriter(stringWriter));
+        dao.addError(pageId, candidate.url(), now, stringWriter.toString());
     }
 
-    public void markCrawled(Candidate candidate) throws SQLException {
+    public void markCrawled(Candidate candidate) {
         dao.setCandidateState(candidate.url(), Candidate.State.CRAWLED);
         dao.releaseQueue(candidate.queue(), Instant.now());
     }
 
-    public void markRobotsExcluded(Candidate candidate) throws SQLException {
+    public void markRobotsExcluded(Candidate candidate) {
         dao.setCandidateState(candidate.url(), Candidate.State.ROBOTS_EXCLUDED);
         dao.releaseQueue(candidate.queue(), Instant.now());
     }

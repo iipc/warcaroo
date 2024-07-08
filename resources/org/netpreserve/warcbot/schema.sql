@@ -99,3 +99,11 @@ create table if not exists robotstxt
     last_checked INTEGER          NOT NULL,
     body         BLOB             NOT NULL
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS errors
+(
+    page_id    TEXT    NOT NULL,
+    url        TEXT    NOT NULL,
+    date       INTEGER NOT NULL,
+    stacktrace TEXT    NOT NULL
+) STRICT;
