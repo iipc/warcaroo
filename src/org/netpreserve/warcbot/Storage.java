@@ -13,22 +13,41 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.http.HttpHeaders;
 import java.nio.channels.Channels;
+import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
+
+import static java.nio.file.StandardOpenOption.*;
 
 public class Storage implements Closeable {
     private final WarcWriter warcWriter;
     final StorageDAO dao;
     private final TimeBasedEpochGenerator uuidGenerator;
+    private final static DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC);
+    private final SecureRandom random = new SecureRandom();
 
     public Storage(Path directory, StorageDAO dao) throws IOException {
-        warcWriter = new WarcWriter(directory.resolve("test.warc"));
+        String basename = "warcbot-" + DATE_FORMAT.format(Instant.now()) + "-" + randomId();
+        warcWriter = new WarcWriter(FileChannel.open(directory.resolve(basename + ".warc.gz"),
+                WRITE, CREATE, TRUNCATE_EXISTING), WarcCompression.GZIP);
         this.dao = dao;
         this.uuidGenerator = Generators.timeBasedEpochGenerator();
+    }
+
+    private String randomId() {
+        String alphabet = "ABCDFGHJKLMNPQRSTVWXYZabcdfghjklmnpqrstvwxyz0123456789";
+        var sb = new StringBuilder();
+        for (int i = 0; i < 5; i++) {
+            sb.append(alphabet.charAt(random.nextInt(alphabet.length())));
+        }
+        return sb.toString();
     }
 
     @Override
