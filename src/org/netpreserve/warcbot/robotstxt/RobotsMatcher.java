@@ -14,11 +14,7 @@
 
 package org.netpreserve.warcbot.robotstxt;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -28,9 +24,7 @@ import java.util.Map;
  * to a {@link MatchingStrategy} class.
  */
 public class RobotsMatcher implements Matcher {
-  private static final Logger logger = LoggerFactory.getLogger(RobotsMatcher.class);
-
-  /** Class containing current match priorities */
+    /** Class containing current match priorities */
   private static class Match {
     /** Priority based on agent-specific rules */
     private int prioritySpecific = 0;
@@ -70,14 +64,7 @@ public class RobotsMatcher implements Matcher {
     return robotsContents;
   }
 
-  private static String getPath(final String url) {
-    final URL parsedUrl;
-    try {
-      parsedUrl = new URL(url);
-    } catch (final MalformedURLException e) {
-      logger.warn("Malformed URL: \"{}\", replaced with \"/\"", url);
-      return "/";
-    }
+  private static String getPath(URI parsedUrl) {
     String path = parsedUrl.getPath();
     final String args = parsedUrl.getQuery();
     if (args != null) {
@@ -184,10 +171,15 @@ public class RobotsMatcher implements Matcher {
 
   @Override
   public boolean allowedByRobots(final List<String> userAgents, final String url) {
+    return allowedByRobots(userAgents, URI.create(url));
+  }
+
+  public boolean allowedByRobots(List<String> userAgents, URI url) {
     final String path = getPath(url);
     Map.Entry<Match, Match> matches = computeMatchPriorities(userAgents, path);
     return allowVerdict(matches.getKey(), matches.getValue());
   }
+
 
   @Override
   public boolean singleAgentAllowedByRobots(final String userAgent, final String url) {
@@ -196,7 +188,7 @@ public class RobotsMatcher implements Matcher {
 
   @Override
   public boolean ignoreGlobalAllowedByRobots(final List<String> userAgents, final String url) {
-    final String path = getPath(url);
+    final String path = getPath(URI.create(url));
     Map.Entry<Match, Match> matches = computeMatchPriorities(userAgents, path, true);
     return allowVerdict(matches.getKey(), matches.getValue());
   }
