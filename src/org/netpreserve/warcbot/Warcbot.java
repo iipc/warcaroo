@@ -57,7 +57,7 @@ public class Warcbot implements AutoCloseable, Crawl {
 
     public void start() {
         for (int i = 0; i < config.getWorkers(); i++) {
-            workers.add(new Worker(i, new Browser(), frontier, storage, db, robotsTxtChecker));
+            workers.add(new Worker(i, new Browser(config), frontier, storage, db, robotsTxtChecker));
         }
         for (Worker worker : workers) {
             worker.start();
@@ -75,6 +75,7 @@ public class Warcbot implements AutoCloseable, Crawl {
                                 Usage: warcbot [options] seed-url...
                                 
                                 Options:
+                                  --browser PATH            Set the path to the browser binary
                                   --crawl-delay MILLIS      Wait this long before crawling another page from the same queue.
                                   --include REGEX           Include pages that match the specified REGEX pattern in the crawl scope.
                                   -A, --user-agent STR      Set the User-Agent string to identify the crawler to the server.
@@ -85,6 +86,7 @@ public class Warcbot implements AutoCloseable, Crawl {
                                 """, config.getWorkers());
                         return;
                     }
+                    case "--browser" -> config.setBrowserBinary(args[++i]);
                     case "--crawl-delay" -> config.setCrawlDelay(Integer.parseInt(args[++i]));
                     case "--include" -> config.addInclude(args[++i]);
                     case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));

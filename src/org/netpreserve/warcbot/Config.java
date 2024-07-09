@@ -18,6 +18,7 @@ public class Config {
     private String userAgent = "warcbot";
     private int workers = 1;
     private int crawlDelay = 2000;
+    private String browserBinary;
 
     public int getWorkers() {
         return workers;
@@ -88,5 +89,13 @@ public class Config {
                     .filter(s -> !s.isEmpty())
                     .forEach(this::addSeed);
         }
+    }
+
+    public String getBrowserBinary() {
+        return browserBinary;
+    }
+
+    public void setBrowserBinary(String browserBinary) {
+        this.browserBinary = browserBinary;
     }
 }

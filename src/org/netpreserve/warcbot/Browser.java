@@ -2,6 +2,7 @@ package org.netpreserve.warcbot;
 
 import org.intellij.lang.annotations.Language;
 import org.openqa.selenium.NoSuchSessionException;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.devtools.NetworkInterceptor;
@@ -26,9 +27,10 @@ public class Browser implements AutoCloseable {
         java.util.logging.Logger.getLogger("org.openqa.selenium").setLevel(Level.WARNING);
     }
 
-    public Browser() {
+    public Browser(Config config) {
         var options = new ChromeOptions();
         options.addArguments("--headless");
+        options.setBinary(config.getBrowserBinary());
         options.setCapability("webSocketUrl", true);
         this.webDriver = new ChromeDriver(options);
     }
@@ -136,7 +138,7 @@ public class Browser implements AutoCloseable {
 
     public static void main(String[] args) {
         AtomicInteger counter = new AtomicInteger();
-        try (var browser = new Browser();
+        try (var browser = new Browser(new Config());
              var ignored = new NetworkInterceptor(browser.webDriver, (Filter) next -> request -> {
                  HttpResponse response = next.execute(request);
                  System.out.println(counter.incrementAndGet() + " " + response.getStatus() + " " + request.getUri());
