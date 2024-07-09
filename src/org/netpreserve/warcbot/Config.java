@@ -4,10 +4,12 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 public class Config {
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -78,5 +80,13 @@ public class Config {
     public void setCrawlDelay(int crawlDelay) {
         if (crawlDelay <= 0) throw new IllegalArgumentException("Crawl delay can't be negative");
         this.crawlDelay = crawlDelay;
+    }
+
+    public void loadSeedFile(Path file) throws IOException {
+        try (Stream<String> stream = Files.lines(file)) {
+            stream.map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .forEach(this::addSeed);
+        }
     }
 }

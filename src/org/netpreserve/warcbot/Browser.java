@@ -11,8 +11,10 @@ import org.openqa.selenium.remote.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 
 public class Browser implements AutoCloseable {
@@ -80,6 +82,46 @@ public class Browser implements AutoCloseable {
                 """);
     }
 
+    public void forceLoadLazyImages() {
+        eval("""
+                    document.querySelectorAll('img[loading="lazy"]').forEach(img => {
+                        img.loading = 'eager';
+                        if (!img.complete) {
+                          img.src = img.src;
+                        }
+                      });
+                """);
+    }
+
+    public void scrollToBottom() {
+        webDriver.executeAsyncScript("""
+                const doneCallback = arguments[arguments.length - 1];
+                const startTime = Date.now();
+                const maxScrollTime = 5000; // 5 seconds timeout
+                const scrollStep = window.innerHeight / 2; // Scroll half a viewport at a time
+                const scrollInterval = 100; // Interval between scrolls in milliseconds
+                
+                function scroll() {
+                    if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
+                        // We've reached the bottom of the page
+                        doneCallback();
+                        return;
+                    }
+                
+                    if (Date.now() - startTime > maxScrollTime) {
+                        // We've exceeded the timeout
+                        doneCallback();
+                        return;
+                    }
+                
+                    window.scrollBy(0, scrollStep);
+                    setTimeout(scroll, scrollInterval);
+                }
+                
+                scroll();
+                """);
+    }
+
     public void navigateToBlank() {
         webDriver.navigate().to("about:blank");
     }
@@ -90,5 +132,28 @@ public class Browser implements AutoCloseable {
 
     public String title() {
         return webDriver.getTitle();
+    }
+
+    public static void main(String[] args) {
+        AtomicInteger counter = new AtomicInteger();
+        try (var browser = new Browser();
+             var ignored = new NetworkInterceptor(browser.webDriver, (Filter) next -> request -> {
+                 HttpResponse response = next.execute(request);
+                 System.out.println(counter.incrementAndGet() + " " + response.getStatus() + " " + request.getUri());
+                 return response;
+             });
+             ) {
+            //browser.webDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
+            browser.navigateTo(new Url(args[0]));
+            browser.forceLoadLazyImages();
+            System.err.println("Scrolling...");
+            browser.scrollToBottom();
+            System.err.println("Done scrolling");
+            try {
+                Thread.sleep(10000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }

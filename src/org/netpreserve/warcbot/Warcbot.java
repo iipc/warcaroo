@@ -87,6 +87,7 @@ public class Warcbot implements AutoCloseable, Crawl {
                     }
                     case "--crawl-delay" -> config.setCrawlDelay(Integer.parseInt(args[++i]));
                     case "--include" -> config.addInclude(args[++i]);
+                    case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));
                     case "-A", "--user-agent", "--userAgent" -> config.setUserAgent(args[++i]);
                     case "-w", "--workers" -> config.setWorkers(Integer.parseInt(args[++i]));
                     default -> {
