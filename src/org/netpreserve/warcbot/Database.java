@@ -57,9 +57,9 @@ public class Database implements AutoCloseable {
         init();
     }
 
-    public void init() throws SQLException, IOException {
+    public void init() throws IOException {
         var regex = Pattern.compile("(?is)(CREATE\\s+TRIGGER\\b.+?END\\s*;)|((?:(?!CREATE\\s+TRIGGER\\b).)+?;)", Pattern.DOTALL);
-        try (var stream = Objects.requireNonNull(getClass().getResourceAsStream("schema.sql"), "Missing schema.sql");) {
+        try (var stream = Objects.requireNonNull(getClass().getResourceAsStream("schema.sql"), "Missing schema.sql")) {
             String schema = new String(stream.readAllBytes(), UTF_8);
             Matcher matcher = regex.matcher(schema);
             while (matcher.find()) {
@@ -82,7 +82,7 @@ public class Database implements AutoCloseable {
         return jdbi.onDemand(StorageDAO.class);
     }
 
-    public void close() throws SQLException {
+    public void close() {
         dataSource.close();
     }
 

@@ -24,7 +24,7 @@ public interface StorageDAO {
     @SqlQuery("""
             SELECT * FROM resources
             WHERE url = :uri
-            AND payload_size = :payloadSize 
+            AND payload_size = :payloadSize
             AND payload_digest = :payloadDigest
             LIMIT 1""")
     Resource findResourceByUrlAndPayload(String uri, long payloadSize, String payloadDigest);

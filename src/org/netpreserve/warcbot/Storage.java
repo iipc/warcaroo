@@ -84,7 +84,7 @@ public class Storage implements Closeable {
 
     }
 
-    public Resource save(UUID pageId, HttpRequest request, HttpResponse response) throws IOException, SQLException {
+    public Resource save(UUID pageId, HttpRequest request, HttpResponse response) throws IOException {
         try (var responseStream = response.getContent().get();
              var requestStream = request.getContent().get()) {
 
@@ -121,10 +121,8 @@ public class Storage implements Closeable {
      * <p>This method processes a chain of HTTP responses (where each response may have a reference
      * to the previous response in the chain) and saves each response along with its associated request.
      * </p>
-     *
-     * @return
      */
-    public List<Resource> save(UUID pageId, java.net.http.HttpResponse<byte[]> responseChain) throws SQLException, IOException {
+    public List<Resource> save(UUID pageId, java.net.http.HttpResponse<byte[]> responseChain) throws IOException {
         // walk the response chain backwards and then reverse it so the responses are in order they were made
         var responses = new ArrayList<java.net.http.HttpResponse<byte[]>>();
         for (var response = responseChain; response != null; response = response.previousResponse().orElse(null)) {
