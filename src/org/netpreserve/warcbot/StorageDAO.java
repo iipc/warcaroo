@@ -2,6 +2,7 @@ package org.netpreserve.warcbot;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.BindMethods;
+import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jetbrains.annotations.NotNull;
 
@@ -19,4 +20,12 @@ public interface StorageDAO {
 
     @SqlUpdate("INSERT INTO pages (id, url, date, title) VALUES (?, ?, ?, ?)")
     void addPage(@NotNull UUID id, @NotNull Url url, @NotNull Instant date, String title);
+
+    @SqlQuery("""
+            SELECT * FROM resources
+            WHERE url = :uri
+            AND payload_size = :payloadSize 
+            AND payload_digest = :payloadDigest
+            LIMIT 1""")
+    Resource findResourceByUrlAndPayload(String uri, long payloadSize, String payloadDigest);
 }

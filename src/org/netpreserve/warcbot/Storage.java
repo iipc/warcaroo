@@ -8,6 +8,8 @@ import org.netpreserve.jwarc.*;
 import org.openqa.selenium.remote.http.Contents;
 import org.openqa.selenium.remote.http.HttpRequest;
 import org.openqa.selenium.remote.http.HttpResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -27,6 +29,7 @@ import java.util.*;
 import static java.nio.file.StandardOpenOption.*;
 
 public class Storage implements Closeable {
+    private final Logger log = LoggerFactory.getLogger(Storage.class);
     private final WarcWriter warcWriter;
     final StorageDAO dao;
     private final TimeBasedEpochGenerator uuidGenerator;
@@ -81,7 +84,7 @@ public class Storage implements Closeable {
 
     }
 
-    public void save(UUID pageId, HttpRequest request, HttpResponse response) throws IOException, SQLException {
+    public Resource save(UUID pageId, HttpRequest request, HttpResponse response) throws IOException, SQLException {
         try (var responseStream = response.getContent().get();
              var requestStream = request.getContent().get()) {
 
@@ -107,7 +110,7 @@ public class Storage implements Closeable {
                 requestPayload = sha1(request.getContent());
             }
 
-            save(pageId, request.getUri(), httpRequestBuilder.build(), httpResponseBuilder.build(),
+            return save(pageId, request.getUri(), httpRequestBuilder.build(), httpResponseBuilder.build(),
                     requestPayload, responsePayload);
         }
     }
@@ -118,8 +121,10 @@ public class Storage implements Closeable {
      * <p>This method processes a chain of HTTP responses (where each response may have a reference
      * to the previous response in the chain) and saves each response along with its associated request.
      * </p>
+     *
+     * @return
      */
-    public void save(UUID pageId, java.net.http.HttpResponse<byte[]> responseChain) throws SQLException, IOException {
+    public List<Resource> save(UUID pageId, java.net.http.HttpResponse<byte[]> responseChain) throws SQLException, IOException {
         // walk the response chain backwards and then reverse it so the responses are in order they were made
         var responses = new ArrayList<java.net.http.HttpResponse<byte[]>>();
         for (var response = responseChain; response != null; response = response.previousResponse().orElse(null)) {
@@ -127,6 +132,7 @@ public class Storage implements Closeable {
         }
         Collections.reverse(responses);
 
+        List<Resource> resources = new ArrayList<>();
         for (var response : responses) {
             var request = response.request();
             var httpResponse = new org.netpreserve.jwarc.HttpResponse.Builder(response.statusCode(), "")
@@ -137,8 +143,10 @@ public class Storage implements Closeable {
             var httpRequest = new org.netpreserve.jwarc.HttpRequest.Builder(request.method(), request.uri().getRawPath())
                     .addHeaders(stripHttp2Headers(request.headers()))
                     .build();
-            save(pageId, request.uri().toString(), httpRequest, httpResponse, null, sha1(response.body()));
+            Resource resource = save(pageId, request.uri().toString(), httpRequest, httpResponse, null, sha1(response.body()));
+            if (resource != null) resources.add(resource);
         }
+        return resources;
     }
 
     private Map<String, List<String>> stripHttp2Headers(HttpHeaders headers) {
@@ -150,12 +158,21 @@ public class Storage implements Closeable {
         return map;
     }
 
-    private void save(@NotNull UUID pageId,
-                      @NotNull String uri,
-                      @NotNull org.netpreserve.jwarc.HttpRequest httpRequest,
-                      @NotNull org.netpreserve.jwarc.HttpResponse httpResponse,
-                      @Nullable WarcDigest requestDigest,
-                      @Nullable WarcDigest responseDigest) throws IOException, SQLException {
+    private Resource save(@NotNull UUID pageId,
+                          @NotNull String uri,
+                          @NotNull org.netpreserve.jwarc.HttpRequest httpRequest,
+                          @NotNull org.netpreserve.jwarc.HttpResponse httpResponse,
+                          @Nullable WarcDigest requestDigest,
+                          @Nullable WarcDigest responseDigest) throws IOException {
+
+        var existingDuplicate = dao.findResourceByUrlAndPayload(uri,
+                httpResponse.body().size(),
+                responseDigest == null ? null : responseDigest.prefixedBase32());
+        if (existingDuplicate != null) {
+            log.debug("Not saving duplicate of resource {}: {}", existingDuplicate.id(), uri);
+            return null;
+        }
+
         Instant now = Instant.now();
         UUID responseUuid = uuidGenerator.construct(now.toEpochMilli());
         var warcResponseBuilder = new WarcResponse.Builder(uri)
@@ -185,11 +202,13 @@ public class Storage implements Closeable {
             requestLength = warcWriter.position() - responseOffset - responseLength;
         }
 
-        dao.addResource(new Resource(responseUuid, pageId,
+        Resource resource = new Resource(responseUuid, pageId,
                 warcResponse.target(), warcResponse.date(), responseOffset, responseLength, requestLength,
                 httpResponse.status(), httpResponse.headers().first("Location").orElse(null),
                 httpResponse.contentType().base().toString(),
                 httpResponse.body().size(),
-                responseDigest));
+                responseDigest);
+        dao.addResource(resource);
+        return resource;
     }
 }

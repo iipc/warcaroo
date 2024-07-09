@@ -2,8 +2,6 @@ package org.netpreserve.warcbot;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import org.jdbi.v3.core.Handle;
-import org.jdbi.v3.core.HandleCallback;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.argument.AbstractArgumentFactory;
 import org.jdbi.v3.core.argument.Argument;
@@ -27,6 +25,10 @@ public class Database implements AutoCloseable {
     private final Logger log = LoggerFactory.getLogger(Database.class);
     private final Jdbi jdbi;
     private final HikariDataSource dataSource;
+
+    public static Database newDatabaseInMemory() throws SQLException, IOException {
+        return new Database("jdbc:sqlite::memory:");
+    }
 
     public Database(Path path) throws SQLException, IOException {
         this("jdbc:sqlite:" + path);
