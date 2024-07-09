@@ -90,6 +90,9 @@ public class Worker {
                         frontier.addUrl(url, candidate.depth() + 1, candidate.url());
                     }
 
+                    browser.forceLoadLazyImages();
+                    browser.scrollToBottom();
+
                     try {
                         Thread.sleep(1000);
                     } catch (InterruptedException e) {
