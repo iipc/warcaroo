@@ -2,7 +2,6 @@ package org.netpreserve.warcbot;
 
 import org.intellij.lang.annotations.Language;
 import org.openqa.selenium.NoSuchSessionException;
-import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.devtools.NetworkInterceptor;
@@ -12,7 +11,6 @@ import org.openqa.selenium.remote.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,7 +28,7 @@ public class Browser implements AutoCloseable {
     public Browser(Config config) {
         var options = new ChromeOptions();
         options.addArguments("--headless");
-        options.setBinary(config.getBrowserBinary());
+        if (config.getBrowserBinary() != null) options.setBinary(config.getBrowserBinary());
         options.setCapability("webSocketUrl", true);
         this.webDriver = new ChromeDriver(options);
     }
@@ -143,8 +141,8 @@ public class Browser implements AutoCloseable {
                  HttpResponse response = next.execute(request);
                  System.out.println(counter.incrementAndGet() + " " + response.getStatus() + " " + request.getUri());
                  return response;
-             });
-             ) {
+             })
+        ) {
             //browser.webDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
             browser.navigateTo(new Url(args[0]));
             browser.forceLoadLazyImages();
