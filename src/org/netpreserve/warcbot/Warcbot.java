@@ -56,6 +56,9 @@ public class Warcbot implements AutoCloseable, Crawl {
     }
 
     public void start() {
+        for (var seed : config.getSeeds()) {
+            frontier.addUrl(new Url(seed), 0, null);
+        }
         for (int i = 0; i < config.getWorkers(); i++) {
             workers.add(new Worker(i, new Browser(config), frontier, storage, db, robotsTxtChecker));
         }
@@ -120,7 +123,6 @@ public class Warcbot implements AutoCloseable, Crawl {
                 log.error("Error closing Warcbot", e);
             }
         }, "shutdown-hook"));
-        warcbot.frontier.addUrl(new Url("https://www.nla.gov.au/"), 0, null);
         warcbot.start();
     }
 
