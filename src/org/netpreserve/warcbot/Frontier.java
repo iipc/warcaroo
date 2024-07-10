@@ -34,10 +34,7 @@ public class Frontier {
         dao.queuesInsert(queue);
 
         var candidate = new Candidate(queue, url, depth, via, Instant.now(), Candidate.State.PENDING);
-        boolean didAdd = dao.addCandidate(candidate);
-        if (didAdd) {
-            dao.incrementQueueCount(queue);
-        }
+        dao.addCandidate(candidate);
         return true;
     }
 

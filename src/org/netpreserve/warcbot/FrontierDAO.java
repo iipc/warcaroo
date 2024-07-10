@@ -62,9 +62,6 @@ public interface FrontierDAO {
     @SqlUpdate("INSERT INTO queues (name) VALUES (?) ON CONFLICT(name) DO NOTHING")
     void queuesInsert(@NotNull String name);
 
-    @SqlUpdate("UPDATE queues SET size = size + 1 WHERE name = ?")
-    void incrementQueueCount(String queue);
-
     @SqlUpdate("UPDATE queues SET worker_id = NULL WHERE worker_id IS NOT NULL")
     void unlockAllQueues();
 

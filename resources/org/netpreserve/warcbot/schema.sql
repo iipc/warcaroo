@@ -1,7 +1,6 @@
 create table if not exists queues
 (
     name         TEXT PRIMARY KEY NOT NULL,
-    size         INTEGER          NOT NULL DEFAULT 0,
     last_visited INTEGER,
     worker_id    INTEGER,
     next_visit   INTEGER                   DEFAULT 0
