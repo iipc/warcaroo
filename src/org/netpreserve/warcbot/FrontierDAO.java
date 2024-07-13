@@ -3,12 +3,14 @@ package org.netpreserve.warcbot;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.BindMethods;
 import org.jdbi.v3.sqlobject.customizer.Timestamped;
+import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,11 +19,11 @@ public interface FrontierDAO {
     @SqlQuery("SELECT * FROM frontier WHERE url = ?")
     Candidate getCandidate(Url url);
 
-    @SqlUpdate("""
+    @SqlBatch("""
             INSERT INTO frontier (queue, depth, url, via, time_added, state)
             VALUES (:queue, :depth, :url, :via, :timeAdded, :state)
             ON CONFLICT(url) DO NOTHING""")
-    boolean addCandidate(@BindMethods Candidate candidate);
+    void addCandidates(@BindMethods Collection<Candidate> candidates);
 
     @SqlUpdate("UPDATE frontier SET state = :state WHERE url = :url")
     @MustUpdate
@@ -59,8 +61,8 @@ public interface FrontierDAO {
     @MustUpdate
     void releaseQueue(String queue, Instant now, Instant nextVisit);
 
-    @SqlUpdate("INSERT INTO queues (name) VALUES (?) ON CONFLICT(name) DO NOTHING")
-    void queuesInsert(@NotNull String name);
+    @SqlBatch("INSERT INTO queues (name) VALUES (?) ON CONFLICT(name) DO NOTHING")
+    void addQueues(@NotNull Collection<String> names);
 
     @SqlUpdate("UPDATE queues SET worker_id = NULL WHERE worker_id IS NOT NULL")
     void unlockAllQueues();

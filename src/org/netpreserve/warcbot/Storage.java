@@ -2,31 +2,30 @@ package org.netpreserve.warcbot;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.netpreserve.jwarc.*;
-import org.openqa.selenium.remote.http.Contents;
-import org.openqa.selenium.remote.http.HttpRequest;
-import org.openqa.selenium.remote.http.HttpResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.SequenceInputStream;
 import java.net.http.HttpHeaders;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.sql.SQLException;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 import static java.nio.file.StandardOpenOption.*;
+import static org.netpreserve.jwarc.MediaType.HTTP_REQUEST;
+import static org.netpreserve.jwarc.MediaType.HTTP_RESPONSE;
 
 public class Storage implements Closeable {
     private final Logger log = LoggerFactory.getLogger(Storage.class);
@@ -35,10 +34,11 @@ public class Storage implements Closeable {
     private final TimeBasedEpochGenerator uuidGenerator;
     private final static DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC);
     private final SecureRandom random = new SecureRandom();
+    private final String filename;
 
     public Storage(Path directory, StorageDAO dao) throws IOException {
-        String basename = "warcbot-" + DATE_FORMAT.format(Instant.now()) + "-" + randomId();
-        warcWriter = new WarcWriter(FileChannel.open(directory.resolve(basename + ".warc.gz"),
+        filename = "warcbot-" + DATE_FORMAT.format(Instant.now()) + "-" + randomId() + ".warc.gz";
+        warcWriter = new WarcWriter(FileChannel.open(directory.resolve(filename),
                 WRITE, CREATE, TRUNCATE_EXISTING), WarcCompression.GZIP);
         this.dao = dao;
         this.uuidGenerator = Generators.timeBasedEpochGenerator();
@@ -60,58 +60,12 @@ public class Storage implements Closeable {
 
     private WarcDigest sha1(byte[] data) {
         try {
+            if (data == null) return null;
             var digest = MessageDigest.getInstance("SHA-1");
             digest.update(data);
             return new WarcDigest(digest);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
-        }
-    }
-
-    private WarcDigest sha1(Contents.Supplier content) throws IOException {
-        try (var stream = content.get()) {
-            var digest = MessageDigest.getInstance("SHA-1");
-            byte[] buf = new byte[8192];
-            while (true) {
-                int n = stream.read(buf);
-                if (n == -1) break;
-                digest.update(buf, 0, n);
-            }
-            return new WarcDigest(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IOException(e);
-        }
-
-    }
-
-    public Resource save(UUID pageId, HttpRequest request, HttpResponse response) throws IOException {
-        try (var responseStream = response.getContent().get();
-             var requestStream = request.getContent().get()) {
-
-            var httpResponseBuilder = new org.netpreserve.jwarc.HttpResponse.Builder(response.getStatus(), "")
-                    .body(null, Channels.newChannel(responseStream), response.getContent().length());
-            response.forEachHeader((name, value) -> {
-                if (name.equalsIgnoreCase("content-length")) return;
-                if (name.equalsIgnoreCase("content-encoding")) return;
-                httpResponseBuilder.addHeader(name, value);
-            });
-            WarcDigest responsePayload = sha1(response.getContent());
-
-            var httpRequestBuilder = new org.netpreserve.jwarc.HttpRequest.Builder(request.getMethod().name(), request.getUri());
-            request.forEachHeader((name, value) -> {
-                if (name.equalsIgnoreCase("content-length")) return;
-                if (name.equalsIgnoreCase("content-encoding")) return;
-                httpRequestBuilder.addHeader(name, value);
-            });
-
-            WarcDigest requestPayload = null;
-            if (request.getContent().length() > 0) {
-                httpRequestBuilder.body(null, Channels.newChannel(requestStream), request.getContent().length());
-                requestPayload = sha1(request.getContent());
-            }
-
-            return save(pageId, request.getUri(), httpRequestBuilder.build(), httpResponseBuilder.build(),
-                    requestPayload, responsePayload);
         }
     }
 
@@ -122,7 +76,7 @@ public class Storage implements Closeable {
      * to the previous response in the chain) and saves each response along with its associated request.
      * </p>
      */
-    public List<Resource> save(UUID pageId, java.net.http.HttpResponse<byte[]> responseChain) throws IOException {
+    public List<Resource> save(Resource.Metadata metadata, java.net.http.HttpResponse<byte[]> responseChain) throws IOException {
         // walk the response chain backwards and then reverse it so the responses are in order they were made
         var responses = new ArrayList<java.net.http.HttpResponse<byte[]>>();
         for (var response = responseChain; response != null; response = response.previousResponse().orElse(null)) {
@@ -135,13 +89,23 @@ public class Storage implements Closeable {
             var request = response.request();
             var httpResponse = new org.netpreserve.jwarc.HttpResponse.Builder(response.statusCode(), "")
                     .addHeaders(stripHttp2Headers(response.headers()))
-                    .body(null, response.body())
                     .build();
 
             var httpRequest = new org.netpreserve.jwarc.HttpRequest.Builder(request.method(), request.uri().getRawPath())
                     .addHeaders(stripHttp2Headers(request.headers()))
                     .build();
-            Resource resource = save(pageId, request.uri().toString(), httpRequest, httpResponse, null, sha1(response.body()));
+
+            var fetch = new ResourceFetched(request.uri().toString(),
+                    httpRequest.serializeHeader(),
+                    null,
+                    httpResponse.serializeHeader(),
+                    response.body(),
+                    metadata.ipAddress(),
+                    metadata.fetchTimeMs(),
+                    httpResponse.status(),
+                    httpResponse.headers().first("Location").orElse(null),
+                    httpResponse.contentType().base().toString());
+            Resource resource = save(metadata.pageId(), fetch);
             if (resource != null) resources.add(resource);
         }
         return resources;
@@ -156,36 +120,51 @@ public class Storage implements Closeable {
         return map;
     }
 
-    private Resource save(@NotNull UUID pageId,
-                          @NotNull String uri,
-                          @NotNull org.netpreserve.jwarc.HttpRequest httpRequest,
-                          @NotNull org.netpreserve.jwarc.HttpResponse httpResponse,
-                          @Nullable WarcDigest requestDigest,
-                          @Nullable WarcDigest responseDigest) throws IOException {
+    private ReadableByteChannel newChannel(byte[] header, byte[] body) {
+        if (body == null) return Channels.newChannel(new ByteArrayInputStream(header));
+        return Channels.newChannel(
+                new SequenceInputStream(new ByteArrayInputStream(header),
+                new ByteArrayInputStream(body)));
+    }
 
-        var existingDuplicate = dao.findResourceByUrlAndPayload(uri,
-                httpResponse.body().size(),
+    private long messageLength(byte[] header, byte[] body) {
+        if (body == null) return header.length;
+        return header.length + body.length;
+    }
+
+    private void setBody(WarcTargetRecord.Builder<?,?> builder, MediaType type, byte[] header, byte[] payload) {
+        if (payload == null) {
+            builder.body(type, header);
+        } else {
+            builder.body(type, Channels.newChannel(new SequenceInputStream(new ByteArrayInputStream(header),
+                            new ByteArrayInputStream(payload))), header.length + payload.length);
+            builder.payloadDigest(sha1(payload));
+        }
+    }
+
+    private Resource save(UUID pageId, ResourceFetched fetch) throws IOException {
+        var responseDigest = sha1(fetch.responseBody());
+        var existingDuplicate = dao.findResourceByUrlAndPayload(fetch.url(),
+                fetch.responseBody().length,
                 responseDigest == null ? null : responseDigest.prefixedBase32());
         if (existingDuplicate != null) {
-            log.debug("Not saving duplicate of resource {}: {}", existingDuplicate.id(), uri);
+            log.debug("Not saving duplicate of resource {}: {}", existingDuplicate.id(), fetch.url());
             return null;
         }
 
         Instant now = Instant.now();
         UUID responseUuid = uuidGenerator.construct(now.toEpochMilli());
-        var warcResponseBuilder = new WarcResponse.Builder(uri)
+        var warcResponseBuilder = new WarcResponse.Builder(fetch.url())
                 .date(now)
-                .recordId(responseUuid)
-                .body(httpResponse);
-        if (responseDigest != null) warcResponseBuilder.payloadDigest(responseDigest);
+                .recordId(responseUuid);
+        setBody(warcResponseBuilder, HTTP_RESPONSE, fetch.responseHeader(), fetch.responseBody());
         WarcResponse warcResponse = warcResponseBuilder.build();
 
-        var warcRequestBuilder = new WarcRequest.Builder(uri)
+        var warcRequestBuilder = new WarcRequest.Builder(fetch.url())
                 .date(now)
                 .recordId(uuidGenerator.construct(now.toEpochMilli()))
-                .concurrentTo(warcResponse.id())
-                .body(httpRequest);
-        if (requestDigest != null) warcRequestBuilder.payloadDigest(requestDigest);
+                .concurrentTo(warcResponse.id());
+        setBody(warcResponseBuilder, HTTP_REQUEST, fetch.requestHeader(), fetch.requestBody());
         WarcRequest warcRequest = warcRequestBuilder.build();
 
         long responseOffset;
@@ -201,11 +180,15 @@ public class Storage implements Closeable {
         }
 
         Resource resource = new Resource(responseUuid, pageId,
-                warcResponse.target(), warcResponse.date(), responseOffset, responseLength, requestLength,
-                httpResponse.status(), httpResponse.headers().first("Location").orElse(null),
-                httpResponse.contentType().base().toString(),
-                httpResponse.body().size(),
-                responseDigest);
+                warcResponse.target(),
+                warcResponse.date(),
+                filename,
+                responseOffset, responseLength, requestLength,
+                fetch.status(), fetch.redirect(),
+                fetch.responseType(),
+                fetch.responseBody().length,
+                responseDigest,
+                fetch.fetchTimeMs(), fetch.ipAddress());
         dao.addResource(resource);
         return resource;
     }

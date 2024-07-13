@@ -11,23 +11,25 @@ import java.util.List;
 
 import org.slf4j.Logger;
 
-public class Warcbot implements AutoCloseable, Crawl {
-    private static final Logger log = LoggerFactory.getLogger(Warcbot.class);
+public class WarcBot implements AutoCloseable, Crawl {
+    private static final Logger log = LoggerFactory.getLogger(WarcBot.class);
     private final Database db;
     private final Frontier frontier;
     private final Storage storage;
     private final HttpClient httpClient;
     private final RobotsTxtChecker robotsTxtChecker;
     private final List<Worker> workers = new ArrayList<>();
+    private final BrowserProcess browserProcess;
     private Config config;
 
-    public Warcbot(Path dataPath, Config config) throws SQLException, IOException {
+    public WarcBot(Path dataPath, Config config) throws SQLException, IOException {
         this.config = config;
         this.db = new Database(dataPath.resolve("db.sqlite3"));
         this.httpClient = HttpClient.newHttpClient();
         this.frontier = new Frontier(db.frontier(), config.getScope(), config);
         this.storage = new Storage(dataPath, db.storage());
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage, List.of("nla.gov.au_bot", "warcbot"));
+        this.browserProcess = BrowserProcess.start(config.getBrowserBinary());
     }
 
     public void close() {
@@ -37,6 +39,11 @@ public class Warcbot implements AutoCloseable, Crawl {
             } catch (Exception e) {
                 log.error("Failed to close worker {}", worker.id, e);
             }
+        }
+        try {
+            browserProcess.close();
+        } catch (Exception e) {
+            log.error("Failed to close browser process", e);
         }
         try {
             db.close();
@@ -60,7 +67,7 @@ public class Warcbot implements AutoCloseable, Crawl {
             frontier.addUrl(new Url(seed), 0, null);
         }
         for (int i = 0; i < config.getWorkers(); i++) {
-            workers.add(new Worker(i, new Browser(config), frontier, storage, db, robotsTxtChecker));
+            workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker));
         }
         for (Worker worker : workers) {
             worker.start();
@@ -115,7 +122,7 @@ public class Warcbot implements AutoCloseable, Crawl {
             }
         }
 
-        Warcbot warcbot = new Warcbot(Path.of("data"), config);
+        WarcBot warcbot = new WarcBot(Path.of("data"), config);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 warcbot.close();

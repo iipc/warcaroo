@@ -75,16 +75,6 @@
             <version>24.1.0</version>
         </dependency>
         <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-chrome-driver</artifactId>
-            <version>4.22.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.seleniumhq.selenium</groupId>
-            <artifactId>selenium-devtools-v126</artifactId>
-            <version>4.22.0</version>
-        </dependency>
-        <dependency>
             <groupId>com.github.mizosoft.methanol</groupId>
             <artifactId>methanol-jackson</artifactId>
             <version>1.7.0</version>

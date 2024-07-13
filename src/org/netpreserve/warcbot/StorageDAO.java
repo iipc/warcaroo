@@ -13,9 +13,9 @@ import java.util.UUID;
 public interface StorageDAO {
     @SqlUpdate("""
             INSERT INTO resources (id, page_id, url, date, response_offset, response_length, request_length,
-             status, redirect, payload_type, payload_size, payload_digest)
+             status, redirect, payload_type, payload_size, payload_digest, fetch_time_ms, ip_address)
             VALUES (:id, :pageId, :url, :date, :responseOffset, :responseLength, :requestLength,
-                    :status, :redirect, :payloadType, :payloadSize, :payloadDigest)""")
+                    :status, :redirect, :payloadType, :payloadSize, :payloadDigest, :fetchTimeMs, :ipAddress)""")
     void addResource(@BindMethods Resource resource);
 
     @SqlUpdate("INSERT INTO pages (id, url, date, title) VALUES (?, ?, ?, ?)")

@@ -1,5 +1,6 @@
 package org.netpreserve.warcbot;
 
+import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -39,10 +40,13 @@ public class RobotsTxtChecker {
         int status;
         byte[] body;
         try {
+            long fetchStart = System.currentTimeMillis();
             var response = httpClient.send(HttpRequest.newBuilder(robotsUri).build(), BodyHandlers.ofByteArray());
+            long fetchTimeMs = System.currentTimeMillis() - fetchStart;
             status = response.statusCode();
             body = response.body();
-            storage.save(pageId, response);
+            String ipAddress = response.sslSession().map(SSLSession::getPeerHost).orElse(null);
+            storage.save(new Resource.Metadata(pageId, fetchTimeMs, ipAddress), response);
         } catch (InterruptedException e) {
             throw new IOException(e);
         } catch (IOException e) {

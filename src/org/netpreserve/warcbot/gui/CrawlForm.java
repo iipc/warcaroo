@@ -2,13 +2,12 @@ package org.netpreserve.warcbot.gui;
 
 import org.netpreserve.warcbot.Config;
 import org.netpreserve.warcbot.Crawl;
-import org.netpreserve.warcbot.Warcbot;
+import org.netpreserve.warcbot.WarcBot;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
-import java.awt.*;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.SQLException;
@@ -74,7 +73,7 @@ public class CrawlForm extends JFrame {
     }
 
     public static void main(String[] args) throws SQLException, IOException {
-        var crawl = new Warcbot(Paths.get("data"), new Config());
+        var crawl = new WarcBot(Paths.get("data"), new Config());
         SwingUtilities.invokeLater(() -> {
             var form = new CrawlForm(crawl);
             form.setVisible(true);

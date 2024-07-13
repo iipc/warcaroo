@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.time.Instant;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Predicate;
 
 public class Frontier {
@@ -23,19 +23,28 @@ public class Frontier {
     }
 
     public boolean addUrl(Url url, int depth, Url via) {
-        if (!url.isHttp()) return false;
-        url = url.withoutFragment();
-        if (!scope.test(url.toString())) return false;
-        String queue = queueForUrl(url);
-        if (queue == null) {
-            log.warn("No queue for URL {}", url);
-            return false;
-        }
-        dao.queuesInsert(queue);
+        return addUrls(Collections.singleton(url), depth, via);
+    }
 
-        var candidate = new Candidate(queue, url, depth, via, Instant.now(), Candidate.State.PENDING);
-        dao.addCandidate(candidate);
-        return true;
+    public boolean addUrls(Collection<Url> urls, int depth, Url via) {
+        var queueNames = new HashSet<String>();
+        var candidates = new ArrayList<Candidate>();
+        for (var url : urls) {
+            if (!url.isHttp()) continue;
+            url = url.withoutFragment();
+            if (!scope.test(url.toString())) continue;
+            String queue = queueForUrl(url);
+            if (queue == null) {
+                log.warn("No queue for URL {}", url);
+                return false;
+            }
+            queueNames.add(queue);
+            candidates.add(new Candidate(queue, url, depth, via, Instant.now(), Candidate.State.PENDING));
+        }
+
+        dao.addQueues(queueNames);
+        dao.addCandidates(candidates);
+        return !candidates.isEmpty();
     }
 
     public @Nullable Candidate next(int workerId) {

@@ -2,20 +2,18 @@ package org.netpreserve.warcbot;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
-import org.openqa.selenium.remote.UnreachableBrowserException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.time.Duration;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
     final int id;
-    final Browser browser;
+    final BrowserWindow browserWindow;
     private final Frontier frontier;
     private final Storage storage;
     private final Database database;
@@ -24,13 +22,16 @@ public class Worker {
     private Thread thread;
     private volatile boolean closed = false;
 
-    public Worker(int id, Browser browser, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker) {
+    public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker) {
         this.id = id;
-        this.browser = browser;
+        this.browserWindow = browserProcess.newWindow(this::handleResource);
         this.frontier = frontier;
         this.storage = storage;
         this.database = database;
         this.robotsTxtChecker = robotsTxtChecker;
+    }
+
+    private void handleResource(ResourceFetched resourceFetched) {
     }
 
     void closeAsync() {
@@ -47,7 +48,7 @@ public class Worker {
             // OK
         }
         try {
-            browser.close();
+            browserWindow.close();
         } catch (Exception e) {
             log.warn("browser close", e);
         }
@@ -81,32 +82,36 @@ public class Worker {
                     continue;
                 }
 
-                try (var ignored = browser.recordResources(storage, pageId)) {
-                    browser.navigateTo(candidate.url());
+                //try (var ignored = browser.recordResources(storage, pageId)) {
+                browserWindow.navigateTo(candidate.url());
 
-                    for (var link : browser.extractLinks()) {
-                        log.debug("Link {}", link);
-                        Url url = new Url(link);
-                        frontier.addUrl(url, candidate.depth() + 1, candidate.url());
-                    }
-
-                    browser.forceLoadLazyImages();
-                    browser.scrollToBottom();
-
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-
-                    storage.dao.addPage(pageId, browser.currentUrl(), Instant.now(), browser.title());
-
-                    browser.navigateToBlank();
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
                 }
+
+                browserWindow.forceLoadLazyImages();
+                browserWindow.scrollToBottom();
+
+                List<Url> links = browserWindow.extractLinks();
+                if (log.isDebugEnabled()) {
+                    for (var link : links) {
+                        log.debug("Link: {}", link);
+                    }
+                }
+                frontier.addUrls(links, candidate.depth() + 1, candidate.url());
+
+                storage.dao.addPage(pageId, browserWindow.currentUrl(), Instant.now(), browserWindow.title());
+
+                browserWindow.navigateToBlank();
+                //}
             } catch (Throwable e) {
                 if (closed) return;
                 frontier.markFailed(candidate, pageId, e);
                 throw e;
+            } finally {
+                log.info("Finished worker {} for {} [{}]", id, candidate.url(), pageId);
             }
             frontier.markCrawled(candidate);
         }

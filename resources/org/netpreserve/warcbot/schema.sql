@@ -69,10 +69,11 @@ END;
 
 create table if not exists resources
 (
-    id              TEXT NOT NULL,
+    id              TEXT PRIMARY KEY NOT NULL,
     url             TEXT             NOT NULL,
     date            INTEGER          NOT NULL,
     page_id         TEXT             NOT NULL,
+    filename        TEXT             NOT NULL,
     response_offset INTEGER          NOT NULL,
     response_length INTEGER          NOT NULL,
     request_length  INTEGER          NOT NULL,
@@ -80,8 +81,13 @@ create table if not exists resources
     redirect        TEXT,
     payload_type    TEXT,
     payload_size    INTEGER          NOT NULL,
-    payload_digest  TEXT
+    payload_digest  TEXT,
+    fetch_time_ms   INTEGER          NOT NULL,
+    ip_address      TEXT
 ) STRICT;
+
+CREATE INDEX IF NOT EXISTS resources_url_date ON resources (url, date);
+CREATE INDEX IF NOT EXISTS resources_page_id ON resources (page_id);
 
 create table if not exists pages
 (

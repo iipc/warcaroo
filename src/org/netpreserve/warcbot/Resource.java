@@ -8,7 +8,10 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record Resource(@NotNull UUID id, @NotNull UUID pageId, @NotNull String url, @NotNull Instant date,
-                       long responseOffset, long responseLength, long requestLength, int status,
+                       String filename, long responseOffset, long responseLength, long requestLength, int status,
                        @Nullable String redirect,
-                       String payloadType, long payloadSize, WarcDigest payloadDigest) {
+                       String payloadType, long payloadSize, WarcDigest payloadDigest,
+                       long fetchTimeMs, String ipAddress) {
+    public record Metadata(UUID pageId, long fetchTimeMs, String ipAddress) {
+    }
 }

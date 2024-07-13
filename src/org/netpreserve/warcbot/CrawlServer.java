@@ -50,7 +50,7 @@ public class CrawlServer implements HttpHandler {
     }
 
     public static void main(String[] args) throws Exception {
-        try (Warcbot crawl = new Warcbot(Path.of("data"), new Config())) {
+        try (WarcBot crawl = new WarcBot(Path.of("data"), new Config())) {
             var httpServer = HttpServer.create(new InetSocketAddress(8080), 0, "/",
                     new CrawlServer(crawl));
             httpServer.start();
