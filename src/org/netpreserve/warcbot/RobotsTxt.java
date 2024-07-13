@@ -10,6 +10,6 @@ public record RobotsTxt(String url, Instant date, Instant lastChecked, byte[] bo
     public boolean allows(Url url, List<String> userAgents) {
         var parser = new RobotsParser(new RobotsParseHandler());
         var matcher = parser.parse(body);
-        return matcher.allowedByRobots(userAgents, url.toURI());
+        return matcher.allowedByRobots(userAgents, url);
     }
 }

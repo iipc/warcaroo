@@ -1,13 +1,24 @@
 package org.netpreserve.warcbot;
 
+import org.netpreserve.urlcanon.ParsedUrl;
+
 import java.net.URI;
 
+/**
+ * URL type which caches parsing.
+ */
 public class Url {
     private final String url;
     private URI uri;
+    private ParsedUrl parsedUrl;
 
     public Url(String url) {
         this.url = url;
+    }
+
+    private Url(ParsedUrl parsedUrl) {
+        this(parsedUrl.toString());
+        this.parsedUrl = parsedUrl;
     }
 
     public static Url orNull(String url) {
@@ -23,11 +34,11 @@ public class Url {
     }
 
     public String host() {
-        return toURI().getHost();
+        return parse().getHost();
     }
 
     public String scheme() {
-        return toURI().getScheme();
+        return parse().getScheme();
     }
 
     public String toString() {
@@ -63,5 +74,28 @@ public class Url {
     @Override
     public int hashCode() {
         return url.hashCode();
+    }
+
+    private ParsedUrl parse() {
+        if (parsedUrl == null) {
+            parsedUrl = ParsedUrl.parseUrl(url);
+        }
+        return parsedUrl;
+    }
+
+    public String pathAndQuery() {
+        ParsedUrl parsed = parse();
+        return parsed.getPath() + parsed.getQuestionMark() + parsed.getQuery();
+    }
+
+    public String hostAndPort() {
+        ParsedUrl parsed = parse();
+        return parsed.getHost() + parsed.getColonBeforePort() + parsed.getPort();
+    }
+
+    public Url withPath(String path) {
+        ParsedUrl parsed = parse();
+        return new Url(parsed.getScheme() + parsed.getColonAfterScheme() + parsed.getSlashes() +
+                       parsed.getHost() + parsed.getColonBeforePort() + parsed.getPort() + path);
     }
 }

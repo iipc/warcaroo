@@ -73,7 +73,7 @@ public class CDPClient extends CDPBase implements AutoCloseable {
                 }});
             }
         } else {
-            var future = calls.get(message.id());
+            var future = calls.remove(message.id());
             if (future == null) {
                 log.warn("Received response to unknown call id {}", message.id());
             } else {
@@ -120,8 +120,9 @@ public class CDPClient extends CDPBase implements AutoCloseable {
     }
 
     <T> T send(String method, Map<String, Object> params, Type returnType, String sessionId) {
+        long callId = idSeq.incrementAndGet();
         try {
-            JsonNode result = send(new Call(idSeq.incrementAndGet(), method, params, sessionId))
+            JsonNode result = sendAsync(new Call(callId, method, params, sessionId))
                     .get(120, TimeUnit.SECONDS);
             return json.treeToValue(result, json.constructType(returnType));
         } catch (ExecutionException e) {
@@ -133,12 +134,16 @@ public class CDPClient extends CDPBase implements AutoCloseable {
             } else {
                 throw new RuntimeException(e.getCause());
             }
-        } catch (InterruptedException | TimeoutException | JsonProcessingException e) {
+        } catch (TimeoutException e) {
+            throw new CDPTimeoutException("Timed out");
+        } catch (InterruptedException | JsonProcessingException e) {
             throw new RuntimeException(e);
+        } finally {
+            calls.remove(callId);
         }
     }
 
-    private CompletableFuture<JsonNode> send(Call call) {
+    private CompletableFuture<JsonNode> sendAsync(Call call) {
         try {
             var future = new CompletableFuture<JsonNode>();
             calls.put(call.id(), future);

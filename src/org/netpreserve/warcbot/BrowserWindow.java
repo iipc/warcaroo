@@ -6,17 +6,15 @@ import org.netpreserve.warcbot.cdp.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 public class BrowserWindow implements AutoCloseable {
-    private final Logger log = LoggerFactory.getLogger(BrowserWindow.class);
-    private final Browser browser;
+    private static final Logger log = LoggerFactory.getLogger(BrowserWindow.class);
     private final Network network;
     private final Page page;
     private final Runtime runtime;
@@ -25,10 +23,12 @@ public class BrowserWindow implements AutoCloseable {
     private final Map<String, PartialFetch> fetchesByNetworkId = new ConcurrentHashMap<>();
     private final Consumer<ResourceFetched> resourceHandler;
     private final RequestInterceptor requestInterceptor;
+    private final AtomicReference<CompletableFuture<Double>> loadEvent = new AtomicReference<>(new CompletableFuture<>());
+    private final IdleMonitor idleMonitor = new IdleMonitor();
+    private String frameId;
 
     public BrowserWindow(CDPSession session, Consumer<ResourceFetched> resourceHandler, RequestInterceptor requestInterceptor) {
         this.resourceHandler = resourceHandler;
-        this.browser = session.domain(Browser.class);
         this.fetch = session.domain(Fetch.class);
         this.network = session.domain(Network.class);
         this.page = session.domain(Page.class);
@@ -41,11 +41,14 @@ public class BrowserWindow implements AutoCloseable {
         network.onResponseReceivedExtraInfo(event ->
                 getRequestInfo(event.requestId()).rawResponseHeader = event.headersText());
 
+        page.onLoadEventFired(event -> loadEvent.get().complete(event.timestamp()));
+        page.enable();
+
         fetch.onRequestPaused(this::handleRequestPaused);
 
         network.enable(0, 0, 0);
         fetch.enable(List.of(new Fetch.RequestPattern(null, null,
-                requestInterceptor == null ? "Response" : "Request")));
+                "Request")));
     }
 
     private static byte[] formatResponseHeader(Fetch.RequestPaused event, String rawResponseHeader) {
@@ -56,8 +59,12 @@ public class BrowserWindow implements AutoCloseable {
         String reason = event.responseStatusText();
         if (reason == null) reason = "";
         builder.append("HTTP/1.1 ").append(event.responseStatusCode()).append(" ").append(reason).append("\r\n");
-        event.responseHeaders().forEach(entry ->
-                builder.append(entry.name()).append(": ").append(entry.value()).append("\r\n"));
+        if (event.responseHeaders() == null) {
+            log.warn("Null response headers: {}", event);
+        } else {
+            event.responseHeaders().forEach(entry ->
+                    builder.append(entry.name()).append(": ").append(entry.value()).append("\r\n"));
+        }
         builder.append("\r\n");
         return builder.toString().getBytes(StandardCharsets.US_ASCII);
     }
@@ -67,28 +74,24 @@ public class BrowserWindow implements AutoCloseable {
      */
     private static byte[] formatRequestHeader(Network.Request request, Map<String, String> extraInfoHeaders) {
         var builder = new StringBuilder();
-        URI uri = URI.create(request.url());
+        Url url = new Url(request.url());
 
-        builder.append(request.method()).append(" ").append(uri.getPath()).append(" HTTP/1.1\r\n");
+        builder.append(request.method()).append(" ").append(url.pathAndQuery()).append(" HTTP/1.1\r\n");
 
         if (extraInfoHeaders != null) {
             extraInfoHeaders.forEach((name, value) -> builder.append(name).append(": ").append(value).append("\r\n"));
         } else {
             request.headers().forEach((name, value) -> builder.append(name).append(": ").append(value).append("\r\n"));
             if (!request.headers().containsKey("Host")) {
-                builder.append("Host: ").append(uri.getHost());
-                if (uri.getPort() >= 0) {
-                    builder.append(":").append(uri.getPort());
-                }
-                builder.append("\r\n");
+                builder.append("Host: ").append(url.hostAndPort()).append("\r\n");
             }
         }
+
         builder.append("\r\n");
         return builder.toString().getBytes(StandardCharsets.US_ASCII);
     }
 
     public static void main(String[] args) throws Exception {
-        AtomicInteger counter = new AtomicInteger();
         try (var browserProcess = BrowserProcess.start(null);
              var visitor = browserProcess.newWindow(resourceFetched -> {
                  System.out.println("Resource: " + resourceFetched);
@@ -136,6 +139,7 @@ public class BrowserWindow implements AutoCloseable {
                 }
             }
 
+            idleMonitor.started(event.request().url());
             fetch.continueRequest(event.requestId(), true);
             return;
         }
@@ -165,6 +169,7 @@ public class BrowserWindow implements AutoCloseable {
         }
 
         fetch.continueResponse(event.requestId());
+        idleMonitor.finished(event.request().url());
     }
 
     private void handleResponseReceived(Network.ResponseReceived event) {
@@ -193,22 +198,47 @@ public class BrowserWindow implements AutoCloseable {
     }
 
     public void navigateTo(Url url) {
-        page.navigate(url.toString());
+        loadEvent.getAndSet(new CompletableFuture<>()).complete(0.0);
+        networkInfoMap.clear();
+        fetchesByNetworkId.clear();
+        var nav = page.navigate(url.toString());
+        this.frameId = nav.frameId();
     }
 
     @Override
     public void close() {
-        log.debug("Closing web driver");
-        browser.close();
+        try {
+            page.close();
+        } catch (CDPException e) {
+            if (!e.getMessage().contains("Session with given id not found")) {
+                throw e;
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
     public <T> T eval(@Language("JavaScript") String script) {
-        var evaluate = runtime.evaluate(script, 2000, true);
+        var evaluate = runtime.evaluate(script, 2000, true, false);
         if (evaluate.exceptionDetails() != null) {
             throw new RuntimeException(evaluate.exceptionDetails().toString());
         }
         return (T) evaluate.result().toJavaObject();
+    }
+
+    @SuppressWarnings("unchecked")
+    public <T> T evalPromise(@Language("JavaScript") String script) {
+        var evaluate = runtime.evaluate(script, 2000, true, true);
+        if (evaluate.exceptionDetails() != null) {
+            throw new JSException(evaluate.exceptionDetails().toString());
+        }
+        return (T) evaluate.result().toJavaObject();
+    }
+
+    private static class JSException extends RuntimeException {
+
+        public JSException(String message) {
+            super(message);
+        }
     }
 
     public List<Url> extractLinks() {
@@ -239,42 +269,65 @@ public class BrowserWindow implements AutoCloseable {
     }
 
     public void scrollToBottom() {
-        // FIXME: wait for promise?
-//        eval("""
-//                const doneCallback = arguments[arguments.length - 1];
-//                const startTime = Date.now();
-//                const maxScrollTime = 5000; // 5 seconds timeout
-//                const scrollStep = window.innerHeight / 2; // Scroll half a viewport at a time
-//                const scrollInterval = 100; // Interval between scrolls in milliseconds
-//
-//                function scroll() {
-//                    if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
-//                        // We've reached the bottom of the page
-//                        doneCallback();
-//                        return;
-//                    }
-//
-//                    if (Date.now() - startTime > maxScrollTime) {
-//                        // We've exceeded the timeout
-//                        doneCallback();
-//                        return;
-//                    }
-//
-//                    window.scrollBy(0, scrollStep);
-//                    setTimeout(scroll, scrollInterval);
-//                }
-//
-//                scroll();
-//                """);
+        try {
+            evalPromise("""
+                
+                    new Promise((doneCallback, reject) => {
+                const startTime = Date.now();
+                const maxScrollTime = 5000; // 5 seconds timeout
+                const scrollInterval = 50;
+
+                function scroll() {
+                    if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
+                        // We've reached the bottom of the page
+                        doneCallback();
+                        return;
+                    }
+
+                    if (Date.now() - startTime > maxScrollTime) {
+                        // We've exceeded the timeout
+                        doneCallback();
+                        return;
+    
+                                   }
+    
+                    const scrollStep = document.scrollingElement.clientHeight * 0.2;
+
+                    window.scrollBy({top: scrollStep, behavior: "instant"});
+                    setTimeout(scroll, scrollInterval);
+                }
+
+                scroll();
+                })
+                """);
+        } catch (JSException e) {
+            log.warn("scrollToBottom threw {}", e.getMessage());
+        }
     }
 
-    public void navigateToBlank() {
+    public void navigateToBlank() throws InterruptedException {
         navigateTo(new Url("about:blank"));
+        waitForLoadEvent();
         try {
             page.resetNavigationHistory();
         } catch (CDPException e) {
             // we might not be attached to a page
         }
+    }
+
+    public void waitForLoadEvent() throws InterruptedException {
+        try {
+            loadEvent.get().get(5, TimeUnit.SECONDS);
+        } catch (ExecutionException | TimeoutException e) {
+            // ignore
+        }
+    }
+
+    public void waitForNetworkIdle() throws InterruptedException {
+        long start = System.currentTimeMillis();
+        int n = idleMonitor.inflight;
+        idleMonitor.waitUntilIdle();
+        log.info("Waited {} ms for network idle (if={})", System.currentTimeMillis() - start, n);
     }
 
     public Url currentUrl() {

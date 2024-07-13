@@ -2,6 +2,7 @@ package org.netpreserve.warcbot.cdp;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.netpreserve.warcbot.Url;
 
 import java.util.Base64;
 import java.util.List;
@@ -9,12 +10,11 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 public interface Network {
-
-    void onRequestWillBeSent(Consumer<RequestWillBeSent> handler);
+    void enable(Integer maxTotalBufferSize, Integer maxResourceBufferSize, Integer maxPostDataSize);
 
     ResponseBody getResponseBody(String requestId);
 
-    void enable(Integer maxTotalBufferSize, Integer maxResourceBufferSize, Integer maxPostDataSize);
+    void onRequestWillBeSent(Consumer<RequestWillBeSent> handler);
 
     void onLoadingFailed(Consumer<LoadingFailed> handler);
 

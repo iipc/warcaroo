@@ -43,7 +43,15 @@ public class Frontier {
         }
 
         dao.addQueues(queueNames);
-        dao.addCandidates(candidates);
+        boolean[] result = dao.addCandidates(candidates);
+        int novel = 0;
+        for (int i = 0; i < result.length; i++) {
+            if (result[i]) {
+                novel++;
+                log.debug("Added {}", candidates.get(i));
+            }
+        }
+        log.info("Added {} new URLs from {} extracted links", novel, candidates.size());
         return !candidates.isEmpty();
     }
 

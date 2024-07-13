@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
 
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
@@ -67,7 +68,7 @@ public class Worker {
         }
     }
 
-    void run() throws SQLException, IOException {
+    void run() throws SQLException, IOException, InterruptedException {
         while (!closed) {
             var candidate = frontier.next(id);
             if (candidate == null) {
@@ -75,7 +76,7 @@ public class Worker {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
+                    return;
                 }
                 continue;
             }
@@ -91,21 +92,25 @@ public class Worker {
                 }
 
                 //try (var ignored = browser.recordResources(storage, pageId)) {
+                log.info("Nav to {}", candidate.url());
                 browserWindow.navigateTo(candidate.url());
+                browserWindow.waitForLoadEvent();
+                log.info("Load event");
 
-                try {
-                    Thread.sleep(5000);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
+                Thread.sleep(200);
 
+                log.info("Force lazy");
                 browserWindow.forceLoadLazyImages();
+
+                log.info("Scrolling");
                 browserWindow.scrollToBottom();
 
+                browserWindow.waitForNetworkIdle();
+
                 List<Url> links = browserWindow.extractLinks();
-                if (log.isDebugEnabled()) {
+                if (log.isTraceEnabled()) {
                     for (var link : links) {
-                        log.debug("Link: {}", link);
+                        log.trace("Link: {}", link);
                     }
                 }
                 frontier.addUrls(links, candidate.depth() + 1, candidate.url());

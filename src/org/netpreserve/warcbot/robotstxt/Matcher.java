@@ -14,7 +14,8 @@
 
 package org.netpreserve.warcbot.robotstxt;
 
-import java.net.URI;
+import org.netpreserve.warcbot.Url;
+
 import java.util.List;
 
 /** Interface of a matcher class. */
@@ -29,7 +30,7 @@ public interface Matcher {
    */
   boolean allowedByRobots(final List<String> userAgents, final String url);
 
-  boolean allowedByRobots(List<String> userAgents, URI url);
+  boolean allowedByRobots(List<String> userAgents, Url url);
 
   /**
    * Check whether given user agent is allowed to visit given URL based on robots.txt which this

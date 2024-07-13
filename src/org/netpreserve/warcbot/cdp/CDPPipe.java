@@ -5,9 +5,11 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 
 public class CDPPipe implements CDPConnection {
     private static final Logger log = LoggerFactory.getLogger(CDPPipe.class);
+    private static final Pattern BIG_STRING = Pattern.compile("\"([^\"]{20})[^\"]{40,}([^\"]{20})", Pattern.DOTALL | Pattern.MULTILINE);
     private final InputStream inputStream;
     private final OutputStream outputStream;
     private final Consumer<CDPClient.Result> messageHandler;
@@ -31,6 +33,7 @@ public class CDPPipe implements CDPConnection {
                     if (b == 0) break;
                     buffer.write(b);
                 }
+                log.atTrace().log(() -> "<- " + BIG_STRING.matcher(buffer.toString()).replaceAll("\"$1...$2\""));
                 var message = CDPClient.json.readValue(buffer.toByteArray(), CDPClient.Result.class);
                 messageHandler.accept(message);
             }
@@ -41,6 +44,7 @@ public class CDPPipe implements CDPConnection {
 
     @Override
     public void send(CDPClient.Call message) throws IOException  {
+        log.trace("-> {}", message);
         CDPClient.json.writeValue(outputStream, message);
         outputStream.write(0);
         outputStream.flush();

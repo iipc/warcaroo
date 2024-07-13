@@ -14,6 +14,8 @@
 
 package org.netpreserve.warcbot.robotstxt;
 
+import org.netpreserve.warcbot.Url;
+
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
@@ -170,12 +172,12 @@ public class RobotsMatcher implements Matcher {
   }
 
   @Override
-  public boolean allowedByRobots(final List<String> userAgents, final String url) {
-    return allowedByRobots(userAgents, URI.create(url));
+  public boolean allowedByRobots(List<String> userAgents, String url) {
+    return allowedByRobots(userAgents, new Url(url));
   }
 
-  public boolean allowedByRobots(List<String> userAgents, URI url) {
-    final String path = getPath(url);
+  public boolean allowedByRobots(List<String> userAgents, Url url) {
+    final String path = url.pathAndQuery();
     Map.Entry<Match, Match> matches = computeMatchPriorities(userAgents, path);
     return allowVerdict(matches.getKey(), matches.getValue());
   }

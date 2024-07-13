@@ -64,6 +64,9 @@ class BrowserWindowTest {
             recordedPaths.add(URI.create(recording.url()).getPath());
             System.out.println("Got resource! " + recording);
         })) {
+            browser.navigateToBlank();
+//            browser.fetchResource(new Url("http://127.0.0.1:" + port + "/robots.txt"));
+
             httpServer.start();
             browser.navigateTo(new Url("http://127.0.0.1:" + port + "/"));
             assertEquals("Test page", browser.title());
@@ -75,8 +78,8 @@ class BrowserWindowTest {
             browser.forceLoadLazyImages();
             Thread.sleep(1000);
             assertTrue(requestedPaths.contains("/lazy.jpg"));
-//            browser.scrollToBottom();
-//            assertEquals(Set.of("/", "/lazy.jpg", "/scroll.jpg"), requestedPaths);
+            browser.scrollToBottom();
+            assertTrue(requestedPaths.contains("/scroll.jpg"));
         } finally {
             httpServer.stop(0);
         }

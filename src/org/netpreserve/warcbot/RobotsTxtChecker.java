@@ -27,10 +27,10 @@ public class RobotsTxtChecker {
     }
 
     boolean checkAllowed(UUID pageId, Url url) throws SQLException, IOException {
-        URI robotsUri = url.toURI().resolve("/robots.txt");
-        var robots = dao.getRobotsTxt(robotsUri.toString());
+        Url robotsUrl = url.withPath("/robots.txt");
+        var robots = dao.getRobotsTxt(robotsUrl.toString());
         if (robots == null || robots.lastChecked().isBefore(Instant.now().minus(Duration.ofDays(1)))) {
-            robots = fetch(pageId, robotsUri, robots);
+            robots = fetch(pageId, robotsUrl.toURI(), robots);
         }
         return robots.allows(url, userAgents);
     }

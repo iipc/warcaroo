@@ -82,7 +82,16 @@ public class BrowserProcess implements AutoCloseable {
             } catch (IOException e) {
                 continue; // try another one
             }
-            java.lang.Runtime.getRuntime().addShutdownHook(new Thread(process::destroy));
+            java.lang.Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                try {
+                    if (process.waitFor(1, TimeUnit.SECONDS)) return;
+                    process.destroy();
+                    if (process.waitFor(10, TimeUnit.SECONDS)) return;
+                    process.destroyForcibly();
+                } catch (InterruptedException e) {
+                    // just exit
+                }
+            }));
             try {
                 return new BrowserProcess(process, usePipe ?
                         new CDPClient(process.getInputStream(), process.getOutputStream()) :

@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface Runtime {
-    Evaluate evaluate(String expression, int timeout, boolean returnByValue);
+    Evaluate evaluate(String expression, int timeout, boolean returnByValue, boolean awaitPromise);
 
     record Evaluate(RemoteObject result, ExceptionDetails exceptionDetails) {
     }

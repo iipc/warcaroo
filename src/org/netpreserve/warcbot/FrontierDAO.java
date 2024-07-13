@@ -23,7 +23,7 @@ public interface FrontierDAO {
             INSERT INTO frontier (queue, depth, url, via, time_added, state)
             VALUES (:queue, :depth, :url, :via, :timeAdded, :state)
             ON CONFLICT(url) DO NOTHING""")
-    void addCandidates(@BindMethods Collection<Candidate> candidates);
+    boolean[] addCandidates(@BindMethods Collection<Candidate> candidates);
 
     @SqlUpdate("UPDATE frontier SET state = :state WHERE url = :url")
     @MustUpdate
