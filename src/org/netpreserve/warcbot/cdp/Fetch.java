@@ -16,6 +16,9 @@ public interface Fetch {
 
     void onRequestPaused(Consumer<RequestPaused> handler);
 
+    void fulfillRequest(String requestId, int responseCode, byte[] binaryResponseHeaders,
+                        byte[] body, String reasonPhrase);
+
     record RequestPattern(
             String urlPattern,
             String resourceType,

@@ -12,9 +12,9 @@ import java.util.UUID;
 @RegisterConstructorMapper(Resource.class)
 public interface StorageDAO {
     @SqlUpdate("""
-            INSERT INTO resources (id, page_id, url, date, response_offset, response_length, request_length,
+            INSERT INTO resources (id, page_id, url, date, filename, response_offset, response_length, request_length,
              status, redirect, payload_type, payload_size, payload_digest, fetch_time_ms, ip_address)
-            VALUES (:id, :pageId, :url, :date, :responseOffset, :responseLength, :requestLength,
+            VALUES (:id, :pageId, :url, :date, :filename, :responseOffset, :responseLength, :requestLength,
                     :status, :redirect, :payloadType, :payloadSize, :payloadDigest, :fetchTimeMs, :ipAddress)""")
     void addResource(@BindMethods Resource resource);
 
@@ -28,4 +28,12 @@ public interface StorageDAO {
             AND payload_digest = :payloadDigest
             LIMIT 1""")
     Resource findResourceByUrlAndPayload(String uri, long payloadSize, String payloadDigest);
+
+    @SqlQuery("""
+            SELECT * FROM resources
+            WHERE url = :uri
+            ORDER BY date DESC
+            LIMIT 1""")
+    Resource findResourceByUrl(String uri);
+
 }

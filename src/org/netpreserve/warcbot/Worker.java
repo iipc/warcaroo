@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
@@ -21,6 +22,7 @@ public class Worker {
     private final RobotsTxtChecker robotsTxtChecker;
     private Thread thread;
     private volatile boolean closed = false;
+    private volatile UUID pageId;
 
     public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker) {
         this.id = id;
@@ -31,7 +33,13 @@ public class Worker {
         this.robotsTxtChecker = robotsTxtChecker;
     }
 
-    private void handleResource(ResourceFetched resourceFetched) {
+    private void handleResource(ResourceFetched resource) {
+        if (pageId == null) return;
+        try {
+            storage.save(pageId, resource);
+        } catch (IOException e) {
+            log.error("Failed to save resource", e);
+        }
     }
 
     void closeAsync() {
@@ -72,7 +80,7 @@ public class Worker {
                 continue;
             }
 
-            var pageId = pageIdGenerator.generate();
+            pageId = pageIdGenerator.generate();
 
             log.info("Running worker for {} [{}]", candidate, pageId);
 

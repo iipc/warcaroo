@@ -13,6 +13,9 @@ public abstract class CDPBase {
         return (T) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[]{domainInterface},
                 (proxy, method, args) -> {
                     var methodParameters = method.getParameters();
+                    if (method.getName().equals("toString")) {
+                        return domainInterface.getSimpleName() + "@" + System.identityHashCode(proxy);
+                    }
                     if (method.getName().startsWith("on") && methodParameters.length == 1) {
                         var type = ((ParameterizedType)method.getGenericParameterTypes()[0]);
                         var eventClass = (Class<?>)type.getActualTypeArguments()[0];

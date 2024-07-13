@@ -32,8 +32,8 @@ public interface Network {
         private final byte[] body;
 
         @JsonCreator
-        public ResponseBody(@JsonProperty("body") String body, @JsonProperty("base64Encode") boolean base64Encode) {
-            if (base64Encode) {
+        public ResponseBody(@JsonProperty("body") String body, @JsonProperty("base64Encoded") boolean base64Encoded) {
+            if (base64Encoded) {
                 this.body = Base64.getDecoder().decode(body);
             } else {
                 this.body = body.getBytes();

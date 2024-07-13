@@ -10,12 +10,16 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
+
+import static java.util.stream.Collectors.joining;
 
 public class BrowserProcess implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(BrowserProcess.class);
@@ -38,31 +42,51 @@ public class BrowserProcess implements AutoCloseable {
     }
 
     public static BrowserProcess start(String executable) throws IOException {
+        boolean usePipe = true;
+        if (!Files.isExecutable(Path.of("/bin/sh"))) usePipe = false;
         for (var executableToTry : executable == null ? BROWSER_EXECUTABLES : List.of(executable)) {
             Process process;
-            try {
-                process = new ProcessBuilder(executableToTry,
+            var command = List.of(executableToTry,
 //                        "--headless=new",
-                        "--remote-debugging-port=0",
-                        "--no-default-browser-check",
-                        "--no-first-run",
-                        "--ash-no-nudges",
-                        "--disable-search-engine-choice-screen",
-                        "--propagate-iph-for-testing",
-                        "--disable-background-networking",
-                        "--disable-sync",
-                        "--use-mock-keychain",
-                        "--user-data-dir=data/profile"
-                )
-                        .inheritIO()
-                        .redirectError(ProcessBuilder.Redirect.PIPE)
-                        .start();
+                    usePipe ? "--remote-debugging-pipe" : "--remote-debugging-port=0",
+//                        "--test-type",
+                    "--no-default-browser-check",
+                    "--no-first-run",
+                    "--no-startup-window",
+                    "--ash-no-nudges",
+                    "--disable-search-engine-choice-screen",
+                    "--propagate-iph-for-testing",
+                    "--disable-background-networking",
+                    "--disable-sync",
+                    "--use-mock-keychain",
+                    "--user-data-dir=data/profile",
+                    "--disable-blink-features=AutomationControlled");
+            try {
+                if (usePipe) {
+                    // in pipe mode the browser expects to read CDP from FD 3 and write CDP to FD 4
+                    // we can't redirect arbitrary FDs in Java, so instead we use stdin and stdout
+                    // and get the shell to set the FDs up for us.
+                    String escapedCommand = command.stream().map(arg -> "'" + arg + "'").collect(joining(" "));
+                    process = new ProcessBuilder("/bin/sh", "-c",
+                            "exec " + escapedCommand + " 3<&0 4>&1 0<&- 1>&2")
+                            .redirectError(ProcessBuilder.Redirect.INHERIT)
+                            .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                            .redirectInput(ProcessBuilder.Redirect.PIPE)
+                            .start();
+                } else {
+                    process = new ProcessBuilder(command)
+                            .inheritIO()
+                            .redirectError(ProcessBuilder.Redirect.PIPE)
+                            .start();
+                }
             } catch (IOException e) {
                 continue; // try another one
             }
             java.lang.Runtime.getRuntime().addShutdownHook(new Thread(process::destroy));
             try {
-                return new BrowserProcess(process, new CDPClient(readDevtoolsUrl(process)));
+                return new BrowserProcess(process, usePipe ?
+                        new CDPClient(process.getInputStream(), process.getOutputStream()) :
+                        new CDPClient(readDevtoolsUrl(process)));
             } catch (Exception e) {
                 process.destroy();
                 throw e;
@@ -96,6 +120,10 @@ public class BrowserProcess implements AutoCloseable {
         }
     }
 
+    public static BrowserProcess start() throws IOException {
+        return start(null);
+    }
+
     @Override
     public void close() {
         if (process != null) {
@@ -112,9 +140,13 @@ public class BrowserProcess implements AutoCloseable {
     }
 
     public BrowserWindow newWindow(Consumer<ResourceFetched> resourceHandler) {
-        var targetId = target.createTarget("about:blank", true).targetId();
+        return newWindow(resourceHandler, null);
+    }
+
+    public BrowserWindow newWindow(Consumer<ResourceFetched> resourceHandler, RequestInterceptor requestInterceptor) {
+        String targetId = target.createTarget("about:blank", true).targetId();
         var sessionId = target.attachToTarget(targetId, true).sessionId();
         var session = new CDPSession(cdp, sessionId);
-        return new BrowserWindow(session, resourceHandler);
+        return new BrowserWindow(session, resourceHandler, requestInterceptor);
     }
 }

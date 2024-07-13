@@ -142,7 +142,7 @@ public class Storage implements Closeable {
         }
     }
 
-    private Resource save(UUID pageId, ResourceFetched fetch) throws IOException {
+    public Resource save(UUID pageId, ResourceFetched fetch) throws IOException {
         var responseDigest = sha1(fetch.responseBody());
         var existingDuplicate = dao.findResourceByUrlAndPayload(fetch.url(),
                 fetch.responseBody().length,
@@ -164,7 +164,7 @@ public class Storage implements Closeable {
                 .date(now)
                 .recordId(uuidGenerator.construct(now.toEpochMilli()))
                 .concurrentTo(warcResponse.id());
-        setBody(warcResponseBuilder, HTTP_REQUEST, fetch.requestHeader(), fetch.requestBody());
+        setBody(warcRequestBuilder, HTTP_REQUEST, fetch.requestHeader(), fetch.requestBody());
         WarcRequest warcRequest = warcRequestBuilder.build();
 
         long responseOffset;

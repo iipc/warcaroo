@@ -24,14 +24,16 @@ public class BrowserWindow implements AutoCloseable {
     private final Map<String, NetworkInfo> networkInfoMap = new ConcurrentHashMap<>();
     private final Map<String, PartialFetch> fetchesByNetworkId = new ConcurrentHashMap<>();
     private final Consumer<ResourceFetched> resourceHandler;
+    private final RequestInterceptor requestInterceptor;
 
-    public BrowserWindow(CDPSession session, Consumer<ResourceFetched> resourceHandler) {
+    public BrowserWindow(CDPSession session, Consumer<ResourceFetched> resourceHandler, RequestInterceptor requestInterceptor) {
         this.resourceHandler = resourceHandler;
         this.browser = session.domain(Browser.class);
         this.fetch = session.domain(Fetch.class);
         this.network = session.domain(Network.class);
         this.page = session.domain(Page.class);
         this.runtime = session.domain(Runtime.class);
+        this.requestInterceptor = requestInterceptor;
 
         network.onRequestWillBeSentExtraInfo(event ->
                 getRequestInfo(event.requestId()).extraRequestHeaders = event.headers());
@@ -42,7 +44,8 @@ public class BrowserWindow implements AutoCloseable {
         fetch.onRequestPaused(this::handleRequestPaused);
 
         network.enable(0, 0, 0);
-        fetch.enable(List.of(new Fetch.RequestPattern(null, null, "Response")));
+        fetch.enable(List.of(new Fetch.RequestPattern(null, null,
+                requestInterceptor == null ? "Response" : "Request")));
     }
 
     private static byte[] formatResponseHeader(Fetch.RequestPaused event, String rawResponseHeader) {
@@ -107,6 +110,32 @@ public class BrowserWindow implements AutoCloseable {
     private void handleRequestPaused(Fetch.RequestPaused event) {
         if (!event.isResponseStage()) {
             log.debug("Request paused {}", event);
+
+            if (requestInterceptor != null) {
+                RequestInterceptor.Response response;
+                try {
+                    response = requestInterceptor.intercept(event.request());
+                } catch (Exception e) {
+                    log.error("Request interceptor threw", e);
+                    response = null;
+                }
+                if (response != null) {
+                    byte[] encodedHeaders = null;
+                    if (response.headers() != null) {
+                        StringBuilder builder = new StringBuilder();
+                        response.headers().map().forEach((name, values) -> {
+                            for (String value : values) {
+                                builder.append(name).append(": ").append(value).append("\0");
+                            }
+                        });
+                        encodedHeaders = builder.toString().getBytes();
+                    }
+                    fetch.fulfillRequest(event.requestId(), response.status(), encodedHeaders,
+                            response.body(), response.reason());
+                    return;
+                }
+            }
+
             fetch.continueRequest(event.requestId(), true);
             return;
         }
@@ -142,12 +171,13 @@ public class BrowserWindow implements AutoCloseable {
         if (event.response().url().startsWith("chrome:")) return; // ignore
         var ipAddress = event.response().remoteIPAddress();
         var rec = fetchesByNetworkId.remove(event.requestId());
+        if (resourceHandler == null) return;
         if (rec == null) {
             log.warn("No fetch for network id {} {}", event.requestId(), event.response().url());
             return;
         }
         long fetchTimeMs = (long) ((event.timestamp() - event.response().timing().requestTime()) * 1000);
-        String responseType = event.response().headers().get("Content-Type");
+        String responseType = event.response().headers().get("content-type");
         if (responseType != null) {
             responseType = responseType.replaceFirst(";.*$", "").strip();
         }
@@ -240,6 +270,11 @@ public class BrowserWindow implements AutoCloseable {
 
     public void navigateToBlank() {
         navigateTo(new Url("about:blank"));
+        try {
+            page.resetNavigationHistory();
+        } catch (CDPException e) {
+            // we might not be attached to a page
+        }
     }
 
     public Url currentUrl() {

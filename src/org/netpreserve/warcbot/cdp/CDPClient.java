@@ -1,6 +1,7 @@
 package org.netpreserve.warcbot.cdp;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -10,10 +11,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.Type;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.WebSocket;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -24,9 +26,8 @@ public class CDPClient extends CDPBase implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(CDPClient.class);
     static final ObjectMapper json = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
             .setSerializationInclusion(JsonInclude.Include.NON_NULL);
-    private static final HttpClient httpClient = HttpClient.newHttpClient();
-    private final WebSocket webSocket;
     private final AtomicLong idSeq = new AtomicLong();
     private final Map<Long, CompletableFuture<JsonNode>> calls = new ConcurrentHashMap<>();
     private final Map<String, Consumer<JsonNode>> listeners = new ConcurrentHashMap<>();
@@ -40,77 +41,48 @@ public class CDPClient extends CDPBase implements AutoCloseable {
             return thread;
         }
     });
+    private final CDPConnection connection;
 
     public CDPClient(URI devtoolsUrl) throws IOException {
-        try {
-            this.webSocket = httpClient.newWebSocketBuilder()
-                    .buildAsync(devtoolsUrl, new WebSocketListener())
-                    .get(10, TimeUnit.SECONDS);
-        } catch (InterruptedException | ExecutionException | TimeoutException e) {
-            throw new RuntimeException(e);
-        }
+        this.connection = new CDPSocket(devtoolsUrl, this::handleMessage);
+    }
+
+    public CDPClient(InputStream inputStream, OutputStream outputStream) {
+        this.connection = new CDPPipe(inputStream, outputStream, this::handleMessage);
     }
 
     @Override
     public void close() {
-        try {
-            webSocket.sendClose(200, "");
-            webSocket.abort();
-        } catch (Exception e) {
-            log.warn("Failed to close web socket", e);
-        }
+        connection.close();
         executor.shutdown();
     }
 
-    private class WebSocketListener implements WebSocket.Listener {
-        private StringBuilder buffer = new StringBuilder();
-
-        @Override
-        public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-            if (!last) {
-                buffer.append(data);
-                webSocket.request(1);
-                return null;
+    private void handleMessage(Result message) {
+        if (message.method != null) {
+            Consumer<JsonNode> handler;
+            if (message.sessionId == null) {
+                handler = listeners.get(message.method);
+            } else {
+                handler = sessionListeners.get(message.sessionId + " " + message.method);
             }
-            if (!buffer.isEmpty()) {
-                buffer.append(data);
-                data = buffer.toString();
-                buffer.setLength(0);
+            if (handler != null) {
+                executor.submit(() -> { try {
+                    handler.accept(message.params());
+                } catch (Exception e) {
+                    log.error("{} handler threw", message.method, e);
+                }});
             }
-//            log.info("CDP RECV: {}", data);
-            try {
-                var message = json.readValue(data.toString(), Result.class);
-                if (message.method != null) {
-                    Consumer<JsonNode> handler;
-                    if (message.sessionId == null) {
-                        handler = listeners.get(message.method);
-                    } else {
-                        handler = sessionListeners.get(message.sessionId + " " + message.method);
-                    }
-                    if (handler != null) {
-                        executor.submit(() -> { try {
-                            handler.accept(message.params());
-                        } catch (Exception e) {
-                            log.error("{} handler threw", message.method, e);
-                        }});
-                    }
+        } else {
+            var future = calls.get(message.id());
+            if (future == null) {
+                log.warn("Received response to unknown call id {}", message.id());
+            } else {
+                if (message.error == null) {
+                    future.complete(message.result);
                 } else {
-                    var future = calls.get(message.id());
-                    if (future == null) {
-                        log.warn("Received response to unknown call id {}", message.id());
-                    } else {
-                        if (message.error == null) {
-                            future.complete(message.result);
-                        } else {
-                            future.completeExceptionally(new CDPException(message.error.code(), message.error.message()));
-                        }
-                    }
+                    future.completeExceptionally(new CDPException(message.error.code(), message.error.message()));
                 }
-            } catch (JsonProcessingException e) {
-                log.warn("Failed to parse response", e);
             }
-            webSocket.request(1);
-            return null;
         }
     }
 
@@ -170,19 +142,17 @@ public class CDPClient extends CDPBase implements AutoCloseable {
         try {
             var future = new CompletableFuture<JsonNode>();
             calls.put(call.id(), future);
-            String data = json.writeValueAsString(call);
-            log.info("CDP SEND: {}", data);
-            webSocket.sendText(data, true);
+            connection.send(call);
             return future;
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 
-    record Call(long id, String method, Map<String, Object> params, String sessionId) {
+    public record Call(long id, String method, Map<String, Object> params, String sessionId) {
     }
 
-    private record Result(long id, JsonNode result, Error error, String method, JsonNode params,
+    record Result(long id, JsonNode result, Error error, String method, JsonNode params,
                           String sessionId) {
     }
 
