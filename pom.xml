@@ -30,6 +30,37 @@
                     <parameters>true</parameters>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <filters>
+                                <filter>
+                                    <artifact>org.xerial:sqlite-jdbc</artifact>
+                                    <excludes>
+                                        <exclude>org/sqlite/native/FreeBSD/</exclude>
+                                        <exclude>org/sqlite/native/Linux/arm/</exclude>
+                                        <exclude>org/sqlite/native/Linux/armv7/</exclude>
+                                        <exclude>org/sqlite/native/Linux/armv6/</exclude>
+                                        <exclude>org/sqlite/native/Linux/ppc64/</exclude>
+                                        <exclude>org/sqlite/native/Linux/x86/</exclude>
+                                        <exclude>org/sqlite/native/Linux-Android/</exclude>
+                                        <exclude>org/sqlite/native/Linux-Musl/</exclude>
+                                        <exclude>org/sqlite/native/Windows/armv7/</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
@@ -78,6 +109,7 @@
             <groupId>org.jetbrains</groupId>
             <artifactId>annotations</artifactId>
             <version>24.1.0</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.github.mizosoft.methanol</groupId>

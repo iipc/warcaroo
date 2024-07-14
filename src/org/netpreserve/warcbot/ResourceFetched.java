@@ -10,5 +10,7 @@ record ResourceFetched(
         long fetchTimeMs,
         int status,
         String redirect,
-        String responseType) {
+        String responseType,
+        String type,
+        String protocol) {
 }

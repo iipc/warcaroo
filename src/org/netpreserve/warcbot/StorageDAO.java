@@ -13,13 +13,15 @@ import java.util.UUID;
 public interface StorageDAO {
     @SqlUpdate("""
             INSERT INTO resources (id, page_id, url, date, filename, response_offset, response_length, request_length,
-             status, redirect, payload_type, payload_size, payload_digest, fetch_time_ms, ip_address)
+               status, redirect, payload_type, payload_size, payload_digest, fetch_time_ms, ip_address, type,
+               protocol)
             VALUES (:id, :pageId, :url, :date, :filename, :responseOffset, :responseLength, :requestLength,
-                    :status, :redirect, :payloadType, :payloadSize, :payloadDigest, :fetchTimeMs, :ipAddress)""")
+                    :status, :redirect, :payloadType, :payloadSize, :payloadDigest, :fetchTimeMs, :ipAddress, :type, 
+                    :protocol)""")
     void addResource(@BindMethods Resource resource);
 
-    @SqlUpdate("INSERT INTO pages (id, url, date, title) VALUES (?, ?, ?, ?)")
-    void addPage(@NotNull UUID id, @NotNull Url url, @NotNull Instant date, String title);
+    @SqlUpdate("INSERT INTO pages (id, url, date, title, visit_time_ms) VALUES (?, ?, ?, ?, ?)")
+    void addPage(@NotNull UUID id, @NotNull Url url, @NotNull Instant date, String title, long visitTimeMs);
 
     @SqlQuery("""
             SELECT * FROM resources

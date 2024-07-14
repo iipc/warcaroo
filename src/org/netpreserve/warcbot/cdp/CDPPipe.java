@@ -15,7 +15,7 @@ public class CDPPipe implements CDPConnection {
     private final Consumer<CDPClient.Result> messageHandler;
 
     public CDPPipe(InputStream inputStream, OutputStream outputStream, Consumer<CDPClient.Result> messageHandler) {
-        this.inputStream = new BufferedInputStream(inputStream, 8192);
+        this.inputStream = inputStream;
         this.outputStream = outputStream;
         this.messageHandler = messageHandler;
         var thread = new Thread(this::run, "CDPPipe");
@@ -33,7 +33,9 @@ public class CDPPipe implements CDPConnection {
                     if (b == 0) break;
                     buffer.write(b);
                 }
-                log.atTrace().log(() -> "<- " + BIG_STRING.matcher(buffer.toString()).replaceAll("\"$1...$2\""));
+                if (log.isTraceEnabled()) {
+                    log.trace("<- {}", BIG_STRING.matcher(buffer.toString()).replaceAll("\"$1...$2\""));
+                }
                 var message = CDPClient.json.readValue(buffer.toByteArray(), CDPClient.Result.class);
                 messageHandler.accept(message);
             }

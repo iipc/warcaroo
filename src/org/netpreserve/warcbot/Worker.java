@@ -82,6 +82,7 @@ public class Worker {
             }
 
             pageId = pageIdGenerator.generate();
+            var startTime = System.nanoTime();
 
             log.info("Running worker for {} [{}]", candidate, pageId);
 
@@ -115,7 +116,9 @@ public class Worker {
                 }
                 frontier.addUrls(links, candidate.depth() + 1, candidate.url());
 
-                storage.dao.addPage(pageId, browserWindow.currentUrl(), Instant.now(), browserWindow.title());
+                var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
+                storage.dao.addPage(pageId, browserWindow.currentUrl(), Instant.now(), browserWindow.title(),
+                        visitTimeMs);
 
                 browserWindow.navigateToBlank();
                 //}

@@ -83,7 +83,9 @@ create table if not exists resources
     payload_size    INTEGER          NOT NULL,
     payload_digest  TEXT,
     fetch_time_ms   INTEGER          NOT NULL,
-    ip_address      TEXT
+    ip_address      TEXT,
+    type            TEXT,
+    protocol        TEXT
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS resources_url_date ON resources (url, date);
@@ -91,10 +93,11 @@ CREATE INDEX IF NOT EXISTS resources_page_id ON resources (page_id);
 
 create table if not exists pages
 (
-    id    TEXT PRIMARY KEY NOT NULL,
-    url   TEXT             NOT NULL,
-    date  INTEGER          NOT NULL,
-    title TEXT
+    id            TEXT PRIMARY KEY NOT NULL,
+    url           TEXT             NOT NULL,
+    date          INTEGER          NOT NULL,
+    title         TEXT,
+    visit_time_ms INTEGER          NOT NULL
 ) STRICT;
 
 create table if not exists robotstxt

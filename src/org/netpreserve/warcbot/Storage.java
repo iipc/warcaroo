@@ -10,6 +10,7 @@ import java.io.ByteArrayInputStream;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.SequenceInputStream;
+import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
@@ -104,7 +105,8 @@ public class Storage implements Closeable {
                     metadata.fetchTimeMs(),
                     httpResponse.status(),
                     httpResponse.headers().first("Location").orElse(null),
-                    httpResponse.contentType().base().toString());
+                    httpResponse.contentType().base().toString(), "RobotsTxt",
+                    response.version() == HttpClient.Version.HTTP_2 ? "http/2" : null);
             Resource resource = save(metadata.pageId(), fetch);
             if (resource != null) resources.add(resource);
         }
@@ -158,6 +160,7 @@ public class Storage implements Closeable {
                 .date(now)
                 .recordId(responseUuid);
         setBody(warcResponseBuilder, HTTP_RESPONSE, fetch.responseHeader(), fetch.responseBody());
+        if (fetch.protocol() != null) warcResponseBuilder.addHeader("WARC-Protocol", fetch.protocol());
         WarcResponse warcResponse = warcResponseBuilder.build();
 
         var warcRequestBuilder = new WarcRequest.Builder(fetch.url())
@@ -188,7 +191,8 @@ public class Storage implements Closeable {
                 fetch.responseType(),
                 fetch.responseBody().length,
                 responseDigest,
-                fetch.fetchTimeMs(), fetch.ipAddress());
+                fetch.fetchTimeMs(), fetch.ipAddress(), fetch.type(),
+                fetch.protocol());
         dao.addResource(resource);
         return resource;
     }

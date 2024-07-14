@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
@@ -79,7 +80,11 @@ public class BrowserWindow implements AutoCloseable {
         builder.append(request.method()).append(" ").append(url.pathAndQuery()).append(" HTTP/1.1\r\n");
 
         if (extraInfoHeaders != null) {
-            extraInfoHeaders.forEach((name, value) -> builder.append(name).append(": ").append(value).append("\r\n"));
+            extraInfoHeaders.forEach((name, value) -> {
+                if (name.equals(":authority")) name = "host";
+                if (name.startsWith(":")) return;
+                builder.append(name).append(": ").append(value).append("\r\n");
+            });
         } else {
             request.headers().forEach((name, value) -> builder.append(name).append(": ").append(value).append("\r\n"));
             if (!request.headers().containsKey("Host")) {
@@ -186,10 +191,14 @@ public class BrowserWindow implements AutoCloseable {
         if (responseType != null) {
             responseType = responseType.replaceFirst(";.*$", "").strip();
         }
+        String protocol = event.response().protocol();
+        if (protocol != null) {
+            protocol = protocol.toLowerCase(Locale.ROOT);
+        }
         var fetch = new ResourceFetched(rec.url(), rec.requestHeader, rec.requestBody, rec.responseHeader,
                 rec.responseBody, ipAddress, fetchTimeMs, event.response().status(),
                 event.response().headers().get("Location"),
-                responseType);
+                responseType, event.type(), protocol);
         resourceHandler.accept(fetch);
     }
 
