@@ -34,7 +34,7 @@ public class Database implements AutoCloseable {
         this("jdbc:sqlite:" + path);
     }
 
-    public Database(String jdbcUrl) throws SQLException, IOException {
+    public Database(String jdbcUrl) throws IOException {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);
         this.dataSource = new HikariDataSource(config);

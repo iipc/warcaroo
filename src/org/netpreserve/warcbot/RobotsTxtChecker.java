@@ -35,7 +35,7 @@ public class RobotsTxtChecker {
         return robots.allows(url, userAgents);
     }
 
-    private RobotsTxt fetch(UUID pageId, URI robotsUri, RobotsTxt prev) throws IOException, SQLException {
+    private RobotsTxt fetch(UUID pageId, URI robotsUri, RobotsTxt prev) throws IOException {
         var now = Instant.now();
         int status;
         byte[] body;

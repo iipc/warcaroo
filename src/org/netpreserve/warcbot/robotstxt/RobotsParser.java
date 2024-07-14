@@ -78,7 +78,7 @@ public class RobotsParser extends Parser {
             Stream.of("dissallow", "dissalow", "disalow", "diasllow", "disallaw")
                 .anyMatch(s -> key.compareToIgnoreCase(s) == 0);
         if (disallowTypoDetected) {
-          logger.atInfo().log("Fixed typo: \"%s\" -> \"%s\"", key, "disallow");
+          logger.atInfo().log("Fixed typo: \"{}\" -> \"{}\"", key, "disallow");
           return DirectiveType.DISALLOW;
         }
 

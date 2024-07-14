@@ -26,22 +26,20 @@ public @interface MustUpdate {
     class Handler implements SqlStatementCustomizerFactory {
         @Override
         public SqlStatementCustomizer createForMethod(Annotation annotation, Class<?> sqlObjectType, Method method) {
-            return stmt -> {
-                stmt.addCustomizer(new StatementCustomizer() {
-                    @Override
-                    public void afterExecution(PreparedStatement stmt, StatementContext ctx) throws SQLException {
-                        long updateCount = stmt.getUpdateCount();
-                        int expectedCount = ((MustUpdate)annotation).value();
-                        if (expectedCount == -1) {
-                            if (updateCount == 0) {
-                                throw new Exception(method.getDeclaringClass().getSimpleName() + "." + method.getName() + "() didn't update any rows");
-                            }
-                        } else if (expectedCount != updateCount) {
-                            throw new Exception(method.getDeclaringClass().getSimpleName() + "." + method.getName() + "() expected to update " + expectedCount + " rows but only updated " + updateCount);
+            return stmt -> stmt.addCustomizer(new StatementCustomizer() {
+                @Override
+                public void afterExecution(PreparedStatement stmt, StatementContext ctx) throws SQLException {
+                    long updateCount = stmt.getUpdateCount();
+                    int expectedCount = ((MustUpdate)annotation).value();
+                    if (expectedCount == -1) {
+                        if (updateCount == 0) {
+                            throw new Exception(method.getDeclaringClass().getSimpleName() + "." + method.getName() + "() didn't update any rows");
                         }
+                    } else if (expectedCount != updateCount) {
+                        throw new Exception(method.getDeclaringClass().getSimpleName() + "." + method.getName() + "() expected to update " + expectedCount + " rows but only updated " + updateCount);
                     }
-                });
-            };
+                }
+            });
         }
     }
 

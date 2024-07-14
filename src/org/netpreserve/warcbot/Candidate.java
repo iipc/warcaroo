@@ -23,6 +23,6 @@ public record Candidate(
         State state
 ) {
     public enum State {
-        PENDING, IN_PROGRESS, CRAWLED, FAILED, ROBOTS_EXCLUDED;
+        PENDING, IN_PROGRESS, CRAWLED, FAILED, ROBOTS_EXCLUDED
     }
 }

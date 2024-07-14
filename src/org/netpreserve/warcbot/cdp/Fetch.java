@@ -1,9 +1,6 @@
 package org.netpreserve.warcbot.cdp;
 
-import org.netpreserve.jwarc.HttpRequest;
-
 import java.util.List;
-import java.util.Map;
 import java.util.function.Consumer;
 
 public interface Fetch {

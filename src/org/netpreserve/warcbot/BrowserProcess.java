@@ -42,8 +42,7 @@ public class BrowserProcess implements AutoCloseable {
     }
 
     public static BrowserProcess start(String executable) throws IOException {
-        boolean usePipe = true;
-        if (!Files.isExecutable(Path.of("/bin/sh"))) usePipe = false;
+        boolean usePipe = Files.isExecutable(Path.of("/bin/sh"));
         for (var executableToTry : executable == null ? BROWSER_EXECUTABLES : List.of(executable)) {
             Process process;
             var command = List.of(executableToTry,

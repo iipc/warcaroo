@@ -26,14 +26,16 @@ public class BrowserWindow implements AutoCloseable {
     private final RequestInterceptor requestInterceptor;
     private final AtomicReference<CompletableFuture<Double>> loadEvent = new AtomicReference<>(new CompletableFuture<>());
     private final IdleMonitor idleMonitor = new IdleMonitor();
+    private final CDPSession cdpSession;
     private String frameId;
 
-    public BrowserWindow(CDPSession session, Consumer<ResourceFetched> resourceHandler, RequestInterceptor requestInterceptor) {
+    public BrowserWindow(CDPSession cdpSession, Consumer<ResourceFetched> resourceHandler, RequestInterceptor requestInterceptor) {
+        this.cdpSession = cdpSession;
         this.resourceHandler = resourceHandler;
-        this.fetch = session.domain(Fetch.class);
-        this.network = session.domain(Network.class);
-        this.page = session.domain(Page.class);
-        this.runtime = session.domain(Runtime.class);
+        this.fetch = cdpSession.domain(Fetch.class);
+        this.network = cdpSession.domain(Network.class);
+        this.page = cdpSession.domain(Page.class);
+        this.runtime = cdpSession.domain(Runtime.class);
         this.requestInterceptor = requestInterceptor;
 
         network.onRequestWillBeSentExtraInfo(event ->
@@ -144,7 +146,7 @@ public class BrowserWindow implements AutoCloseable {
                 }
             }
 
-            idleMonitor.started(event.request().url());
+            idleMonitor.started();
             fetch.continueRequest(event.requestId(), true);
             return;
         }
@@ -174,7 +176,7 @@ public class BrowserWindow implements AutoCloseable {
         }
 
         fetch.continueResponse(event.requestId());
-        idleMonitor.finished(event.request().url());
+        idleMonitor.finished();
     }
 
     private void handleResponseReceived(Network.ResponseReceived event) {
@@ -222,7 +224,10 @@ public class BrowserWindow implements AutoCloseable {
             if (!e.getMessage().contains("Session with given id not found")) {
                 throw e;
             }
+        } catch (Exception e) {
+            // ignore
         }
+        cdpSession.close();
     }
 
     @SuppressWarnings("unchecked")

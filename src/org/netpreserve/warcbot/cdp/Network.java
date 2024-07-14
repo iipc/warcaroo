@@ -2,7 +2,6 @@ package org.netpreserve.warcbot.cdp;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.netpreserve.warcbot.Url;
 
 import java.util.Base64;
 import java.util.List;

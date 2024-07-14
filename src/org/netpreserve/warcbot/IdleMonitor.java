@@ -1,23 +1,18 @@
 package org.netpreserve.warcbot;
 
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 public class IdleMonitor {
     int inflight;
-    Set<String> urls = new HashSet<>();
 
-    public synchronized void started(String url) {
-        urls.add(url);
+    public synchronized void started() {
         inflight++;
         if (inflight == 1) {
             notifyAll();
         }
     }
 
-    public synchronized void finished(String url) {
-        urls.remove(url);
+    public synchronized void finished() {
         inflight--;
         if (inflight < 0) throw new IllegalStateException();
         if (inflight == 0) {
@@ -31,7 +26,6 @@ public class IdleMonitor {
             while (inflight > 0) {
                 long remaining = deadline - System.nanoTime();
                 if (remaining <= 0) {
-                    System.err.println("DEADLINE: " + urls);
                     return;
                 }
                 waitNanos(remaining);

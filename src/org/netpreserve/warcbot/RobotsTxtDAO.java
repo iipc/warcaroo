@@ -4,7 +4,6 @@ import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
-import java.sql.SQLException;
 import java.time.Instant;
 
 @RegisterConstructorMapper(RobotsTxt.class)

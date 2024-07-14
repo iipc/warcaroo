@@ -10,12 +10,12 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CountDownLatch;
 
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
     final int id;
-    final BrowserWindow browserWindow;
+    BrowserWindow browserWindow;
+    private final BrowserProcess browserProcess;
     private final Frontier frontier;
     private final Storage storage;
     private final Database database;
@@ -27,7 +27,7 @@ public class Worker {
 
     public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker) {
         this.id = id;
-        this.browserWindow = browserProcess.newWindow(this::handleResource);
+        this.browserProcess = browserProcess;
         this.frontier = frontier;
         this.storage = storage;
         this.database = database;
@@ -56,10 +56,8 @@ public class Worker {
         } catch (InterruptedException e) {
             // OK
         }
-        try {
+        if (browserWindow != null) {
             browserWindow.close();
-        } catch (Exception e) {
-            log.warn("browser close", e);
         }
         try {
             thread.join(1000);
@@ -92,6 +90,10 @@ public class Worker {
                     continue;
                 }
 
+                if (browserWindow == null) {
+                    browserWindow = browserProcess.newWindow(this::handleResource);
+                }
+
                 //try (var ignored = browser.recordResources(storage, pageId)) {
                 log.info("Nav to {}", candidate.url());
                 browserWindow.navigateTo(candidate.url());
@@ -121,7 +123,6 @@ public class Worker {
                         visitTimeMs);
 
                 browserWindow.navigateToBlank();
-                //}
             } catch (Throwable e) {
                 if (closed) return;
                 frontier.markFailed(candidate, pageId, e);
@@ -141,7 +142,7 @@ public class Worker {
             } catch (Exception e) {
                 log.error("Worker error", e);
             }
-        }, "worker-" + id);
+        }, "Worker-" + id);
         thread.start();
     }
 }

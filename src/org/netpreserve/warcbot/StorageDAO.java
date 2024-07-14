@@ -16,7 +16,7 @@ public interface StorageDAO {
                status, redirect, payload_type, payload_size, payload_digest, fetch_time_ms, ip_address, type,
                protocol)
             VALUES (:id, :pageId, :url, :date, :filename, :responseOffset, :responseLength, :requestLength,
-                    :status, :redirect, :payloadType, :payloadSize, :payloadDigest, :fetchTimeMs, :ipAddress, :type, 
+                    :status, :redirect, :payloadType, :payloadSize, :payloadDigest, :fetchTimeMs, :ipAddress, :type,
                     :protocol)""")
     void addResource(@BindMethods Resource resource);
 

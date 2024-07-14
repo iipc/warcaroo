@@ -22,11 +22,11 @@ public class Frontier {
         this.config = config;
     }
 
-    public boolean addUrl(Url url, int depth, Url via) {
-        return addUrls(Collections.singleton(url), depth, via);
+    public void addUrl(Url url, int depth, Url via) {
+        addUrls(Collections.singleton(url), depth, via);
     }
 
-    public boolean addUrls(Collection<Url> urls, int depth, Url via) {
+    public void addUrls(Collection<Url> urls, int depth, Url via) {
         var queueNames = new HashSet<String>();
         var candidates = new ArrayList<Candidate>();
         for (var url : urls) {
@@ -36,7 +36,7 @@ public class Frontier {
             String queue = queueForUrl(url);
             if (queue == null) {
                 log.warn("No queue for URL {}", url);
-                return false;
+                return;
             }
             queueNames.add(queue);
             candidates.add(new Candidate(queue, url, depth, via, Instant.now(), Candidate.State.PENDING));
@@ -52,7 +52,6 @@ public class Frontier {
             }
         }
         log.info("Added {} new URLs from {} extracted links", novel, candidates.size());
-        return !candidates.isEmpty();
     }
 
     public @Nullable Candidate next(int workerId) {

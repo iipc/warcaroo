@@ -1,6 +1,6 @@
 package org.netpreserve.warcbot;
 
-record ResourceFetched(
+public record ResourceFetched(
         String url,
         byte[] requestHeader,
         byte[] requestBody,

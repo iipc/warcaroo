@@ -19,9 +19,9 @@ public interface Runtime {
                 case "object" -> {
                     try {
                         if (value.isArray()) {
-                            yield CDPClient.json.treeToValue(value, List.class);
+                            yield RPC.JSON.treeToValue(value, List.class);
                         } else {
-                            yield CDPClient.json.treeToValue(value, Map.class);
+                            yield RPC.JSON.treeToValue(value, Map.class);
                         }
                     } catch (JsonProcessingException e) {
                         throw new RuntimeException(e);
