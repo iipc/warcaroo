@@ -63,7 +63,7 @@ class BrowserWindowTest {
              var browser = browserProcess.newWindow(recording -> {
             recordedPaths.add(URI.create(recording.url()).getPath());
             System.out.println("Got resource! " + recording);
-        })) {
+        }, null, null)) {
             browser.navigateToBlank();
 //            browser.fetchResource(new Url("http://127.0.0.1:" + port + "/robots.txt"));
 

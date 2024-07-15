@@ -29,7 +29,7 @@ public class Replay {
                      log.error("Error replaying {}", request.url(), e);
                      return new RequestInterceptor.Response(500, "Error");
                  }
-             })) {
+             }, null)) {
             window.navigateTo(new Url(args[0]));
             Thread.sleep(50000);
         }

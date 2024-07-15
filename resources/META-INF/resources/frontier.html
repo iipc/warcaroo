@@ -1,0 +1,68 @@
+<!doctype html>
+<title>Resources - WarcBot</title>
+<div id="myTable">
+</div>
+
+<style>
+    html, body {
+        height: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    body {
+        font-family: sans-serif;
+    }
+</style>
+<link rel="stylesheet" href="/webjars/tabulator-tables/6.2.1/dist/css/tabulator.min.css">
+<link rel="stylesheet" href="/webjars/tabulator-tables/6.2.1/dist/css/tabulator_simple.min.css">
+<script src="/webjars/tabulator-tables/6.2.1/dist/js/tabulator.js"></script>
+<script src="/webjars/luxon/3.4.4/build/global/luxon.min.js"></script>
+<script>
+    var table = new Tabulator("#myTable", {
+        ajaxURL: '/api/frontier',
+        groupBy: 'queue',
+        height: '100%',
+        layout: "dataFill",
+        pagination: true,
+        paginationMode: "remote",
+        paginationCounter:"rows",
+        paginationSize: 100,
+        sortMode: "remote",
+        persistence: {
+            sort: true
+        },
+        persistenceReaderFunc: function(id, type) {
+            var state = Object.fromEntries(new URLSearchParams(location.hash.substring(1)));
+            if (type === 'sort' && state.sort) {
+                return state.sort.split(',').map(s => s.startsWith("-") ?
+                    {column:s.substring(1), dir:"desc"} : {column:s, dir:"asc"});
+            }
+            return false;
+        },
+        persistenceWriterFunc: function(id, type, data) {
+            var state = Object.fromEntries(new URLSearchParams(location.hash.substring(1)));
+            if (type === 'sort') {
+                state.sort = data.map(item => (item.dir === 'desc' ? '-' : '') + item.column).join(',');
+            }
+            window.history.replaceState(undefined, undefined, "#" + new URLSearchParams(state).toString());
+        },
+        columns: [
+            {title: "Queue", field: "queue"},
+            {title: "Depth", field: "depth"},
+            {title: "State", field: "state"},
+            {title: "URL",  field: "url"},
+            {title: "Via",  field: "via"},
+        ],
+    });
+
+    window.addEventListener('hashchange', event => {
+        table.setSort(table.modules.persistence.load('sort'));
+    });
+
+    function formatSize(n) {
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        let i = 0;
+        while (n >= 1024 && ++i < units.length) n /= 1024;
+        return `${n.toFixed(n > 0 && n < 10 ? 1 : 0)} ${units[i]}`;
+    }
+</script>

@@ -29,7 +29,10 @@ public class BrowserWindow implements AutoCloseable {
     private final CDPSession cdpSession;
     private String frameId;
 
-    public BrowserWindow(CDPSession cdpSession, Consumer<ResourceFetched> resourceHandler, RequestInterceptor requestInterceptor) {
+    public BrowserWindow(CDPSession cdpSession,
+                         Consumer<ResourceFetched> resourceHandler,
+                         RequestInterceptor requestInterceptor,
+                         Tracker tracker) {
         this.cdpSession = cdpSession;
         this.resourceHandler = resourceHandler;
         this.fetch = cdpSession.domain(Fetch.class);
@@ -43,6 +46,11 @@ public class BrowserWindow implements AutoCloseable {
         network.onResponseReceived(this::handleResponseReceived);
         network.onResponseReceivedExtraInfo(event ->
                 getRequestInfo(event.requestId()).rawResponseHeader = event.headersText());
+
+        if (tracker != null) {
+            network.onDataReceived(event -> tracker.updateDownloadedBytes(event.encodedDataLength() > 0 ?
+                    event.encodedDataLength() : event.dataLength()));
+        }
 
         page.onLoadEventFired(event -> loadEvent.get().complete(event.timestamp()));
         page.enable();
@@ -102,7 +110,7 @@ public class BrowserWindow implements AutoCloseable {
         try (var browserProcess = BrowserProcess.start(null);
              var visitor = browserProcess.newWindow(resourceFetched -> {
                  System.out.println("Resource: " + resourceFetched);
-             })) {
+             }, null, null)) {
             //browser.webDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
             visitor.navigateTo(new Url(args[0]));
             visitor.forceLoadLazyImages();

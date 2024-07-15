@@ -1,25 +1,30 @@
 package org.netpreserve.warcbot;
 
+import com.sun.net.httpserver.HttpServer;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 
 public class WarcBot implements AutoCloseable, Crawl {
     private static final Logger log = LoggerFactory.getLogger(WarcBot.class);
-    private final Database db;
+    final Database db;
     private final Frontier frontier;
     private final Storage storage;
     private final HttpClient httpClient;
     private final RobotsTxtChecker robotsTxtChecker;
     private final List<Worker> workers = new ArrayList<>();
     private final BrowserProcess browserProcess;
+    final Tracker tracker;
     private Config config;
 
     public WarcBot(Path dataPath, Config config) throws SQLException, IOException {
@@ -30,6 +35,7 @@ public class WarcBot implements AutoCloseable, Crawl {
         this.storage = new Storage(dataPath, db.storage());
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage, List.of("nla.gov.au_bot", "warcbot"));
         this.browserProcess = BrowserProcess.start(config.getBrowserBinary());
+        this.tracker = new Tracker();
     }
 
     public void close() {
@@ -67,7 +73,7 @@ public class WarcBot implements AutoCloseable, Crawl {
             frontier.addUrl(new Url(seed), 0, null);
         }
         for (int i = 0; i < config.getWorkers(); i++) {
-            workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker));
+            workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker, tracker));
         }
         for (Worker worker : workers) {
             worker.start();
@@ -76,6 +82,7 @@ public class WarcBot implements AutoCloseable, Crawl {
 
     public static void main(String[] args) throws Exception {
         Config config = new Config();
+        Integer port = null;
 
         for (int i = 0; i < args.length; i++) {
             try {
@@ -99,6 +106,7 @@ public class WarcBot implements AutoCloseable, Crawl {
                     case "--browser" -> config.setBrowserBinary(args[++i]);
                     case "--crawl-delay" -> config.setCrawlDelay(Integer.parseInt(args[++i]));
                     case "--include" -> config.addInclude(args[++i]);
+                    case "--port" -> port = Integer.parseInt(args[++i]);
                     case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));
                     case "-A", "--user-agent", "--userAgent" -> config.setUserAgent(args[++i]);
                     case "-w", "--workers" -> config.setWorkers(Integer.parseInt(args[++i]));
@@ -130,7 +138,16 @@ public class WarcBot implements AutoCloseable, Crawl {
                 log.error("Error closing Warcbot", e);
             }
         }, "shutdown-hook"));
-        warcbot.start();
+
+
+        if (port != null) {
+            var httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
+            httpServer.createContext("/", new Webapp(warcbot));
+            httpServer.setExecutor(Executors.newVirtualThreadPerTaskExecutor());
+            httpServer.start();
+        } else {
+            warcbot.start();
+        }
     }
 
     @Override

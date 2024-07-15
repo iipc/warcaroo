@@ -2,6 +2,7 @@ package org.netpreserve.warcbot.cdp;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Base64;
 import java.util.List;
@@ -26,6 +27,8 @@ public interface Network {
     void onResponseReceived(Consumer<ResponseReceived> handler);
 
     void onResponseReceivedExtraInfo(Consumer<ResponseReceivedExtraInfo> handler);
+
+    void onDataReceived(Consumer<DataReceived> handler);
 
     class ResponseBody {
         private final byte[] body;
@@ -168,5 +171,8 @@ public interface Network {
     }
 
     record Initiator() {
+    }
+
+    record DataReceived(String requestId, double timestamp, int dataLength, int encodedDataLength, @Nullable byte[] data) {
     }
 }

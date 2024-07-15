@@ -43,6 +43,22 @@
                         <configuration>
                             <filters>
                                 <filter>
+                                    <artifact>org.webjars.npm:luxon</artifact>
+                                    <includes>
+                                        <include>META-INF/resources/webjars/luxon/*/LICENSE.md</include>
+                                        <include>META-INF/resources/webjars/luxon/*/build/global/luxon.min.js</include>
+                                    </includes>
+                                </filter>
+                                <filter>
+                                    <artifact>org.webjars.npm:tabulator-tables</artifact>
+                                    <includes>
+                                        <include>META-INF/resources/webjars/tabulator-tables/*/LICENSE</include>
+                                        <include>META-INF/resources/webjars/tabulator-tables/*/dist/css/tabulator.min.css</include>
+                                        <include>META-INF/resources/webjars/tabulator-tables/*/dist/css/tabulator_simple.min.css</include>
+                                        <include>META-INF/resources/webjars/tabulator-tables/*/dist/js/tabulator.min.js</include>
+                                    </includes>
+                                </filter>
+                                <filter>
                                     <artifact>org.xerial:sqlite-jdbc</artifact>
                                     <excludes>
                                         <exclude>org/sqlite/native/FreeBSD/</exclude>
@@ -65,6 +81,16 @@
     </build>
 
     <dependencies>
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>tabulator-tables</artifactId>
+            <version>6.2.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>luxon</artifactId>
+            <version>3.4.4</version>
+        </dependency>
         <dependency>
             <groupId>org.jdbi</groupId>
             <artifactId>jdbi3-sqlobject</artifactId>
@@ -119,6 +145,11 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <version>2.17.2</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
             <version>2.17.2</version>
         </dependency>
         <dependency>

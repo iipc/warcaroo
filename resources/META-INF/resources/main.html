@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WarcBot</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+        html, body {
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+        body {
+            font-family: monospace;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #contentFrame {
+            flex-grow: 1;
+            border: none;
+        }
+
+        .logo {
+            font-weight: bold;
+            font-size: 20px;
+            padding: 0 4px;
+        }
+
+        nav.tabs {
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+            background-color: #ffffff;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tabs .tab {
+            display: inline-block;
+            padding: 10px 20px;
+            text-decoration: none;
+            color: #555555;
+            border-radius: 4px 4px 0 0;
+            border: 1px solid transparent;
+            border-bottom: none;
+            background-color: #f1f1f1;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .tabs .tab:hover {
+            background-color: #e0e0e0;
+            color: #333333;
+        }
+
+        .tabs .tab.active {
+            background-color: #ffffff;
+            color: #000000;
+            border-color: #e0e0e0;
+            border-bottom: 2px solid #ffffff;
+            font-weight: bold;
+        }
+
+        .toolbar {
+            cursor: default;
+            background: #b4f3ff;
+            display: flex;
+            gap: 8px;
+            padding: 4px;
+            height: 40px;
+            align-items: stretch;
+            justify-content: space-between;
+
+            .logo {
+                width: 140px;
+                text-align: center;
+                margin-right: 8px;
+            }
+            > nav {
+                display: flex;
+                gap: 4px;
+                align-items: center;
+            }
+
+            button {
+                min-width: 48px;
+                height: 32px;
+            }
+
+            /*.tab {*/
+            /*    display: flex;*/
+            /*    justify-content: center;*/
+            /*    align-items: center;*/
+            /*    min-width: 80px;*/
+            /*    border: 1px solid #999;*/
+            /*    border-radius: 4px;*/
+            /*    background: #eee;*/
+            /*    height: 100%;*/
+            /*    text-decoration: none;*/
+            /*    color: black;*/
+            /*}*/
+
+            /*.tab:hover {*/
+            /*    background: #ccc;*/
+            /*}*/
+
+            /*.tab.active {*/
+            /*    font-weight: bold;*/
+            /*}*/
+        }
+
+        #download-speed {
+            position: relative;
+            width: 100px;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+
+            > canvas {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 1;
+                border: 1px solid #333;
+            }
+            > div {
+                z-index: 2;
+                text-shadow: 1px 1px 1px black;
+            }
+        }
+    </style>
+    <link rel='shortcut icon' type='image/svg+xml' href='warcbot.svg' />
+</head>
+<body>
+
+<div class="toolbar">
+    <nav class="controls">
+        <img src="warcbot.svg" style="height: 140%; position: relative; top: 2px; margin-left: 6px; aspect-ratio: 1">
+        <div class="logo">
+            WarcBot
+        </div>
+        <button title="Start" onclick="fetch('start', {method: 'POST'})">&#9654;</button>
+        <button title="Stop" onclick="fetch('stop', {method: 'POST'})">&#10074;&#10074;</button>
+    </nav>
+    <nav class="tabs">
+        <a class="tab" target="contentFrame" href="frontier.html">Frontier</a>
+        <a class="tab" target="contentFrame" href="pages.html">Pages</a>
+        <a class="tab" target="contentFrame" href="resources.html">Resources</a>
+    </nav>
+    <div id="download-speed">
+        <canvas id="download-speed-sparkline"></canvas>
+        <div id="download-speed-label" title="Download Speed">640 KB/s</div>
+    </div>
+</div>
+
+<iframe id="contentFrame" name="contentFrame" src="pages.html"></iframe>
+
+<script>
+    class Sparkline {
+        constructor(canvasId, maxDataPoints = 50) {
+            this.data = [640*1024, 20, 30, 640*1024];
+            this.maxDataPoints = maxDataPoints;
+            /** @type {HTMLCanvasElement} */
+            this.canvas = document.getElementById(canvasId);
+            /** @type {CanvasRenderingContext2D} */
+            this.ctx = this.canvas.getContext('2d');
+            this.width = this.canvas.width;
+            this.height = this.canvas.height;
+        }
+
+        update(value) {
+            if (this.data.length >= this.maxDataPoints) this.data.shift();
+            this.data.push(value);
+            this.draw();
+        }
+
+        draw() {
+            const dpr = window.devicePixelRatio || 1;
+            const width = this.canvas.width = this.canvas.clientWidth * dpr;
+            const height = this.canvas.height = this.canvas.clientHeight * dpr;
+
+            const ctx = this.ctx;
+            const data = this.data;
+            const max = Math.max(...data);
+            const min = Math.min(...data);
+            const len = data.length;
+
+            // Draw black background
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, width, height);
+
+
+            // Create gradient for the area under the line
+            const gradient = ctx.createLinearGradient(0, 0, 0, height);
+            gradient.addColorStop(0, 'rgba(0, 255, 255, 0.5)');
+            gradient.addColorStop(1, 'rgba(0, 255, 255, 0.2)');
+
+            // Draw line and fill under it
+            ctx.strokeStyle = '#00ffff';
+            ctx.fillStyle = gradient;
+
+            ctx.beginPath();
+            data.forEach((point, i) => {
+                const x = (i / (len - 1)) * width;
+                const y = height - ((point - min) / (max - min)) * height;
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+            ctx.lineWidth = dpr;
+            ctx.stroke();
+            ctx.lineTo(width, height);
+            ctx.lineTo(0, height);
+            ctx.fill();
+        }
+    }
+
+    function formatSpeed(bps) {
+        const units = ['B/s', 'KB/s', 'MB/s', 'GB/s', 'TB/s'];
+        let i = 0;
+        while (bps >= 1024 && ++i < units.length) bps /= 1024;
+        return `${bps.toFixed(bps < 10 ? 1 : 0)} ${units[i]}`;
+    }
+
+    const downloadSpeedSparkline = new Sparkline("download-speed-sparkline");
+    downloadSpeedSparkline.draw();
+
+    const eventSource = new EventSource("events");
+    eventSource.addEventListener("progress", event => {
+        /** @type {{speed: number}} */
+        const data = JSON.parse(event.data);
+        document.getElementById('download-speed-label').innerText = formatSpeed(data.speed);
+        downloadSpeedSparkline.update(data.speed);
+        console.log(event);
+    });
+
+
+    const contentFrame = document.getElementById("contentFrame");
+    const tabLinks = document.querySelectorAll(".toolbar .tab");
+    contentFrame.addEventListener('load', function() {
+        let frameUrl;
+        try {
+            frameUrl = contentFrame.contentWindow.location.href;
+            document.title = contentFrame.contentWindow.document.title;
+        } catch (e) {
+            frameUrl = null;
+            document.title = "WarcBot";
+        }
+        tabLinks.forEach(link => {
+            if (link.href === frameUrl) {
+                link.classList.add('active');
+            } else {
+                link.classList.remove('active');
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

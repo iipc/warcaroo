@@ -1,3 +1,8 @@
 /.idea
 /target
 /data
+/node_modules
+/dependency-reduced-pom.xml
+/package-lock.json
+/package.json
+/*.iml

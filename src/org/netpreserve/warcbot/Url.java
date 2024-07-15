@@ -1,5 +1,7 @@
 package org.netpreserve.warcbot;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import org.netpreserve.urlcanon.ParsedUrl;
 
 import java.net.URI;
@@ -12,6 +14,7 @@ public class Url {
     private URI uri;
     private ParsedUrl parsedUrl;
 
+    @JsonCreator
     public Url(String url) {
         this.url = url;
     }
@@ -41,6 +44,7 @@ public class Url {
         return parse().getScheme();
     }
 
+    @JsonValue
     public String toString() {
         return url;
     }

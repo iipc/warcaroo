@@ -1,12 +1,16 @@
 package org.netpreserve.warcbot;
 
+import com.fasterxml.jackson.annotation.JsonUnwrapped;
+import org.jdbi.v3.core.mapper.Nested;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.BindMethods;
+import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @RegisterConstructorMapper(Resource.class)
@@ -22,6 +26,36 @@ public interface StorageDAO {
 
     @SqlUpdate("INSERT INTO pages (id, url, date, title, visit_time_ms) VALUES (?, ?, ?, ?, ?)")
     void addPage(@NotNull UUID id, @NotNull Url url, @NotNull Instant date, String title, long visitTimeMs);
+
+    @SqlQuery("SELECT COUNT(*) FROM pages")
+    long countPages();
+
+    @RegisterConstructorMapper(Page.class)
+    @RegisterConstructorMapper(PageExt.class)
+    @SqlQuery("""
+            SELECT pages.*,
+              COUNT(resources.id) AS resources,
+              SUM(resources.payload_size) AS size
+            FROM pages
+            LEFT JOIN resources ON pages.id = resources.page_id
+            GROUP BY pages.id <orderBy> LIMIT :limit OFFSET :offset""")
+    List<PageExt> queryPages(@Define String orderBy, int limit, long offset);
+
+    @SqlQuery("SELECT COUNT(*) FROM resources")
+    long countResources();
+
+    @SqlQuery("""
+            SELECT *
+            FROM resources
+            <orderBy> LIMIT :limit OFFSET :offset""")
+    List<Resource> queryResources(@Define String orderBy, int limit, long offset);
+
+    record Page(String id, String url, Instant date, String title, long visitTimeMs) {
+    }
+
+    record PageExt(@Nested @JsonUnwrapped Page page, long resources, long size) {
+    }
+
 
     @SqlQuery("""
             SELECT * FROM resources

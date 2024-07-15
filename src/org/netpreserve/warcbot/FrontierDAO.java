@@ -2,6 +2,7 @@ package org.netpreserve.warcbot;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.BindMethods;
+import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.Timestamped;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
@@ -75,4 +76,16 @@ public interface FrontierDAO {
 
     @SqlUpdate("INSERT INTO errors (page_id, url, date, stacktrace) VALUES (?, ?, ?, ?)")
     void addError(UUID pageId, Url url, Instant date, String stacktrace);
+
+    @SqlQuery("""
+        WITH ranked_frontier AS (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY queue <orderBy>) AS row_num
+            FROM frontier)
+        SELECT *
+        FROM ranked_frontier
+        WHERE row_num <= 5
+        LIMIT :limit
+        OFFSET :offset;
+        """)
+    List<Candidate> queryFrontier(@Define String orderBy, int limit, long offset);
 }
