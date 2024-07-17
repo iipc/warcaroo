@@ -3,6 +3,7 @@ package org.netpreserve.warcbot;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.jupiter.api.Test;
+import org.netpreserve.warcbot.webapp.QueryMapper;
 
 import static org.junit.jupiter.api.Assertions.*;
 

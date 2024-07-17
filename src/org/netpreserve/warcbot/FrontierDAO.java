@@ -1,6 +1,7 @@
 package org.netpreserve.warcbot;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
+import org.jdbi.v3.sqlobject.customizer.BindList;
 import org.jdbi.v3.sqlobject.customizer.BindMethods;
 import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.Timestamped;
@@ -11,9 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.time.Instant;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @RegisterConstructorMapper(Candidate.class)
 public interface FrontierDAO {
@@ -88,4 +87,25 @@ public interface FrontierDAO {
         OFFSET :offset;
         """)
     List<Candidate> queryFrontier(@Define String orderBy, int limit, long offset);
+
+    @SqlQuery("""
+    SELECT * FROM queue_state_counts WHERE queue IN (<queues>)
+    """)
+
+    @RegisterConstructorMapper(QueueStateCount.class)
+    List<QueueStateCount> getQueueStateCounts1(@BindList Set<String> queues);
+
+    default Map<String, Map<Candidate.State, Long>> getQueueStateCounts(@BindList Set<String> queues) {
+        var map = new HashMap<String, Map<Candidate.State, Long>>();
+        for (var qsc: getQueueStateCounts1(queues)) {
+            map.computeIfAbsent(qsc.queue, k -> new HashMap<>()).put(qsc.state, qsc.count);
+        }
+        return map;
+    }
+
+
+    record QueueStateCount(String queue, Candidate.State state, long count) {
+    }
+
+
 }

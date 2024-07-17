@@ -1,6 +1,7 @@
 package org.netpreserve.warcbot;
 
 import com.sun.net.httpserver.HttpServer;
+import org.netpreserve.warcbot.webapp.Webapp;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -10,21 +11,20 @@ import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import org.slf4j.Logger;
 
 public class WarcBot implements AutoCloseable, Crawl {
     private static final Logger log = LoggerFactory.getLogger(WarcBot.class);
-    final Database db;
+    public final Database db;
     private final Frontier frontier;
     private final Storage storage;
     private final HttpClient httpClient;
     private final RobotsTxtChecker robotsTxtChecker;
     private final List<Worker> workers = new ArrayList<>();
     private final BrowserProcess browserProcess;
-    final Tracker tracker;
+    public final Tracker tracker;
     private Config config;
 
     public WarcBot(Path dataPath, Config config) throws SQLException, IOException {

@@ -18,9 +18,39 @@
 <script src="/webjars/tabulator-tables/6.2.1/dist/js/tabulator.js"></script>
 <script src="/webjars/luxon/3.4.4/build/global/luxon.min.js"></script>
 <script>
+    /* queue -> State -> count */
+    /** @type{Object.<string, Object.<string, number>>} */
+    let queueStateCounts = {};
+
     var table = new Tabulator("#myTable", {
         ajaxURL: '/api/frontier',
+        ajaxResponse: function(url, params, response) {
+            queueStateCounts = response.queueStateCounts;
+            return response;
+        },
         groupBy: 'queue',
+        groupHeader: function(queue, count, data, group) {
+            const qs = queueStateCounts[queue];
+            const total = Object.values(qs).reduce((a, b) => a + b, 0)
+            const done = total - (qs.PENDING || 0);
+
+            const header = document.createDocumentFragment();
+
+            const span = document.createElement('span');
+            span.innerText = queue;
+            span.style.minWidth = '200px';
+            span.style.display = 'inline-block';
+            header.append(span);
+
+            const progress = document.createElement('progress');
+            progress.value = done;
+            progress.max = total;
+            header.append(progress);
+
+            header.append(` finished ${done.toLocaleString()} of ${total.toLocaleString()} pages `)
+
+            return header;
+        },
         height: '100%',
         layout: "dataFill",
         pagination: true,

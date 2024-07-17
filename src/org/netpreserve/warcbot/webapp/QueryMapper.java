@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcbot.webapp;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -7,6 +7,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+
+import java.net.URLDecoder;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class QueryMapper {
     private static final ObjectMapper mapper = JsonMapper.builder()
@@ -22,38 +26,38 @@ public class QueryMapper {
             return result;
         }
 
-        for (String pair : queryString.split("&")) {
-            String[] keyValue = pair.split("=", 2);
-            String key = keyValue[0];
-            String value = keyValue.length > 1 ? keyValue[1] : "";
-            String[] keys = key.split("]\\[|\\[|]", -1);
+        for (String param : queryString.split("&")) {
+            String[] pair = param.split("=", 2);
+            String name = pair[0];
+            String value = pair.length > 1 ? pair[1] : "";
+            String[] keys = name.split("]\\[|\\[|]", -1);
             int keysLen = keys.length;
             if (keysLen > 1) {
                 keysLen--; // ignore trailing "" after ]
             }
 
-            JsonNode currentNode = result;
+            JsonNode node = result;
             for (int i = 0; i < keysLen; i++) {
-                String currentKey = keys[i];
-                JsonNode nextNode;
-                if (currentKey.isEmpty()) {
-                    nextNode = null;
-                } else if (currentKey.matches("\\d+")) {
-                    nextNode = currentNode.get(Integer.parseInt(currentKey));
+                String key = URLDecoder.decode(keys[i], UTF_8);
+                JsonNode child;
+                if (key.isEmpty()) {
+                    child = null;
+                } else if (key.matches("\\d+")) {
+                    child = node.get(Integer.parseInt(key));
                 } else {
-                    nextNode = currentNode.get(currentKey);
+                    child = node.get(key);
                 }
-                if (nextNode == null) {
+                if (child == null) {
                     if (i + 1 >= keysLen) {
-                        nextNode = mapper.getNodeFactory().textNode(value);
+                        child = mapper.getNodeFactory().textNode(URLDecoder.decode(value, UTF_8));
                     } else if (keys[i + 1].matches("\\d+|")) {
-                        nextNode = mapper.createArrayNode();
+                        child = mapper.createArrayNode();
                     } else {
-                        nextNode = mapper.createObjectNode();
+                        child = mapper.createObjectNode();
                     }
-                    set(currentNode, currentKey, nextNode);
+                    set(node, key, child);
                 }
-                currentNode = nextNode;
+                node = child;
             }
         }
 

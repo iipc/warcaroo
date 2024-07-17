@@ -1,5 +1,6 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcbot.webapp;
 
+import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,24 +11,26 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.netpreserve.jwarc.WarcDigest;
+import org.netpreserve.warcbot.Candidate;
+import org.netpreserve.warcbot.Resource;
+import org.netpreserve.warcbot.StorageDAO;
+import org.netpreserve.warcbot.WarcBot;
+import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
+import org.netpreserve.warcbot.webapp.Route.GET;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URLConnection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
-import static java.net.URLDecoder.decode;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.stream.Collectors.toMap;
 
 public class Webapp implements HttpHandler {
     private static final Logger log = LoggerFactory.getLogger(Webapp.class);
-    private static final ObjectMapper JSON = new ObjectMapper()
+    static final ObjectMapper JSON = new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
@@ -39,6 +42,8 @@ public class Webapp implements HttpHandler {
                 }
             }));
     private final WarcBot warcbot;
+    private final Map<String, Route> routes = Route.buildMap(this);
+    private final OpenAPI openapi = new OpenAPI(routes);
 
     public Webapp(WarcBot warcbot) {
         this.warcbot = warcbot;
@@ -47,24 +52,17 @@ public class Webapp implements HttpHandler {
     @Override
     public void handle(HttpExchange exchange) throws IOException {
         try {
-            switch (exchange.getRequestURI().getPath()) {
-                case "/" -> home(exchange);
-                case "/events" -> events(exchange);
-                case "/start" -> warcbot.start();
-                case "/api/frontier" -> frontier(exchange);
-                case "/api/pages" -> pages(exchange);
-                case "/api/resources" -> resources(exchange);
-                default -> notFound(exchange);
-            }
-            try {
-                exchange.sendResponseHeaders(200, 0);
-            } catch (IOException e) {
-                // ignore
+            var route = routes.get(exchange.getRequestURI().getPath());
+            if (route != null) {
+                route.handle(exchange);
+            } else {
+                notFound(exchange);
             }
         } catch (IllegalArgumentException e) {
             exchange.getResponseHeaders().set("Content-Type", "text/plain");
             exchange.sendResponseHeaders(400, 0);
             exchange.getResponseBody().write((e.getMessage() + "\n").getBytes(UTF_8));
+            e.printStackTrace();
         } catch (Exception e) {
             log.error("Error handling request " + exchange.getRequestURI(), e);
         } finally {
@@ -72,109 +70,46 @@ public class Webapp implements HttpHandler {
         }
     }
 
-    record Sort(String field, Direction dir) {
-        String sql(Map<String, String> columns) {
-            var column = columns.get(field);
-            if (column == null) throw new IllegalArgumentException("No column for field: " + field);
-            return dir == Direction.DESC ? column + " DESC" : column;
-        }
-
-        enum Direction {
-            ASC, DESC;
-        }
+    @GET("/api")
+    OpenAPI apidoc(HttpExchange exchange) throws IOException {
+        return openapi;
     }
 
-    abstract static class BaseQuery {
-        public long page = 1;
-        public int size = 10;
-        public List<Sort> sort;
-    }
-
-    static class FrontierQuery extends BaseQuery {
-        public String orderBy() {
-            var columns = Map.of("id", "id",
-                    "date", "date",
-                    "url", "url",
-                    "title", "title",
-                    "visitTimeMs", "visit_time_ms",
-                    "resources", "resources",
-                    "size", "size");
-            if (sort == null) return "";
-            return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
-        }
-    }
-
-    private void frontier(HttpExchange exchange) throws IOException {
-        var query = QueryMapper.parse(exchange.getRequestURI().getQuery(), FrontierQuery.class);
+    @GET("/api/frontier")
+    FrontierPage frontier(FrontierQuery query) throws IOException {
         long count = warcbot.db.storage().countPages();
-        sendJson(exchange, new PageData(count / query.size + 1, count,
-                warcbot.db.frontier().queryFrontier(query.orderBy(), query.size, (query.page - 1) * query.size)));
+        var candidates = warcbot.db.frontier().queryFrontier(query.orderBy(), query.size, (query.page - 1) * query.size);
+        var queueNames = candidates.stream().map(Candidate::queue).collect(Collectors.toSet());
+        return new FrontierPage(count / query.size + 1, count, candidates,
+                warcbot.db.frontier().getQueueStateCounts(queueNames));
     }
 
+    public static class FrontierPage extends Page<Candidate> {
+        public final Map<String, Map<Candidate.State, Long>> queueStateCounts;
 
-    static class PagesQuery extends BaseQuery {
-        public String orderBy() {
-            var columns = Map.of("id", "id",
-                    "date", "date",
-                    "url", "url",
-                    "title", "title",
-                    "visitTimeMs", "visit_time_ms",
-                    "resources", "resources",
-                    "size", "size");
-            if (sort == null) return "";
-            return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
+        public FrontierPage(long lastPage, long lastRow, List<Candidate> data,
+                            Map<String, Map<Candidate.State, Long>> queueStateCounts) {
+            super(lastPage, lastRow, data);
+            this.queueStateCounts = queueStateCounts;
         }
     }
 
-    private void pages(HttpExchange exchange) throws IOException {
-        var query = QueryMapper.parse(exchange.getRequestURI().getQuery(), PagesQuery.class);
+    @GET("/api/pages")
+    Page<StorageDAO.PageExt> pages(PagesQuery query) throws IOException {
         long count = warcbot.db.storage().countPages();
-        sendJson(exchange, new PageData(count / query.size + 1, count,
-                warcbot.db.storage().queryPages(query.orderBy(), query.size, (query.page - 1) * query.size)));
+        return new Page(count / query.size + 1, count,
+                warcbot.db.storage().queryPages(query.orderBy(), query.size, (query.page - 1) * query.size));
     }
 
-    static class ResourcesQuery extends BaseQuery {
-        public String orderBy() {
-            var columns = Map.ofEntries(Map.entry("id", "id"),
-                    Map.entry("pageId", "page_id"),
-                    Map.entry("date", "date"),
-                    Map.entry("url", "url"),
-                    Map.entry("filename", "filename"),
-                    Map.entry("responseOffset", "response_offset"),
-                    Map.entry("responseLength", "response_length"),
-                    Map.entry("requestLength", "request_length"),
-                    Map.entry("status", "status"),
-                    Map.entry("redirect", "redirect"),
-                    Map.entry("payloadType", "payload_type"),
-                    Map.entry("payloadSize", "payload_size"),
-                    Map.entry("payloadDigest", "payload_digest"),
-                    Map.entry("fetchTimeMs", "fetch_time_ms"),
-                    Map.entry("ipAddress", "ip_address"),
-                    Map.entry("type", "type"),
-                    Map.entry("protocol", "protocol"));
-            if (sort == null) return "";
-            return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
-        }
-    }
-
-    private void resources(HttpExchange exchange) throws IOException {
-        var query = QueryMapper.parse(exchange.getRequestURI().getQuery(), ResourcesQuery.class);
+    @GET("/api/resources")
+    Page<Resource> resources(ResourcesQuery query) throws IOException {
         long count = warcbot.db.storage().countResources();
-        sendJson(exchange, new PageData(count / query.size + 1, count,
-                warcbot.db.storage().queryResources(query.orderBy(), query.size, (query.page - 1) * query.size)));
+        return new Page(count / query.size + 1, count,
+                warcbot.db.storage().queryResources(query.orderBy(), query.size, (query.page - 1) * query.size));
     }
 
-    record PageData (long last_page, long last_row, Object data) {
-
-    }
-
-    private void sendJson(HttpExchange exchange, Object object) throws IOException {
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        exchange.sendResponseHeaders(200, 0);
-        JSON.writeValue(exchange.getResponseBody(), object);
-    }
-
-    private void home(HttpExchange exchange) throws IOException {
+    @GET("/")
+    void home(HttpExchange exchange) throws IOException {
         var connection = Objects.requireNonNull(getClass().getResource("assets/main.html"), "Resource main.html")
                 .openConnection();
         try (var stream = connection.getInputStream()){
@@ -184,26 +119,8 @@ public class Webapp implements HttpHandler {
         }
     }
 
-    private void notFound(HttpExchange exchange) throws IOException {
-        String path = exchange.getRequestURI().getPath();
-        if (path.contains("..")) throw new IllegalArgumentException();
-
-        var resource = getClass().getResource("/META-INF/resources" + path);
-        if (resource != null) {
-            var connection = resource.openConnection();
-            try (var stream = connection.getInputStream()) {
-                String type = path.endsWith(".mjs") ? "application/javascript" : URLConnection.guessContentTypeFromName(path);
-                exchange.getResponseHeaders().set("Content-Type", type);
-                exchange.sendResponseHeaders(200, connection.getContentLengthLong());
-                stream.transferTo(exchange.getResponseBody());
-                return;
-            }
-        }
-        exchange.sendResponseHeaders(404, 0);
-        exchange.getResponseBody().write("Not found".getBytes(UTF_8));
-    }
-
-    private void events(HttpExchange exchange) throws IOException {
+    @GET("/events")
+    void events(HttpExchange exchange) throws IOException {
         exchange.getResponseHeaders().add("Content-Type", "text/event-stream");
         exchange.getResponseHeaders().add("Cache-Control", "no-cache");
         exchange.sendResponseHeaders(200, 0);
@@ -236,4 +153,118 @@ public class Webapp implements HttpHandler {
             lastTime = time;
         }
     }
+
+    public record Sort(String field, Direction dir) {
+        String sql(Map<String, String> columns) {
+            var column = columns.get(field);
+            if (column == null) throw new IllegalArgumentException("No column for field: " + field);
+            return dir == Direction.DESC ? column + " DESC" : column;
+        }
+
+        public enum Direction {
+            ASC, DESC;
+        }
+    }
+
+    abstract static class BaseQuery {
+        @Doc("Page number of results to return. Starting from 1.")
+        public long page = 1;
+        @Doc("How many results to return per page.")
+        public int size = 10;
+        @Doc("Fields to order the results by.")
+        public List<Sort> sort;
+    }
+
+    static class FrontierQuery extends BaseQuery {
+        public String orderBy() {
+            var columns = Map.of("id", "id",
+                    "date", "date",
+                    "url", "url",
+                    "title", "title",
+                    "visitTimeMs", "visit_time_ms",
+                    "resources", "resources",
+                    "size", "size");
+            if (sort == null) return "";
+            return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
+        }
+    }
+
+    static class PagesQuery extends BaseQuery {
+        public String orderBy() {
+            var columns = Map.of("id", "id",
+                    "date", "date",
+                    "url", "url",
+                    "title", "title",
+                    "visitTimeMs", "visit_time_ms",
+                    "resources", "resources",
+                    "size", "size");
+            if (sort == null) return "";
+            return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
+        }
+    }
+
+    static class ResourcesQuery extends BaseQuery {
+        public String orderBy() {
+            var columns = Map.ofEntries(Map.entry("id", "id"),
+                    Map.entry("pageId", "page_id"),
+                    Map.entry("date", "date"),
+                    Map.entry("url", "url"),
+                    Map.entry("filename", "filename"),
+                    Map.entry("responseOffset", "response_offset"),
+                    Map.entry("responseLength", "response_length"),
+                    Map.entry("requestLength", "request_length"),
+                    Map.entry("status", "status"),
+                    Map.entry("redirect", "redirect"),
+                    Map.entry("payloadType", "payload_type"),
+                    Map.entry("payloadSize", "payload_size"),
+                    Map.entry("payloadDigest", "payload_digest"),
+                    Map.entry("fetchTimeMs", "fetch_time_ms"),
+                    Map.entry("ipAddress", "ip_address"),
+                    Map.entry("type", "type"),
+                    Map.entry("protocol", "protocol"));
+            if (sort == null) return "";
+            return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
+        }
+    }
+
+    public static class Page<T> {
+        @JsonPropertyDescription("Index of the last page of results.")
+        @Doc(example = "5")
+        public final long last_page;
+        @Doc(example = "101")
+        public final long last_row;
+        public final List<T> data;
+
+        public Page(long lastPage, long lastRow, List<T> data) {
+            last_page = lastPage;
+            last_row = lastRow;
+            this.data = data;
+        }
+    }
+
+    private void sendJson(HttpExchange exchange, Object object) throws IOException {
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.sendResponseHeaders(200, 0);
+        JSON.writeValue(exchange.getResponseBody(), object);
+    }
+
+    private void notFound(HttpExchange exchange) throws IOException {
+        String path = exchange.getRequestURI().getPath();
+        if (path.contains("..")) throw new IllegalArgumentException();
+
+        var resource = getClass().getResource("/META-INF/resources" + path);
+        if (resource != null) {
+            var connection = resource.openConnection();
+            try (var stream = connection.getInputStream()) {
+                String type = path.endsWith(".mjs") ? "application/javascript" : URLConnection.guessContentTypeFromName(path);
+                exchange.getResponseHeaders().set("Content-Type", type);
+                exchange.sendResponseHeaders(200, connection.getContentLengthLong());
+                stream.transferTo(exchange.getResponseBody());
+                return;
+            }
+        }
+        exchange.sendResponseHeaders(404, 0);
+        exchange.getResponseBody().write("Not found".getBytes(UTF_8));
+    }
+
 }
