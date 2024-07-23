@@ -91,7 +91,7 @@ public class Crawl implements AutoCloseable {
                 frontier.addUrl(new Url(seed), 0, null);
             }
             for (int i = 0; i < config.getWorkers(); i++) {
-                workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker, tracker));
+                workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker, tracker, config));
             }
             for (Worker worker : workers) {
                 worker.start();

@@ -16,6 +16,7 @@ import java.util.function.Consumer;
 
 public class BrowserWindow implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(BrowserWindow.class);
+    private final Emulation emulation;
     private final Page page;
     private final Runtime runtime;
     private final AtomicReference<Navigation> currentNavigation = new AtomicReference<>();
@@ -35,6 +36,10 @@ public class BrowserWindow implements AutoCloseable {
         }
         if (!navigation.frameId.equals(event.frameId())) return;
         navigation.handleLifecycleEvent(event);
+    }
+
+    public void setUserAgent(String userAgent) {
+        emulation.setUserAgentOverride(userAgent);
     }
 
     public record Navigation(
@@ -61,6 +66,7 @@ public class BrowserWindow implements AutoCloseable {
                          RequestHandler requestHandler,
                          Tracker tracker) {
         this.cdpSession = cdpSession;
+        this.emulation = cdpSession.domain(Emulation.class);
         this.page = cdpSession.domain(Page.class);
         this.runtime = cdpSession.domain(Runtime.class);
         this.requestInterceptor = new RequestInterceptor(cdpSession, idleMonitor, tracker, requestHandler,

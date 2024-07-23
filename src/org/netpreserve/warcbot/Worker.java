@@ -24,11 +24,12 @@ public class Worker {
     private final NoArgGenerator pageIdGenerator = Generators.timeBasedEpochGenerator();
     private final RobotsTxtChecker robotsTxtChecker;
     private final Tracker tracker;
+    private final Config config;
     private Thread thread;
     private volatile boolean closed = false;
     private volatile UUID pageId;
 
-    public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker, Tracker tracker) {
+    public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker, Tracker tracker, Config config) {
         this.id = id;
         this.browserProcess = browserProcess;
         this.frontier = frontier;
@@ -36,6 +37,7 @@ public class Worker {
         this.database = database;
         this.robotsTxtChecker = robotsTxtChecker;
         this.tracker = tracker;
+        this.config = config;
     }
 
     private void handleResource(ResourceFetched resource) {
@@ -102,6 +104,7 @@ public class Worker {
                 if (browserWindow == null) {
                     browserWindow = browserProcess.newWindow(this::handleResource, null, tracker);
                 }
+                browserWindow.setUserAgent(config.getUserAgent());
 
                 //try (var ignored = browser.recordResources(storage, pageId)) {
                 log.info("Nav to {}", candidate.url());
