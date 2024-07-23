@@ -41,6 +41,13 @@ public class Storage implements Closeable {
         filename = "warcbot-" + DATE_FORMAT.format(Instant.now()) + "-" + randomId() + ".warc.gz";
         warcWriter = new WarcWriter(FileChannel.open(directory.resolve(filename),
                 WRITE, CREATE, TRUNCATE_EXISTING), WarcCompression.GZIP);
+        Warcinfo warcinfo = new Warcinfo.Builder()
+                .filename(filename)
+                .fields(Map.of("software", List.of("warcbot"),
+                        "format", List.of("WARC File Format 1.0"),
+                        "conformsTo", List.of("https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.0/")))
+                .build();
+        warcWriter.write(warcinfo);
         this.dao = dao;
         this.uuidGenerator = Generators.timeBasedEpochGenerator();
     }
@@ -77,7 +84,8 @@ public class Storage implements Closeable {
      * to the previous response in the chain) and saves each response along with its associated request.
      * </p>
      */
-    public List<Resource> save(Resource.Metadata metadata, java.net.http.HttpResponse<byte[]> responseChain) throws IOException {
+    public List<Resource> save(Resource.Metadata metadata,
+                               java.net.http.HttpResponse<byte[]> responseChain) throws IOException {
         // walk the response chain backwards and then reverse it so the responses are in order they were made
         var responses = new ArrayList<java.net.http.HttpResponse<byte[]>>();
         for (var response = responseChain; response != null; response = response.previousResponse().orElse(null)) {
@@ -122,24 +130,12 @@ public class Storage implements Closeable {
         return map;
     }
 
-    private ReadableByteChannel newChannel(byte[] header, byte[] body) {
-        if (body == null) return Channels.newChannel(new ByteArrayInputStream(header));
-        return Channels.newChannel(
-                new SequenceInputStream(new ByteArrayInputStream(header),
-                new ByteArrayInputStream(body)));
-    }
-
-    private long messageLength(byte[] header, byte[] body) {
-        if (body == null) return header.length;
-        return header.length + body.length;
-    }
-
-    private void setBody(WarcTargetRecord.Builder<?,?> builder, MediaType type, byte[] header, byte[] payload) {
+    private void setBody(WarcTargetRecord.Builder<?, ?> builder, MediaType type, byte[] header, byte[] payload) {
         if (payload == null) {
             builder.body(type, header);
         } else {
             builder.body(type, Channels.newChannel(new SequenceInputStream(new ByteArrayInputStream(header),
-                            new ByteArrayInputStream(payload))), header.length + payload.length);
+                    new ByteArrayInputStream(payload))), header.length + payload.length);
             builder.payloadDigest(sha1(payload));
         }
     }
