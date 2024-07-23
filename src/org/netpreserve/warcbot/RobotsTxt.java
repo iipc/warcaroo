@@ -2,6 +2,7 @@ package org.netpreserve.warcbot;
 
 import org.netpreserve.warcbot.robotstxt.RobotsParseHandler;
 import org.netpreserve.warcbot.robotstxt.RobotsParser;
+import org.netpreserve.warcbot.util.Url;
 
 import java.time.Instant;
 import java.util.List;

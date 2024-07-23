@@ -1,6 +1,7 @@
 package org.netpreserve.warcbot;
 
 import org.junit.jupiter.api.Test;
+import org.netpreserve.warcbot.util.Url;
 
 import java.io.IOException;
 import java.sql.SQLException;

@@ -2,6 +2,7 @@ package org.netpreserve.warcbot;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
+import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,6 +11,7 @@ import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeoutException;
 
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
@@ -45,6 +47,11 @@ public class Worker {
         }
     }
 
+
+    public void closeAsyncGraceful() {
+        closed = true;
+    }
+
     void closeAsync() {
         if (closed) return;
         closed = true;
@@ -54,7 +61,7 @@ public class Worker {
     void close() {
         closeAsync();
         try {
-            thread.join(1000);
+            thread.join(10000);
         } catch (InterruptedException e) {
             // OK
         }
@@ -68,7 +75,7 @@ public class Worker {
         }
     }
 
-    void run() throws SQLException, IOException, InterruptedException {
+    void run() throws SQLException, IOException, InterruptedException, TimeoutException, NavigationException {
         while (!closed) {
             var candidate = frontier.next(id);
             if (candidate == null) {
@@ -110,7 +117,7 @@ public class Worker {
                 log.info("Scrolling");
                 browserWindow.scrollToBottom();
 
-                browserWindow.waitForNetworkIdle();
+                browserWindow.waitForRequestInterceptorIdle();
 
                 List<Url> links = browserWindow.extractLinks();
                 if (log.isTraceEnabled()) {

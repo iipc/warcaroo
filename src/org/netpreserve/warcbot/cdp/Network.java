@@ -2,11 +2,13 @@ package org.netpreserve.warcbot.cdp;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonValue;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public interface Network {
@@ -47,9 +49,21 @@ public interface Network {
         }
     }
 
+    record LoaderId(@JsonValue String value) {
+        @JsonCreator
+        public LoaderId {
+            Objects.requireNonNull(value);
+        }
+    }
+
+    record MonotonicTime(@JsonValue double value) {
+        @JsonCreator
+        public MonotonicTime {}
+    }
+
     record RequestWillBeSent(
             String requestId,
-            String loaderId,
+            LoaderId loaderId,
             String documentURL,
             Request request,
             double timestamp,
@@ -72,7 +86,7 @@ public interface Network {
 
     record ResponseReceived(
             String requestId,
-            String loaderId,
+            LoaderId loaderId,
             double timestamp,
             String type,
             Response response,

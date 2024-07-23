@@ -9,6 +9,7 @@ import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.netpreserve.jwarc.WarcDigest;
+import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

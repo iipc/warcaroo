@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.victools.jsonschema.generator.*;
 import com.github.victools.jsonschema.generator.impl.module.SimpleTypeModule;
 import com.github.victools.jsonschema.module.jackson.JacksonModule;
-import org.netpreserve.warcbot.Url;
+import org.netpreserve.warcbot.util.Url;
 
 import java.lang.annotation.Retention;
 import java.lang.reflect.Method;
@@ -56,6 +56,8 @@ public class OpenAPI {
         String value() default "";
 
         String example() default "";
+
+        String summary() default "";
     }
 
     public static class Info {
@@ -75,25 +77,57 @@ public class OpenAPI {
         }
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class Operation {
         public final String operationId;
         public final List<Parameter> parameters = new ArrayList<>();
         public final Map<String, Response> responses = new TreeMap<>();
+        public final String description;
+        public final String summary;
 
         public Operation(Method method, SchemaBuilder schemaBuilder) {
             this.operationId = method.getName();
-            var queryClass = method.getParameterTypes()[0];
-            for (var field : queryClass.getFields()) {
-                var doc = field.getAnnotation(Doc.class);
-                parameters.add(new Parameter(field.getName(), "query",
-                        doc == null ? null : doc.value(),
-                        schemaBuilder.createSchemaReference(field.getGenericType()),
-                        doc == null || doc.example().isEmpty() ? null : doc.example()));
+
+            {
+                Doc doc = method.getAnnotation(Doc.class);
+                if (doc != null) {
+                    this.summary = doc.summary().isEmpty() ? null : doc.summary();
+                    this.description = doc.value().isEmpty() ? null : doc.value();
+                } else {
+                    this.description = null;
+                    this.summary = null;
+                }
             }
 
-            Response response = new Response();
-            responses.put("200", response);
-            response.content.put("application/json", new MediaType(schemaBuilder.createSchemaReference(method.getGenericReturnType())));
+            if (method.getParameterCount() > 0) {
+                var queryClass = method.getParameterTypes()[0];
+                for (var field : queryClass.getFields()) {
+                    var doc = field.getAnnotation(Doc.class);
+                    parameters.add(new Parameter(field.getName(), "query",
+                            doc == null ? null : doc.value(),
+                            schemaBuilder.createSchemaReference(field.getGenericType()),
+                            doc == null || doc.example().isEmpty() ? null : doc.example()));
+                }
+            }
+
+            {
+                Response response = new Response();
+                responses.put("200", response);
+                if (!method.getReturnType().equals(void.class)) {
+                    ObjectNode schema = schemaBuilder.createSchemaReference(method.getGenericReturnType());
+                    response.content.put("application/json", new MediaType(schema));
+                }
+            }
+
+            for (var ex : method.getExceptionTypes()) {
+                var docAnno = ex.getAnnotation(Doc.class);
+                var errorAnno = ex.getAnnotation(Route.HttpError.class);
+                if (errorAnno != null) {
+                    Response response = new Response();
+                    response.description = docAnno == null ? ex.getSimpleName() : docAnno.value();
+                    responses.put(String.valueOf(errorAnno.value()), response);
+                }
+            }
         }
     }
 
@@ -106,10 +140,13 @@ public class OpenAPI {
             Object example) {
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class Response {
+        public String description;
         public Map<String, MediaType> content = new TreeMap<>();
     }
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class MediaType {
         public final ObjectNode schema;
 

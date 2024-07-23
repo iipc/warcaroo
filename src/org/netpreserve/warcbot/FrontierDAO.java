@@ -10,6 +10,8 @@ import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.netpreserve.warcbot.util.MustUpdate;
+import org.netpreserve.warcbot.util.Url;
 
 import java.time.Instant;
 import java.util.*;

@@ -14,7 +14,7 @@ import org.netpreserve.jwarc.WarcDigest;
 import org.netpreserve.warcbot.Candidate;
 import org.netpreserve.warcbot.Resource;
 import org.netpreserve.warcbot.StorageDAO;
-import org.netpreserve.warcbot.WarcBot;
+import org.netpreserve.warcbot.Crawl;
 import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
 import org.netpreserve.warcbot.webapp.Route.GET;
 import org.slf4j.Logger;
@@ -27,6 +27,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.netpreserve.warcbot.webapp.Route.*;
 
 public class Webapp implements HttpHandler {
     private static final Logger log = LoggerFactory.getLogger(Webapp.class);
@@ -41,12 +42,13 @@ public class Webapp implements HttpHandler {
                     gen.writeString(value.toString());
                 }
             }));
-    private final WarcBot warcbot;
-    private final Map<String, Route> routes = Route.buildMap(this);
+    static final ObjectMapper JSON_NO_INDENT = JSON.copy().disable(SerializationFeature.INDENT_OUTPUT);
+    private final Crawl crawl;
+    private final Map<String, Route> routes = buildMap(this);
     private final OpenAPI openapi = new OpenAPI(routes);
 
-    public Webapp(WarcBot warcbot) {
-        this.warcbot = warcbot;
+    public Webapp(Crawl crawl) {
+        this.crawl = crawl;
     }
 
     @Override
@@ -77,11 +79,11 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/frontier")
     FrontierPage frontier(FrontierQuery query) throws IOException {
-        long count = warcbot.db.storage().countPages();
-        var candidates = warcbot.db.frontier().queryFrontier(query.orderBy(), query.size, (query.page - 1) * query.size);
+        long count = crawl.db.storage().countPages();
+        var candidates = crawl.db.frontier().queryFrontier(query.orderBy(), query.size, (query.page - 1) * query.size);
         var queueNames = candidates.stream().map(Candidate::queue).collect(Collectors.toSet());
         return new FrontierPage(count / query.size + 1, count, candidates,
-                warcbot.db.frontier().getQueueStateCounts(queueNames));
+                crawl.db.frontier().getQueueStateCounts(queueNames));
     }
 
     public static class FrontierPage extends Page<Candidate> {
@@ -96,21 +98,21 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/pages")
     Page<StorageDAO.PageExt> pages(PagesQuery query) throws IOException {
-        long count = warcbot.db.storage().countPages();
+        long count = crawl.db.storage().countPages();
         return new Page(count / query.size + 1, count,
-                warcbot.db.storage().queryPages(query.orderBy(), query.size, (query.page - 1) * query.size));
+                crawl.db.storage().queryPages(query.orderBy(), query.size, (query.page - 1) * query.size));
     }
 
     @GET("/api/resources")
     Page<Resource> resources(ResourcesQuery query) throws IOException {
-        long count = warcbot.db.storage().countResources();
+        long count = crawl.db.storage().countResources();
         return new Page(count / query.size + 1, count,
-                warcbot.db.storage().queryResources(query.orderBy(), query.size, (query.page - 1) * query.size));
+                crawl.db.storage().queryResources(query.orderBy(), query.size, (query.page - 1) * query.size));
     }
 
     @GET("/")
     void home(HttpExchange exchange) throws IOException {
-        var connection = Objects.requireNonNull(getClass().getResource("assets/main.html"), "Resource main.html")
+        var connection = Objects.requireNonNull(getClass().getResource("/META-INF/resources/main.html"), "Resource main.html")
                 .openConnection();
         try (var stream = connection.getInputStream()){
             exchange.getResponseHeaders().set("Content-Type", "text/html");
@@ -128,7 +130,7 @@ public class Webapp implements HttpHandler {
         double smoothingFactor = 0.05;
         double averageDownloadSpeed = 0;
         long lastTime = System.nanoTime();
-        long lastBytes = warcbot.tracker.downloadedBytes();
+        long lastBytes = crawl.tracker.downloadedBytes();
         while (true) {
             try {
                 Thread.sleep(1000);
@@ -136,7 +138,7 @@ public class Webapp implements HttpHandler {
                 throw new RuntimeException(e);
             }
             long time = System.nanoTime();
-            long bytes = warcbot.tracker.downloadedBytes();
+            long bytes = crawl.tracker.downloadedBytes();
 
             long elapsed = time - lastTime;
             long bytesDelta = bytes - lastBytes;
@@ -145,13 +147,28 @@ public class Webapp implements HttpHandler {
             averageDownloadSpeed = smoothingFactor * downloadSpeed + (1 - smoothingFactor) * averageDownloadSpeed;
 
             writer.write("event: progress\ndata: ");
-            JSON.writeValue(writer, Map.of("speed", averageDownloadSpeed));
+            JSON_NO_INDENT.writeValue(writer, Map.of("speed", averageDownloadSpeed,
+                    "state", crawl.state()));
             writer.write("\n\n");
             writer.flush();
 
             lastBytes = bytes;
             lastTime = time;
         }
+    }
+
+    @POST("/api/start")
+    @Doc(summary = "Start the crawl")
+    public void start() throws Crawl.BadStateException {
+        crawl.start();
+    }
+
+    @POST("/api/stop")
+    @Doc(summary = "Stop the crawl",
+            value = "Waits for currently in progress page processing to complete. Once stopped the crawl can be " +
+                    "started again later.")
+    public void stop() throws Crawl.BadStateException {
+        crawl.stop();
     }
 
     public record Sort(String field, Direction dir) {
@@ -257,7 +274,7 @@ public class Webapp implements HttpHandler {
             var connection = resource.openConnection();
             try (var stream = connection.getInputStream()) {
                 String type = path.endsWith(".mjs") ? "application/javascript" : URLConnection.guessContentTypeFromName(path);
-                exchange.getResponseHeaders().set("Content-Type", type);
+                if (type != null) exchange.getResponseHeaders().set("Content-Type", type);
                 exchange.sendResponseHeaders(200, connection.getContentLengthLong());
                 stream.transferTo(exchange.getResponseBody());
                 return;

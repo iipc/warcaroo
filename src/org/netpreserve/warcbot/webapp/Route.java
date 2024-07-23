@@ -2,17 +2,27 @@ package org.netpreserve.warcbot.webapp;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
+import org.netpreserve.warcbot.WarcBotException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
+import java.io.*;
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
+import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Route implements HttpHandler {
+    private static final Logger log = LoggerFactory.getLogger(Route.class);
     private final Object controller;
     final Map<String, Method> methods = new HashMap<>();
 
@@ -46,31 +56,73 @@ public class Route implements HttpHandler {
             exchange.sendResponseHeaders(405, -1);
             return;
         }
-        var type = method.getParameterTypes()[0];
-        Object arg;
-        if (type == HttpExchange.class) {
-            arg = exchange;
-        } else {
-            arg = QueryMapper.parse(exchange.getRequestURI().getQuery(), type);
+        var args = new ArrayList<>();
+        for (var type : method.getParameterTypes()) {
+            if (type == HttpExchange.class) {
+                args.add(exchange);
+            } else {
+                args.add(QueryMapper.parse(exchange.getRequestURI().getQuery(), type));
+            }
         }
         Object result;
         try {
-            result = method.invoke(controller, arg);
-        } catch (IllegalAccessException | InvocationTargetException e) {
+            result = method.invoke(controller, args.toArray());
+        } catch (InvocationTargetException e) {
+            var cause = e.getCause();
+            if (cause instanceof IOException && "Broken pipe".equals(cause.getMessage())) {
+                // client hung up
+                return;
+            }
+            log.error("Error invoking " + method, e.getCause());
+            int status = 500;
+            var errorAnnotation = cause.getClass().getAnnotation(HttpError.class);
+            if (errorAnnotation != null) {
+                status = errorAnnotation.value();
+            }
+            StringWriter writer = new StringWriter();
+            cause.printStackTrace(new PrintWriter(writer));
+            var body = writer.toString()
+                    .replaceFirst("(?s)\n\tat org\\.netpreserve\\.warcbot\\.webapp\\.Webapp\\.handle.*", "\n")
+                    .replaceAll("\n\tat java\\.base/jdk\\.internal\\.reflect\\..*", "")
+                    .replaceAll("\n\tat java\\.base/java\\.lang\\.reflect\\.Method\\.invoke.*", "")
+                    .getBytes(UTF_8);
+            exchange.getResponseHeaders().add("Content-Type", "text/plain");
+            exchange.sendResponseHeaders(status, body.length);
+            exchange.getResponseBody().write(body);
+            return;
+        } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        exchange.sendResponseHeaders(200, 0);
-        Webapp.JSON.writeValue(exchange.getResponseBody(), result);
+        if (result != null) {
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, 0);
+            Webapp.JSON.writeValue(exchange.getResponseBody(), result);
+        } else {
+            try {
+                exchange.sendResponseHeaders(200, -1);
+            } catch (IOException e) {
+                if (!e.getMessage().contains("headers already sent")) {
+                    throw e;
+                }
+            }
+        }
     }
 
+    @Target(METHOD)
     @Retention(RUNTIME)
     public @interface GET {
         String value();
     }
 
+    @Target(METHOD)
     @Retention(RUNTIME)
     public @interface POST {
         String value();
+    }
+
+    @Target(TYPE)
+    @Retention(RUNTIME)
+    public @interface HttpError {
+        int value();
     }
 }

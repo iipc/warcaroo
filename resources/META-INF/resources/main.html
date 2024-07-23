@@ -146,8 +146,8 @@
         <div class="logo">
             WarcBot
         </div>
-        <button title="Start" onclick="fetch('start', {method: 'POST'})">&#9654;</button>
-        <button title="Stop" onclick="fetch('stop', {method: 'POST'})">&#10074;&#10074;</button>
+        <button id=startButton title="Start" onclick="fetch('api/start', {method: 'POST'})">&#9654;</button>
+        <button id=stopButton title="Stop" onclick="fetch('api/stop', {method: 'POST'})">&#10074;&#10074;</button>
     </nav>
     <nav class="tabs">
         <a class="tab" target="contentFrame" href="frontier.html">Frontier</a>
@@ -160,7 +160,7 @@
     </div>
 </div>
 
-<iframe id="contentFrame" name="contentFrame" src="pages.html"></iframe>
+<iframe id="contentFrame" name="contentFrame" src="frontier.html"></iframe>
 
 <script>
     class Sparkline {
@@ -236,11 +236,12 @@
 
     const eventSource = new EventSource("events");
     eventSource.addEventListener("progress", event => {
-        /** @type {{speed: number}} */
+        /** @type {{speed: number, state: string}} */
         const data = JSON.parse(event.data);
         document.getElementById('download-speed-label').innerText = formatSpeed(data.speed);
         downloadSpeedSparkline.update(data.speed);
-        console.log(event);
+        document.getElementById('startButton').disabled = data.state !== "STOPPED";
+        document.getElementById('stopButton').disabled = data.state !== "RUNNING";
     });
 
 

@@ -14,7 +14,7 @@
 
 package org.netpreserve.warcbot.robotstxt;
 
-import org.netpreserve.warcbot.Url;
+import org.netpreserve.warcbot.util.Url;
 
 import java.net.URI;
 import java.util.Collections;

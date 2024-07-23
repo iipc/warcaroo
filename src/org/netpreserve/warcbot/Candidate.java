@@ -1,6 +1,7 @@
 package org.netpreserve.warcbot;
 
 import org.jetbrains.annotations.NotNull;
+import org.netpreserve.warcbot.util.Url;
 
 import java.time.Instant;
 

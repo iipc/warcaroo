@@ -8,6 +8,7 @@ import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jetbrains.annotations.NotNull;
+import org.netpreserve.warcbot.util.Url;
 
 import java.time.Instant;
 import java.util.List;

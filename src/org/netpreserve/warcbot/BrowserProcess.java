@@ -1,5 +1,6 @@
 package org.netpreserve.warcbot;
 
+import org.netpreserve.warcbot.cdp.Browser;
 import org.netpreserve.warcbot.cdp.CDPClient;
 import org.netpreserve.warcbot.cdp.CDPSession;
 import org.netpreserve.warcbot.cdp.Target;
@@ -33,15 +34,17 @@ public class BrowserProcess implements AutoCloseable {
 
     private final Process process;
     private final CDPClient cdp;
+    private final Browser browser;
     private final Target target;
 
     public BrowserProcess(Process process, CDPClient cdp) {
         this.process = process;
         this.cdp = cdp;
+        this.browser = cdp.domain(Browser.class);
         this.target = cdp.domain(Target.class);
     }
 
-    public static BrowserProcess start(String executable) throws IOException {
+    public static BrowserProcess start(String executable, Path profileDir) throws IOException {
         boolean usePipe = Files.isExecutable(Path.of("/bin/sh"));
         for (var executableToTry : executable == null ? BROWSER_EXECUTABLES : List.of(executable)) {
             Process process;
@@ -58,14 +61,16 @@ public class BrowserProcess implements AutoCloseable {
                     "--disable-background-networking",
                     "--disable-sync",
                     "--use-mock-keychain",
-                    "--user-data-dir=data/profile",
+                    "--user-data-dir=" + profileDir.toString(),
                     "--disable-blink-features=AutomationControlled");
             try {
                 if (usePipe) {
                     // in pipe mode the browser expects to read CDP from FD 3 and write CDP to FD 4
                     // we can't redirect arbitrary FDs in Java, so instead we use stdin and stdout
                     // and get the shell to set the FDs up for us.
-                    String escapedCommand = command.stream().map(arg -> "'" + arg + "'").collect(joining(" "));
+                    String escapedCommand = command.stream()
+                            .map(arg -> "'" + arg.replace("'", "'\\''") + "'")
+                            .collect(joining(" "));
                     process = new ProcessBuilder("/bin/sh", "-c",
                             "exec " + escapedCommand + " 3<&0 4>&1 0<&- 1>&2")
                             .redirectError(ProcessBuilder.Redirect.INHERIT)
@@ -129,7 +134,7 @@ public class BrowserProcess implements AutoCloseable {
     }
 
     public static BrowserProcess start() throws IOException {
-        return start(null);
+        return start(null, Path.of("data", "profile"));
     }
 
     @Override
@@ -148,11 +153,11 @@ public class BrowserProcess implements AutoCloseable {
     }
 
     public BrowserWindow newWindow(Consumer<ResourceFetched> resourceHandler,
-                                   RequestInterceptor requestInterceptor,
+                                   RequestHandler requestHandler,
                                    Tracker tracker) {
         String targetId = target.createTarget("about:blank", true).targetId();
         var sessionId = target.attachToTarget(targetId, true).sessionId();
         var session = new CDPSession(cdp, sessionId);
-        return new BrowserWindow(session, resourceHandler, requestInterceptor, tracker);
+        return new BrowserWindow(session, resourceHandler, requestHandler, tracker);
     }
 }

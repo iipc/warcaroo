@@ -1,13 +1,27 @@
 package org.netpreserve.warcbot.cdp;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 public interface Runtime {
-    Evaluate evaluate(String expression, int timeout, boolean returnByValue, boolean awaitPromise);
+    Evaluate evaluate(String expression, int timeout, boolean returnByValue, boolean awaitPromise,
+                      ExecutionContextUniqueId uniqueContextId);
+
+    void onExecutionContextCreated(Consumer<ExecutionContextCreated> handler);
+
+    void enable();
+
+    record ExecutionContextCreated(ExecutionContextDescription context) {
+    }
+
+    record ExecutionContextDescription(ExecutionContextId id, String origin, String name, ExecutionContextUniqueId uniqueId) {
+    }
 
     record Evaluate(RemoteObject result, ExceptionDetails exceptionDetails) {
     }
@@ -35,4 +49,15 @@ public interface Runtime {
 
     record ExceptionDetails(int exceptionId, String text, int lineNumber, int columnNumber) {
     }
+
+    record ExecutionContextId(@JsonValue int value) {
+        @JsonCreator
+        public ExecutionContextId {}
+    }
+
+    record ExecutionContextUniqueId(@JsonValue String value) {
+        @JsonCreator
+        public ExecutionContextUniqueId {}
+    }
+
 }

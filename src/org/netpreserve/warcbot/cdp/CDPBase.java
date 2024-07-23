@@ -1,7 +1,9 @@
 package org.netpreserve.warcbot.cdp;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,12 +23,14 @@ public abstract class CDPBase {
     private final Map<Long, CompletableFuture<JsonNode>> commands = new ConcurrentHashMap<>();
     private final Map<String, Consumer<JsonNode>> listeners = new ConcurrentHashMap<>();
     private final ExecutorService executor;
+    private Thread executorThread;
 
     protected CDPBase() {
         String parentThreadName = Thread.currentThread().getName();
         executor = Executors.newSingleThreadExecutor(r -> {
             Thread thread = new Thread(r, parentThreadName + "-CDP");
             thread.setDaemon(true);
+            executorThread = thread;
             return thread;
         });
     }
@@ -49,17 +53,20 @@ public abstract class CDPBase {
                     for (int i = 0; i < methodParameters.length; i++) {
                         if (args[i] != null) params.put(methodParameters[i].getName(), args[i]);
                     }
+                    Unwrap unwrap = method.getAnnotation(Unwrap.class);
                     return sendCommand(domainInterface.getSimpleName() + "." + method.getName(), params,
-                            method.getGenericReturnType());
+                            method.getGenericReturnType(), unwrap);
                 });
     }
 
     protected void handleMessage(RPC.ServerMessage message) {
-        switch (message) {
-            case RPC.Event event -> handleEvent(event);
-            case RPC.Response response -> handleResponse(response);
-            case null, default -> log.error("Unknown message type: {}", message);
-        }
+        executor.submit(() -> {
+            switch (message) {
+                case RPC.Event event -> handleEvent(event);
+                case RPC.Response response -> handleResponse(response);
+                case null, default -> log.error("Unknown message type: {}", message);
+            }
+        });
     }
 
     private void handleResponse(RPC.Response response) {
@@ -78,11 +85,11 @@ public abstract class CDPBase {
     private void handleEvent(RPC.Event event) {
         Consumer<JsonNode> handler = listeners.get(event.method());
         if (handler != null) {
-            executor.submit(() -> { try {
+            try {
                 handler.accept(event.params());
             } catch (Exception e) {
                 log.error("{} handler threw", event.method(), e);
-            }});
+            }
         }
     }
 
@@ -103,14 +110,26 @@ public abstract class CDPBase {
         });
     }
 
-    <T> T sendCommand(String method, Map<String, Object> params, Type returnType) {
+    <T> T sendCommand(String method, Map<String, Object> params, Type returnType, Unwrap unwrap) {
+        if (Thread.currentThread() == executorThread) {
+            throw new IllegalStateException("Sending command on the event handler thread would deadlock");
+        }
         long commandId = nextCommandId();
         try {
             var future = new CompletableFuture<JsonNode>();
             commands.put(commandId, future);
             sendCommandMessage(commandId, method, params);
             JsonNode result = future.get(120, TimeUnit.SECONDS);
-            return RPC.JSON.treeToValue(result, RPC.JSON.constructType(returnType));
+            ObjectReader reader;
+            if (unwrap != null) {
+                String rootName = unwrap.value().isEmpty() ?
+                        lowercaseFirstLetter(((Class<?>) returnType).getSimpleName()) : unwrap.value();
+                reader = RPC.JSON.reader(DeserializationFeature.UNWRAP_ROOT_VALUE)
+                        .withRootName(rootName);
+            } else {
+                reader = RPC.JSON.reader();
+            }
+            return reader.treeToValue(result, RPC.JSON.constructType(returnType));
         } catch (ExecutionException e) {
             if (e.getCause() instanceof CDPException cdpException) {
                 cdpException.actuallyFillInStackTrace();
@@ -129,6 +148,10 @@ public abstract class CDPBase {
         } finally {
             commands.remove(commandId);
         }
+    }
+
+    private static String lowercaseFirstLetter(String s) {
+        return s.substring(0, 1).toLowerCase(Locale.ROOT) + s.substring(1);
     }
 
     protected abstract void sendCommandMessage(long commandId, String method, Map<String, Object> params) throws IOException;

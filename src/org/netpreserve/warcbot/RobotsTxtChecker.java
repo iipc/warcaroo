@@ -1,5 +1,7 @@
 package org.netpreserve.warcbot;
 
+import org.netpreserve.warcbot.util.Url;
+
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.URI;

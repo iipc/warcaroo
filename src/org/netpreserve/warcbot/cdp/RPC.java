@@ -25,6 +25,8 @@ import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -117,6 +119,7 @@ public interface RPC {
         private final InputStream inputStream;
         private final OutputStream outputStream;
         private final Consumer<ServerMessage> messageHandler;
+        private final Lock writeLock = new ReentrantLock();
 
         public Pipe(InputStream inputStream, OutputStream outputStream, Consumer<ServerMessage> messageHandler) {
             this.inputStream = inputStream;
@@ -152,10 +155,15 @@ public interface RPC {
 
         @Override
         public void send(Command message) throws IOException {
-            log.trace("-> {}", message);
-            JSON.writeValue(outputStream, message);
-            outputStream.write(0);
-            outputStream.flush();
+            writeLock.lock();
+            try {
+                if (log.isTraceEnabled()) log.trace("-> {}", JSON.writeValueAsString(message));
+                JSON.writeValue(outputStream, message);
+                outputStream.write(0);
+                outputStream.flush();
+            } finally {
+                writeLock.unlock();
+            }
         }
 
         @Override
