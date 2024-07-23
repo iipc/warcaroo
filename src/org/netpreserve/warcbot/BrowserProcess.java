@@ -13,6 +13,7 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -45,13 +46,15 @@ public class BrowserProcess implements AutoCloseable {
     }
 
     public static BrowserProcess start(String executable, Path profileDir) throws IOException {
+        return start(executable, profileDir);
+    }
+
+    public static BrowserProcess start(String executable, Path profileDir, boolean headless) throws IOException {
         boolean usePipe = Files.isExecutable(Path.of("/bin/sh"));
         for (var executableToTry : executable == null ? BROWSER_EXECUTABLES : List.of(executable)) {
             Process process;
-            var command = List.of(executableToTry,
-                    "--headless=new", "--disable-gpu",
+            var command = new ArrayList<>(List.of(executableToTry,
                     usePipe ? "--remote-debugging-pipe" : "--remote-debugging-port=0",
-//                        "--test-type",
                     "--no-default-browser-check",
                     "--no-first-run",
                     "--no-startup-window",
@@ -62,7 +65,11 @@ public class BrowserProcess implements AutoCloseable {
                     "--disable-sync",
                     "--use-mock-keychain",
                     "--user-data-dir=" + profileDir.toString(),
-                    "--disable-blink-features=AutomationControlled");
+                    "--disable-blink-features=AutomationControlled"));
+            if (headless) {
+                command.add("--headless=new");
+                command.add("--disable-gpu");
+            }
             try {
                 if (usePipe) {
                     // in pipe mode the browser expects to read CDP from FD 3 and write CDP to FD 4

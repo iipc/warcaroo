@@ -33,7 +33,7 @@ public class RequestInterceptor {
     private final Consumer<ResourceFetched> resourceHandler;
     private final RequestHandler requestHandler;
     private final Path downloadPath;
-    private static ThreadFactory threadFactory = Thread.ofVirtual().name("RequestInterceptor", 0).factory();
+    private static final ThreadFactory threadFactory = Thread.ofVirtual().name("RequestInterceptor", 0).factory();
 
     public RequestInterceptor(CDPSession cdpSession, IdleMonitor idleMonitor, Tracker tracker,
                               RequestHandler requestHandler, Consumer<ResourceFetched> resourceHandler,

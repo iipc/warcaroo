@@ -29,8 +29,13 @@ public class WarcBot {
                                   --browser PATH            Set the path to the browser binary
                                   --crawl-delay MILLIS      Wait this long before crawling another page from the same queue.
                                   --include REGEX           Include pages that match the specified REGEX pattern in the crawl scope.
+                                  --headless                Run the browser in headless mode.
+                                  --host HOST               Set the hostname to bind the server.
+                                  --port PORT               Set the port to bind the server.
+                                  --seed-file FILE          Load seed URLs from the specified file.
                                   -A, --user-agent STR      Set the User-Agent string to identify the crawler to the server.
                                   -w, --workers INT         Specify the number of browser and worker threads to use (default is %d).
+                                  -v, --verbose             Increase verbosity of the output.
                                 
                                 Examples:
                                   warcbot --include "https?://([^/]+\\.)example\\.com/.*" -A "MyCrawler/1.0" -w 5
@@ -40,6 +45,7 @@ public class WarcBot {
                     case "--browser" -> config.setBrowserBinary(args[++i]);
                     case "--crawl-delay" -> config.setCrawlDelay(Integer.parseInt(args[++i]));
                     case "--include" -> config.addInclude(args[++i]);
+                    case "--headless" -> config.setHeadless(true);
                     case "--host" -> host = args[++i];
                     case "--port" -> port = Integer.parseInt(args[++i]);
                     case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));

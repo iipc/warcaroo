@@ -19,6 +19,7 @@ public class Config {
     private int workers = 1;
     private int crawlDelay = 2000;
     private String browserBinary;
+    private boolean headless;
 
     public int getWorkers() {
         return workers;
@@ -97,5 +98,13 @@ public class Config {
 
     public void setBrowserBinary(String browserBinary) {
         this.browserBinary = browserBinary;
+    }
+
+    public void setHeadless(boolean headless) {
+        this.headless = headless;
+    }
+
+    public boolean isHeadless() {
+        return headless;
     }
 }
