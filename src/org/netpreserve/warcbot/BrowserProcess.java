@@ -49,7 +49,7 @@ public class BrowserProcess implements AutoCloseable {
         for (var executableToTry : executable == null ? BROWSER_EXECUTABLES : List.of(executable)) {
             Process process;
             var command = List.of(executableToTry,
-                    "--headless=new",
+                    "--headless=new", "--disable-gpu",
                     usePipe ? "--remote-debugging-pipe" : "--remote-debugging-port=0",
 //                        "--test-type",
                     "--no-default-browser-check",
