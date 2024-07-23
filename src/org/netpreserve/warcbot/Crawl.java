@@ -40,7 +40,8 @@ public class Crawl implements AutoCloseable {
         this.httpClient = HttpClient.newHttpClient();
         this.frontier = new Frontier(db.frontier(), config.getScope(), config);
         this.storage = new Storage(dataPath, db.storage());
-        this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage, List.of("nla.gov.au_bot", "warcbot"));
+        this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage,
+                List.of("nla.gov.au_bot", "warcbot"), config.getUserAgent());
         this.browserProcess = BrowserProcess.start(config.getBrowserBinary(), dataPath.resolve("profile"));
         this.tracker = new Tracker();
     }

@@ -20,12 +20,15 @@ public class RobotsTxtChecker {
     private final HttpClient httpClient;
     private final Storage storage;
     private final List<String> userAgents;
+    private final String userAgent;
 
-    public RobotsTxtChecker(RobotsTxtDAO dao, HttpClient httpClient, Storage storage, List<String> userAgents) {
+    public RobotsTxtChecker(RobotsTxtDAO dao, HttpClient httpClient, Storage storage, List<String> userAgents,
+                            String userAgent) {
         this.dao = dao;
         this.httpClient = httpClient;
         this.storage = storage;
         this.userAgents = userAgents;
+        this.userAgent = userAgent;
     }
 
     boolean checkAllowed(UUID pageId, Url url) throws SQLException, IOException {
@@ -43,7 +46,9 @@ public class RobotsTxtChecker {
         byte[] body;
         try {
             long fetchStart = System.currentTimeMillis();
-            var response = httpClient.send(HttpRequest.newBuilder(robotsUri).build(), BodyHandlers.ofByteArray());
+            var response = httpClient.send(HttpRequest.newBuilder(robotsUri)
+                    .header("User-Agent", userAgent)
+                    .build(), BodyHandlers.ofByteArray());
             long fetchTimeMs = System.currentTimeMillis() - fetchStart;
             status = response.statusCode();
             body = response.body();
