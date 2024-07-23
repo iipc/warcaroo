@@ -14,8 +14,8 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-public class BrowserWindow implements AutoCloseable {
-    private static final Logger log = LoggerFactory.getLogger(BrowserWindow.class);
+public class Navigator implements AutoCloseable {
+    private static final Logger log = LoggerFactory.getLogger(Navigator.class);
     private final Emulation emulation;
     private final Page page;
     private final Runtime runtime;
@@ -61,10 +61,10 @@ public class BrowserWindow implements AutoCloseable {
         }
     }
 
-    public BrowserWindow(CDPSession cdpSession,
-                         Consumer<ResourceFetched> resourceHandler,
-                         RequestHandler requestHandler,
-                         Tracker tracker) {
+    public Navigator(CDPSession cdpSession,
+                     Consumer<ResourceFetched> resourceHandler,
+                     RequestHandler requestHandler,
+                     Tracker tracker) {
         this.cdpSession = cdpSession;
         this.emulation = cdpSession.domain(Emulation.class);
         this.page = cdpSession.domain(Page.class);

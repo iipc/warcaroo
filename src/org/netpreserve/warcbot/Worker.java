@@ -16,7 +16,7 @@ import java.util.concurrent.TimeoutException;
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
     final int id;
-    BrowserWindow browserWindow;
+    Navigator navigator;
     private final BrowserProcess browserProcess;
     private final Frontier frontier;
     private final Storage storage;
@@ -67,8 +67,8 @@ public class Worker {
         } catch (InterruptedException e) {
             // OK
         }
-        if (browserWindow != null) {
-            browserWindow.close();
+        if (navigator != null) {
+            navigator.close();
         }
         try {
             thread.join(1000);
@@ -101,28 +101,28 @@ public class Worker {
                     continue;
                 }
 
-                if (browserWindow == null) {
-                    browserWindow = browserProcess.newWindow(this::handleResource, null, tracker);
+                if (navigator == null) {
+                    navigator = browserProcess.newWindow(this::handleResource, null, tracker);
                 }
-                browserWindow.setUserAgent(config.getUserAgent());
+                navigator.setUserAgent(config.getUserAgent());
 
                 //try (var ignored = browser.recordResources(storage, pageId)) {
                 log.info("Nav to {}", candidate.url());
-                browserWindow.navigateTo(candidate.url());
-                browserWindow.waitForLoadEvent();
+                navigator.navigateTo(candidate.url());
+                navigator.waitForLoadEvent();
                 log.info("Load event");
 
                 Thread.sleep(200);
 
                 log.info("Force lazy");
-                browserWindow.forceLoadLazyImages();
+                navigator.forceLoadLazyImages();
 
                 log.info("Scrolling");
-                browserWindow.scrollToBottom();
+                navigator.scrollToBottom();
 
-                browserWindow.waitForRequestInterceptorIdle();
+                navigator.waitForRequestInterceptorIdle();
 
-                List<Url> links = browserWindow.extractLinks();
+                List<Url> links = navigator.extractLinks();
                 if (log.isTraceEnabled()) {
                     for (var link : links) {
                         log.trace("Link: {}", link);
@@ -131,10 +131,10 @@ public class Worker {
                 frontier.addUrls(links, candidate.depth() + 1, candidate.url());
 
                 var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
-                storage.dao.addPage(pageId, browserWindow.currentUrl(), Instant.now(), browserWindow.title(),
+                storage.dao.addPage(pageId, navigator.currentUrl(), Instant.now(), navigator.title(),
                         visitTimeMs);
 
-                browserWindow.navigateToBlank();
+                navigator.navigateToBlank();
             } catch (Throwable e) {
                 if (closed) return;
                 frontier.markFailed(candidate, pageId, e);

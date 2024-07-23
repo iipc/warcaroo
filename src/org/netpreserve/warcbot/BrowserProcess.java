@@ -159,12 +159,12 @@ public class BrowserProcess implements AutoCloseable {
         }
     }
 
-    public BrowserWindow newWindow(Consumer<ResourceFetched> resourceHandler,
-                                   RequestHandler requestHandler,
-                                   Tracker tracker) {
+    public Navigator newWindow(Consumer<ResourceFetched> resourceHandler,
+                               RequestHandler requestHandler,
+                               Tracker tracker) {
         String targetId = target.createTarget("about:blank", true).targetId();
         var sessionId = target.attachToTarget(targetId, true).sessionId();
         var session = new CDPSession(cdp, sessionId);
-        return new BrowserWindow(session, resourceHandler, requestHandler, tracker);
+        return new Navigator(session, resourceHandler, requestHandler, tracker);
     }
 }
