@@ -1,9 +1,9 @@
 package org.netpreserve.warcbot;
 
-import org.netpreserve.warcbot.cdp.Browser;
+import org.netpreserve.warcbot.cdp.domains.Browser;
 import org.netpreserve.warcbot.cdp.CDPClient;
 import org.netpreserve.warcbot.cdp.CDPSession;
-import org.netpreserve.warcbot.cdp.Target;
+import org.netpreserve.warcbot.cdp.domains.Target;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

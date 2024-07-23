@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcbot.cdp.domains;
 
 
 import java.util.List;

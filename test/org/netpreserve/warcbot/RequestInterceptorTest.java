@@ -1,8 +1,8 @@
 package org.netpreserve.warcbot;
 
 import org.junit.jupiter.api.Test;
-import org.netpreserve.warcbot.cdp.Fetch;
-import org.netpreserve.warcbot.cdp.Network;
+import org.netpreserve.warcbot.cdp.domains.Fetch;
+import org.netpreserve.warcbot.cdp.domains.Network;
 
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;

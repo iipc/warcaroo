@@ -1,8 +1,9 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcbot.cdp.domains;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.jetbrains.annotations.NotNull;
+import org.netpreserve.warcbot.cdp.Unwrap;
 
 import java.util.List;
 import java.util.Objects;

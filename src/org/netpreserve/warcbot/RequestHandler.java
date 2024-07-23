@@ -2,7 +2,7 @@ package org.netpreserve.warcbot;
 
 import org.netpreserve.jwarc.HttpResponse;
 import org.netpreserve.jwarc.MessageHeaders;
-import org.netpreserve.warcbot.cdp.Network;
+import org.netpreserve.warcbot.cdp.domains.Network;
 
 import java.io.IOException;
 

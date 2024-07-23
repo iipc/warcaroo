@@ -1,12 +1,14 @@
 package org.netpreserve.warcbot;
 
 import org.netpreserve.warcbot.cdp.*;
+import org.netpreserve.warcbot.cdp.domains.Browser;
+import org.netpreserve.warcbot.cdp.domains.Fetch;
+import org.netpreserve.warcbot.cdp.domains.Network;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
