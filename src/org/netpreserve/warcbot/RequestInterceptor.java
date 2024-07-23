@@ -213,9 +213,9 @@ public class RequestInterceptor {
      * Formats the response header for a given fetch request, using the raw response header string if available.
      * Omits any "Content-Encoding" headers because the browser only gives us the decoded response body.
      */
-    private static byte[] formatResponseHeader(Fetch.RequestPaused event, String rawResponseHeader) {
+    static byte[] formatResponseHeader(Fetch.RequestPaused event, String rawResponseHeader) {
         if (rawResponseHeader != null) {
-            rawResponseHeader = rawResponseHeader.replaceAll("(?i)^Content-Encoding:.*?\\r?\\n", "");
+            rawResponseHeader = rawResponseHeader.replaceAll("(?mi)^Content-Encoding:.*?\\r?\\n", "");
             return rawResponseHeader.getBytes(US_ASCII);
         }
         var builder = new StringBuilder();
@@ -236,7 +236,7 @@ public class RequestInterceptor {
     /**
      * Constructs a HTTP/1.1 header from a CDP Network.Request.
      */
-    private static byte[] formatRequestHeader(Network.Request request, Map<String, String> extraInfoHeaders) {
+    static byte[] formatRequestHeader(Network.Request request, Map<String, String> extraInfoHeaders) {
         var builder = new StringBuilder();
         Url url = new Url(request.url());
 
