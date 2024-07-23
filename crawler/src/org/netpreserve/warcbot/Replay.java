@@ -1,20 +1,31 @@
 package org.netpreserve.warcbot;
 
+import org.netpreserve.jwarc.HttpResponse;
 import org.netpreserve.jwarc.WarcReader;
 import org.netpreserve.jwarc.WarcResponse;
 import org.netpreserve.warcbot.cdp.BrowserProcess;
+import org.netpreserve.warcbot.cdp.NavigationException;
+import org.netpreserve.warcbot.cdp.RequestHandler;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.net.http.HttpHeaders;
 import java.nio.file.Path;
 import java.sql.SQLException;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiPredicate;
 
 public class Replay {
 
     private static final Logger log = LoggerFactory.getLogger(Replay.class);
+
+    public static RequestHandler.Response toResponse(HttpResponse httpResponse) throws IOException {
+        return new RequestHandler.Response(httpResponse.status(), httpResponse.reason(),
+                HttpHeaders.of(httpResponse.headers().map(), (name, value) -> true),
+                httpResponse.body().stream().readAllBytes());
+    }
 
     public static void main(String[] args) throws IOException, InterruptedException, SQLException, TimeoutException, NavigationException {
         try (var database = new Database(Path.of("data", "db.sqlite3"));
@@ -27,7 +38,7 @@ public class Replay {
                  try (var warcReader = new WarcReader(Path.of("data", resource.filename()))) {
                      warcReader.position(resource.responseOffset());
                      var record = (WarcResponse) warcReader.next().orElseThrow();
-                     return new RequestHandler.Response(record.http());
+                     return toResponse(record.http());
                  } catch (IOException e) {
                      log.error("Error replaying {}", request.url(), e);
                      return new RequestHandler.Response(500, "Error");

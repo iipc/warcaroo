@@ -3,7 +3,6 @@ package org.netpreserve.warcbot.cdp;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.netpreserve.warcbot.NavigationException;
 import org.netpreserve.warcbot.util.Url;
 
 import java.io.IOException;

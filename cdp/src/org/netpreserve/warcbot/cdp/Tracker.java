@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcbot.cdp;
 
 import java.util.concurrent.atomic.AtomicLong;
 

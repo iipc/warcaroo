@@ -2,8 +2,7 @@ package org.netpreserve.warcbot;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
-import org.netpreserve.warcbot.cdp.BrowserProcess;
-import org.netpreserve.warcbot.cdp.Navigator;
+import org.netpreserve.warcbot.cdp.*;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

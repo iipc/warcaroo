@@ -1,10 +1,45 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-    <name>warcbot</name>
-    <groupId>warcbot</groupId>
-    <artifactId>warcbot</artifactId>
+    <packaging>pom</packaging>
+    <groupId>org.netpreserve</groupId>
+    <artifactId>warcbot-parent</artifactId>
     <version>0.1.0</version>
+
+    <modules>
+        <module>cdp</module>
+        <module>crawler</module>
+    </modules>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>2.17.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-api</artifactId>
+                <version>2.0.13</version>
+            </dependency>
+            <dependency>
+                <groupId>org.mockito</groupId>
+                <artifactId>mockito-core</artifactId>
+                <version>5.11.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.junit.jupiter</groupId>
+                <artifactId>junit-jupiter</artifactId>
+                <version>5.10.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jetbrains</groupId>
+                <artifactId>annotations</artifactId>
+                <version>24.1.0</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -32,53 +67,6 @@
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <filters>
-                                <filter>
-                                    <artifact>org.webjars.npm:luxon</artifact>
-                                    <includes>
-                                        <include>META-INF/resources/webjars/luxon/*/LICENSE.md</include>
-                                        <include>META-INF/resources/webjars/luxon/*/build/global/luxon.min.js</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.webjars.npm:tabulator-tables</artifact>
-                                    <includes>
-                                        <include>META-INF/resources/webjars/tabulator-tables/*/LICENSE</include>
-                                        <include>META-INF/resources/webjars/tabulator-tables/*/dist/css/tabulator.min.css</include>
-                                        <include>META-INF/resources/webjars/tabulator-tables/*/dist/css/tabulator_simple.min.css</include>
-                                        <include>META-INF/resources/webjars/tabulator-tables/*/dist/js/tabulator.min.js</include>
-                                    </includes>
-                                </filter>
-                                <filter>
-                                    <artifact>org.xerial:sqlite-jdbc</artifact>
-                                    <excludes>
-                                        <exclude>org/sqlite/native/FreeBSD/</exclude>
-                                        <exclude>org/sqlite/native/Linux/arm/</exclude>
-                                        <exclude>org/sqlite/native/Linux/armv7/</exclude>
-                                        <exclude>org/sqlite/native/Linux/armv6/</exclude>
-                                        <exclude>org/sqlite/native/Linux/ppc64/</exclude>
-                                        <exclude>org/sqlite/native/Linux/x86/</exclude>
-                                        <exclude>org/sqlite/native/Linux-Android/</exclude>
-                                        <exclude>org/sqlite/native/Linux-Musl/</exclude>
-                                        <exclude>org/sqlite/native/Windows/armv7/</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                        </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
@@ -89,99 +77,4 @@
         </plugins>
     </build>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.webjars.npm</groupId>
-            <artifactId>tabulator-tables</artifactId>
-            <version>6.2.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.webjars.npm</groupId>
-            <artifactId>luxon</artifactId>
-            <version>3.4.4</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jdbi</groupId>
-            <artifactId>jdbi3-sqlobject</artifactId>
-            <version>3.45.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.zaxxer</groupId>
-            <artifactId>HikariCP</artifactId>
-            <version>5.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>2.0.13</version>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-classic</artifactId>
-            <version>1.5.6</version>
-        </dependency>
-        <dependency>
-            <groupId>org.netpreserve</groupId>
-            <artifactId>jwarc</artifactId>
-            <version>0.29.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.netpreserve</groupId>
-            <artifactId>urlcanon</artifactId>
-            <version>0.4.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.uuid</groupId>
-            <artifactId>java-uuid-generator</artifactId>
-            <version>5.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.xerial</groupId>
-            <artifactId>sqlite-jdbc</artifactId>
-            <version>3.46.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations</artifactId>
-            <version>24.1.0</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>com.github.mizosoft.methanol</groupId>
-            <artifactId>methanol-jackson</artifactId>
-            <version>1.7.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <version>2.17.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml.jackson.datatype</groupId>
-            <artifactId>jackson-datatype-jsr310</artifactId>
-            <version>2.17.2</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.victools</groupId>
-            <artifactId>jsonschema-generator</artifactId>
-            <version>4.31.1</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.victools</groupId>
-            <artifactId>jsonschema-module-jackson</artifactId>
-            <version>4.31.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter</artifactId>
-            <scope>test</scope>
-            <version>5.10.2</version>
-        </dependency>
-        <dependency>
-            <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>5.11.0</version>
-            <scope>test</scope>
-        </dependency>
-    </dependencies>
 </project>

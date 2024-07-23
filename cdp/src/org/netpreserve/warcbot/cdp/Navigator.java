@@ -1,7 +1,6 @@
 package org.netpreserve.warcbot.cdp;
 
 import org.intellij.lang.annotations.Language;
-import org.netpreserve.warcbot.*;
 import org.netpreserve.warcbot.cdp.domains.Emulation;
 import org.netpreserve.warcbot.cdp.domains.Network;
 import org.netpreserve.warcbot.cdp.domains.Page;

@@ -1,8 +1,5 @@
 package org.netpreserve.warcbot.cdp;
 
-import org.netpreserve.warcbot.RequestHandler;
-import org.netpreserve.warcbot.ResourceFetched;
-import org.netpreserve.warcbot.Tracker;
 import org.netpreserve.warcbot.cdp.domains.Browser;
 import org.netpreserve.warcbot.cdp.protocol.CDPClient;
 import org.netpreserve.warcbot.cdp.protocol.CDPSession;

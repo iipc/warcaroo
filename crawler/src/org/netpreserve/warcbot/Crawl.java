@@ -1,6 +1,7 @@
 package org.netpreserve.warcbot;
 
 import org.netpreserve.warcbot.cdp.BrowserProcess;
+import org.netpreserve.warcbot.cdp.Tracker;
 import org.netpreserve.warcbot.util.Url;
 import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
 import org.netpreserve.warcbot.webapp.Route.HttpError;

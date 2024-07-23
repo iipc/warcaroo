@@ -3,6 +3,7 @@ package org.netpreserve.warcbot;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import org.netpreserve.jwarc.*;
+import org.netpreserve.warcbot.cdp.ResourceFetched;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,7 +15,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
