@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcbot.cdp.protocol;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;

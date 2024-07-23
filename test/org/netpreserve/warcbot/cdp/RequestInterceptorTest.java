@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcbot.cdp;
 
 import org.junit.jupiter.api.Test;
 import org.netpreserve.warcbot.cdp.domains.Fetch;
@@ -12,7 +12,7 @@ import java.util.Map;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
-import static org.netpreserve.warcbot.RequestInterceptor.formatResponseHeader;
+import static org.netpreserve.warcbot.cdp.RequestInterceptor.formatResponseHeader;
 
 class RequestInterceptorTest {
     @Test

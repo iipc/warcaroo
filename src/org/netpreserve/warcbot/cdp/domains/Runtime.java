@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import org.netpreserve.warcbot.cdp.RPC;
+import org.netpreserve.warcbot.cdp.protocol.RPC;
 
 import java.util.List;
 import java.util.Map;

@@ -2,6 +2,7 @@ package org.netpreserve.warcbot;
 
 import org.netpreserve.jwarc.WarcReader;
 import org.netpreserve.jwarc.WarcResponse;
+import org.netpreserve.warcbot.cdp.BrowserProcess;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

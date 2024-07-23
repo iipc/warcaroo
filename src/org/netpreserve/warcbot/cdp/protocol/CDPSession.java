@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcbot.cdp.protocol;
 
 import java.io.IOException;
 import java.util.Map;

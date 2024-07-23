@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcbot.cdp.protocol;
 
 public class CDPTimeoutException extends CDPException {
     public CDPTimeoutException(String message) {

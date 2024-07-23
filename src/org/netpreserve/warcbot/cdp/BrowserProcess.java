@@ -1,8 +1,11 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcbot.cdp;
 
+import org.netpreserve.warcbot.RequestHandler;
+import org.netpreserve.warcbot.ResourceFetched;
+import org.netpreserve.warcbot.Tracker;
 import org.netpreserve.warcbot.cdp.domains.Browser;
-import org.netpreserve.warcbot.cdp.CDPClient;
-import org.netpreserve.warcbot.cdp.CDPSession;
+import org.netpreserve.warcbot.cdp.protocol.CDPClient;
+import org.netpreserve.warcbot.cdp.protocol.CDPSession;
 import org.netpreserve.warcbot.cdp.domains.Target;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,7 +49,7 @@ public class BrowserProcess implements AutoCloseable {
     }
 
     public static BrowserProcess start(String executable, Path profileDir) throws IOException {
-        return start(executable, profileDir);
+        return start(executable, profileDir, false);
     }
 
     public static BrowserProcess start(String executable, Path profileDir, boolean headless) throws IOException {

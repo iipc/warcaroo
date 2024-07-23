@@ -1,9 +1,13 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcbot.cdp;
 
-import org.netpreserve.warcbot.cdp.*;
+import org.netpreserve.warcbot.RequestHandler;
+import org.netpreserve.warcbot.ResourceFetched;
+import org.netpreserve.warcbot.Tracker;
 import org.netpreserve.warcbot.cdp.domains.Browser;
 import org.netpreserve.warcbot.cdp.domains.Fetch;
 import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcbot.cdp.protocol.CDPException;
+import org.netpreserve.warcbot.cdp.protocol.CDPSession;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
