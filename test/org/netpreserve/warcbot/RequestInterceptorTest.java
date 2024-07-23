@@ -5,6 +5,7 @@ import org.netpreserve.warcbot.cdp.Fetch;
 import org.netpreserve.warcbot.cdp.Network;
 
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -32,38 +33,38 @@ class RequestInterceptorTest {
                 "Accept-Language", "en-US"
         );
 
-        byte[] expected = (
+        var expected = (
                 "GET /test HTTP/1.1\r\n" +
                 "host: example.com\r\n" +
                 "Accept-Language: en-US\r\n\r\n"
-        ).getBytes(US_ASCII);
+        );
 
         byte[] actual = RequestInterceptor.formatRequestHeader(request, extraInfoHeaders);
-        assertArrayEquals(expected, actual);
+        assertEquals(expected, new String(actual, US_ASCII));
     }
 
     @Test
     void testFormatRequestHeaderWithoutExtraInfoHeaders() {
+        Map<String, String> headers = new LinkedHashMap<>();
+        headers.put("Accept", "text/html");
+        headers.put("User-Agent", "MyCrawler/1.0");
         var request = new Network.Request(
                 "http://example.com/test",
                 null,
                 "GET",
-                Map.of(
-                        "Accept", "text/html",
-                        "User-Agent", "MyCrawler/1.0"
-                ),
+                headers,
                 null
         );
 
-        byte[] expected = (
+        String expected = (
                 "GET /test HTTP/1.1\r\n" +
                 "Accept: text/html\r\n" +
                 "User-Agent: MyCrawler/1.0\r\n" +
                 "Host: example.com\r\n\r\n"
-        ).getBytes(US_ASCII);
+        );
 
         byte[] actual = RequestInterceptor.formatRequestHeader(request, null);
-        assertArrayEquals(expected, actual);
+        assertEquals(expected, new String(actual, US_ASCII));
     }
 
     @Test
