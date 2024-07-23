@@ -1,7 +1,10 @@
 package org.netpreserve.warcbot;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
 import com.sun.net.httpserver.HttpServer;
 import org.netpreserve.warcbot.webapp.Webapp;
+import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
@@ -62,9 +65,9 @@ public class WarcBot {
         }
 
         if (verbosity >= 2) {
-            System.setProperty("org.slf4j.simpleLogger.log.org.netpreserve.warcbot", "TRACE");
+            ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot")).setLevel(Level.TRACE);
         } else if (verbosity == 1) {
-            System.setProperty("org.slf4j.simpleLogger.log.org.netpreserve.warcbot", "DEBUG");
+            ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot")).setLevel(Level.DEBUG);
         }
 
         Crawl crawl = new Crawl(Path.of("data"), config);
