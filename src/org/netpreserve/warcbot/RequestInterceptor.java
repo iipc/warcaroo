@@ -16,6 +16,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
+
 /**
  * Intercepts HTTP requests made by the browser.
  * <p>
@@ -207,9 +209,14 @@ public class RequestInterceptor {
         return networkInfoMap.computeIfAbsent(requestId, k -> new NetworkInfo());
     }
 
+    /**
+     * Formats the response header for a given fetch request, using the raw response header string if available.
+     * Omits any "Content-Encoding" headers because the browser only gives us the decoded response body.
+     */
     private static byte[] formatResponseHeader(Fetch.RequestPaused event, String rawResponseHeader) {
         if (rawResponseHeader != null) {
-            return rawResponseHeader.getBytes(StandardCharsets.US_ASCII);
+            rawResponseHeader = rawResponseHeader.replaceAll("(?i)^Content-Encoding:.*?\\r?\\n", "");
+            return rawResponseHeader.getBytes(US_ASCII);
         }
         var builder = new StringBuilder();
         String reason = event.responseStatusText();
@@ -218,11 +225,12 @@ public class RequestInterceptor {
         if (event.responseHeaders() == null) {
             log.warn("Null response headers: {}", event);
         } else {
-            event.responseHeaders().forEach(entry ->
-                    builder.append(entry.name()).append(": ").append(entry.value()).append("\r\n"));
+            event.responseHeaders().stream()
+                    .filter(entry -> !"Content-Encoding".equalsIgnoreCase(entry.name()))
+                    .forEach(entry -> builder.append(entry.name()).append(": ").append(entry.value()).append("\r\n"));
         }
         builder.append("\r\n");
-        return builder.toString().getBytes(StandardCharsets.US_ASCII);
+        return builder.toString().getBytes(US_ASCII);
     }
 
     /**
@@ -248,6 +256,6 @@ public class RequestInterceptor {
         }
 
         builder.append("\r\n");
-        return builder.toString().getBytes(StandardCharsets.US_ASCII);
+        return builder.toString().getBytes(US_ASCII);
     }
 }
