@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot;
+    package org.netpreserve.warcbot;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -14,6 +14,7 @@ public class WarcBot {
 
     public static void main(String[] args) throws Exception {
         Config config = new Config();
+        String host = "127.0.0.1";
         Integer port = null;
         int verbosity = 0;
 
@@ -39,6 +40,7 @@ public class WarcBot {
                     case "--browser" -> config.setBrowserBinary(args[++i]);
                     case "--crawl-delay" -> config.setCrawlDelay(Integer.parseInt(args[++i]));
                     case "--include" -> config.addInclude(args[++i]);
+                    case "--host" -> host = args[++i];
                     case "--port" -> port = Integer.parseInt(args[++i]);
                     case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));
                     case "-A", "--user-agent", "--userAgent" -> config.setUserAgent(args[++i]);
@@ -82,7 +84,7 @@ public class WarcBot {
 
 
         if (port != null) {
-            var httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
+            var httpServer = HttpServer.create(new InetSocketAddress(host, port), 0);
             httpServer.createContext("/", new Webapp(crawl));
             httpServer.setExecutor(Executors.newCachedThreadPool());
             httpServer.start();
