@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 public interface Network {
     void enable(Integer maxTotalBufferSize, Integer maxResourceBufferSize, Integer maxPostDataSize);
 
-    ResponseBody getResponseBody(String requestId);
+    ResponseBody getResponseBody(RequestId requestId);
 
     void onRequestWillBeSent(Consumer<RequestWillBeSent> handler);
 
@@ -61,8 +61,15 @@ public interface Network {
         public MonotonicTime {}
     }
 
+    record RequestId(@JsonValue String value) {
+        @JsonCreator
+        public RequestId {
+            Objects.requireNonNull(value);
+        }
+    }
+
     record RequestWillBeSent(
-            String requestId,
+            RequestId requestId,
             LoaderId loaderId,
             String documentURL,
             Request request,
@@ -75,7 +82,7 @@ public interface Network {
     }
 
     record RequestWillBeSentExtraInfo(
-            String requestId,
+            RequestId requestId,
             List<AssociatedCookie> associatedCookies,
             Map<String, String> headers
     ) {
@@ -85,7 +92,7 @@ public interface Network {
     }
 
     record ResponseReceived(
-            String requestId,
+            RequestId requestId,
             LoaderId loaderId,
             double timestamp,
             String type,
@@ -95,21 +102,21 @@ public interface Network {
     }
 
     record ResponseReceivedExtraInfo(
-            String requestId,
+            RequestId requestId,
             Map<String, String> headers,
             int statusCode,
             String headersText
     ) {
     }
 
-    record RequestServedFromCache(String requestId) {
+    record RequestServedFromCache(RequestId requestId) {
     }
 
-    record LoadingFinished(String requestId, long timestamp, long encodedDataLength) {
+    record LoadingFinished(RequestId requestId, long timestamp, long encodedDataLength) {
     }
 
     record LoadingFailed(
-            String requestId,
+            RequestId requestId,
             long timestamp,
             String type,
             String errorText,
@@ -187,6 +194,6 @@ public interface Network {
     record Initiator() {
     }
 
-    record DataReceived(String requestId, double timestamp, int dataLength, int encodedDataLength, @Nullable byte[] data) {
+    record DataReceived(RequestId requestId, double timestamp, int dataLength, int encodedDataLength, @Nullable byte[] data) {
     }
 }

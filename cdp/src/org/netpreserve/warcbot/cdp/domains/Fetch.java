@@ -45,7 +45,7 @@ public interface Fetch {
             Integer responseStatusCode,
             String responseStatusText,
             List<HeaderEntry> responseHeaders,
-            String networkId,
+            Network.RequestId networkId,
             RequestId redirectedRequestId
     ) {
         public boolean isResponseStage() {

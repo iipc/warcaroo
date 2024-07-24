@@ -32,8 +32,8 @@ public class RequestInterceptor {
     private final Browser browser;
     private final Fetch fetch;
     private final Network network;
-    private final Map<String, NetworkInfo> networkInfoMap = new ConcurrentHashMap<>();
-    private final Map<String, PartialFetch> fetchesByNetworkId = new ConcurrentHashMap<>();
+    private final Map<Network.RequestId, NetworkInfo> networkInfoMap = new ConcurrentHashMap<>();
+    private final Map<Network.RequestId, PartialFetch> fetchesByNetworkId = new ConcurrentHashMap<>();
     private final IdleMonitor idleMonitor;
     private final Tracker tracker;
     private final Consumer<ResourceFetched> resourceHandler;
@@ -218,7 +218,7 @@ public class RequestInterceptor {
         resourceHandler.accept(fetch);
     }
 
-    private NetworkInfo getRequestInfo(String requestId) {
+    private NetworkInfo getRequestInfo(Network.RequestId requestId) {
         return networkInfoMap.computeIfAbsent(requestId, k -> new NetworkInfo());
     }
 

@@ -95,7 +95,7 @@ class RequestInterceptorTest {
                 200,
                 "OK",
                 responseHeaders,
-                "network1",
+                new Network.RequestId("network1"),
                 null
         );
 
