@@ -5,6 +5,7 @@ import org.netpreserve.warcbot.cdp.domains.Fetch;
 import org.netpreserve.warcbot.cdp.domains.Network;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,10 +29,9 @@ class RequestInterceptorTest {
                 null
         );
 
-        Map<String, String> extraInfoHeaders = Map.of(
-                ":authority", "example.com",
-                "Accept-Language", "en-US"
-        );
+        Map<String, String> extraInfoHeaders = new LinkedHashMap<>();
+        extraInfoHeaders.put(":authority", "example.com");
+        extraInfoHeaders.put("Accept-Language", "en-US");
 
         var expected = (
                 "GET /test HTTP/1.1\r\n" +
