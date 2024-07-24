@@ -3,6 +3,7 @@ package org.netpreserve.warcbot.cdp;
 import org.junit.jupiter.api.Test;
 import org.netpreserve.warcbot.cdp.domains.Fetch;
 import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcbot.cdp.domains.Page;
 
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
@@ -89,7 +90,7 @@ class RequestInterceptorTest {
         Fetch.RequestPaused event = new Fetch.RequestPaused(
                 new Fetch.RequestId("1"),
                 null,
-                "frame1",
+                new Page.FrameId("frame1"),
                 "Document",
                 null,
                 200,
