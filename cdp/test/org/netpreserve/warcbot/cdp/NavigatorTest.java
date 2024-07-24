@@ -117,8 +117,8 @@ class NavigatorTest {
 
             try {
                 navigator.navigateTo(new Url(baseUrl + "download"));
-            } catch (NavigationException e) {
-                assertEquals("net::ERR_ABORTED", e.getMessage(),
+            } catch (NavigationFailedException e) {
+                assertEquals("net::ERR_ABORTED", e.errorText(),
                         "Download should abort the page load");
             }
             Thread.sleep(10000);
