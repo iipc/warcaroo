@@ -3,8 +3,10 @@ package org.netpreserve.warcbot.cdp.protocol;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.core.JsonFactoryBuilder;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -29,7 +31,9 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 public interface RPC {
-    ObjectMapper JSON = new ObjectMapper()
+    ObjectMapper JSON = new ObjectMapper(new JsonFactoryBuilder()
+            .streamReadConstraints(StreamReadConstraints.builder().maxStringLength(300 * 1024 * 1024).build())
+            .build())
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
             .setSerializationInclusion(JsonInclude.Include.NON_NULL);
