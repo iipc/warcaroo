@@ -4,6 +4,8 @@ import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.netpreserve.warcbot.util.Url;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -19,6 +21,7 @@ import java.util.concurrent.TimeoutException;
 import static org.junit.jupiter.api.Assertions.*;
 
 class NavigatorTest {
+    private static final Logger log = LoggerFactory.getLogger(NavigatorTest.class);
 
     @Test
     public void testLazyImagesAndScroll(@TempDir Path tempDir) throws IOException, InterruptedException, ExecutionException, TimeoutException, NavigationException {
@@ -26,6 +29,7 @@ class NavigatorTest {
         var httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         httpServer.createContext("/", exchange -> {
             String path = exchange.getRequestURI().getPath();
+            log.info("{} {}", exchange.getRequestMethod(), path);
             if (!path.equals("/favicon.ico")) {
                 requestedPaths.add(path);
             }
@@ -41,13 +45,14 @@ class NavigatorTest {
             exchange.getResponseHeaders().add("Test", "2");
             exchange.sendResponseHeaders(200, 0);
             exchange.getResponseBody().write("""
+                <!doctype html>
                 <title>Test page</title>
                 <div style='height:4000px'></div>
                 <a href='link1'>Link1</a>
-                <img loading=lazy src=lazy.jpg>
-                <img id=scrollImg data-src=scroll.jpg>
+                <img loading=lazy src=lazy.jpg id=lazy>
+                <img id=scrollImg data-src=scroll.jpg width=50 height=50>
                 <script>
-                    new IntersectionObserver(function(entries, observer) {
+                    var observer = new IntersectionObserver(function(entries, observer) {
                         entries.forEach(function(entry) {
                             if (entry.isIntersecting) {
                                 const img = entry.target;
@@ -55,7 +60,9 @@ class NavigatorTest {
                                 observer.unobserve(img);
                             }
                         });
-                    }).observe(document.getElementById('scrollImg'));
+                    });
+                    observer.observe(document.getElementById('scrollImg'));
+                    observer.observe(document.getElementById('lazy'));
     
                     const headers = new Headers();
                     headers.append("Test-Header", 1);
@@ -72,7 +79,7 @@ class NavigatorTest {
         int port = httpServer.getAddress().getPort();
 
         var recordedPaths = new HashSet<String>();
-        try (var browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"));
+        try (var browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"), true);
              var browser = browserProcess.newWindow(recording -> {
             recordedPaths.add(URI.create(recording.url()).getPath());
             System.out.println("Got resource! " + recording);

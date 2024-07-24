@@ -1,9 +1,7 @@
 package org.netpreserve.warcbot.cdp;
 
 import org.intellij.lang.annotations.Language;
-import org.netpreserve.warcbot.cdp.domains.Emulation;
-import org.netpreserve.warcbot.cdp.domains.Network;
-import org.netpreserve.warcbot.cdp.domains.Page;
+import org.netpreserve.warcbot.cdp.domains.*;
 import org.netpreserve.warcbot.cdp.domains.Runtime;
 import org.netpreserve.warcbot.cdp.protocol.CDPException;
 import org.netpreserve.warcbot.cdp.protocol.CDPSession;
@@ -90,6 +88,8 @@ public class Navigator implements AutoCloseable {
         page.setLifecycleEventsEnabled(true);
         page.createIsolatedWorld(frameTree.frame().id(), "warcbot", false);
         page.addScriptToEvaluateOnNewDocument("// warcbot", "warcbot");
+
+        runtime.onConsoleAPICalled(event -> log.debug("Console: {} {}", event.type(), event.args()));
     }
 
     public static void main(String[] args) throws Exception {
@@ -210,6 +210,7 @@ public class Navigator implements AutoCloseable {
                 const scrollInterval = 50;
 
                 function scroll() {
+                    console.log("Scroll: " + window.scrollY);
                     if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
                         // We've reached the bottom of the page
                         doneCallback();

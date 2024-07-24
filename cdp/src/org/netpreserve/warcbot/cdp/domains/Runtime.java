@@ -14,9 +14,13 @@ public interface Runtime {
     Evaluate evaluate(String expression, int timeout, boolean returnByValue, boolean awaitPromise,
                       ExecutionContextUniqueId uniqueContextId);
 
+    void onConsoleAPICalled(Consumer<ConsoleAPICalled> event);
+
     void onExecutionContextCreated(Consumer<ExecutionContextCreated> handler);
 
     void enable();
+
+    record ConsoleAPICalled(String type, JsonNode args) {}
 
     record ExecutionContextCreated(ExecutionContextDescription context) {
     }

@@ -26,12 +26,11 @@ import static java.util.stream.Collectors.joining;
 public class BrowserProcess implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(BrowserProcess.class);
     private static final List<String> BROWSER_EXECUTABLES = List.of(
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-            "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
-            "google-chrome-stable",
+            "chromium-browser",
             "google-chrome",
-            "chromium-browser"
-    );
+            "google-chrome-stable",
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe");
 
     private final Process process;
     private final CDPClient cdp;
@@ -51,68 +50,81 @@ public class BrowserProcess implements AutoCloseable {
 
     public static BrowserProcess start(String executable, Path profileDir, boolean headless) throws IOException {
         boolean usePipe = Files.isExecutable(Path.of("/bin/sh"));
-        for (var executableToTry : executable == null ? BROWSER_EXECUTABLES : List.of(executable)) {
-            Process process;
-            var command = new ArrayList<>(List.of(executableToTry,
-                    usePipe ? "--remote-debugging-pipe" : "--remote-debugging-port=0",
-                    "--no-default-browser-check",
-                    "--no-first-run",
-                    "--no-startup-window",
-                    "--ash-no-nudges",
-                    "--disable-search-engine-choice-screen",
-                    "--propagate-iph-for-testing",
-                    "--disable-background-networking",
-                    "--disable-sync",
-                    "--use-mock-keychain",
-                    "--user-data-dir=" + profileDir.toString(),
-                    "--disable-blink-features=AutomationControlled"));
-            if (headless) {
-                command.add("--headless=new");
-                command.add("--disable-gpu");
-            }
+        Process process;
+        if (executable == null) {
+            executable = probeForExecutable();
+        }
+        var command = new ArrayList<>(List.of(executable,
+                usePipe ? "--remote-debugging-pipe" : "--remote-debugging-port=0",
+                "--no-default-browser-check",
+                "--no-first-run",
+                "--no-startup-window",
+                "--ash-no-nudges",
+                "--disable-search-engine-choice-screen",
+                "--propagate-iph-for-testing",
+                "--disable-background-networking",
+                "--disable-background-time-throttling",
+                "--disable-backgrounding-occluded-windows",
+                "--disable-renderer-backgrounding",
+                "--disable-sync",
+                "--use-mock-keychain",
+                "--user-data-dir=" + profileDir.toString(),
+                "--disable-blink-features=AutomationControlled"));
+        if (headless) {
+            command.add("--headless=new");
+            command.add("--disable-gpu");
+        }
+        if (usePipe) {
+            // in pipe mode the browser expects to read CDP from FD 3 and write CDP to FD 4
+            // we can't redirect arbitrary FDs in Java, so instead we use stdin and stdout
+            // and get the shell to set the FDs up for us.
+            String escapedCommand = command.stream()
+                    .map(arg -> "'" + arg.replace("'", "'\\''") + "'")
+                    .collect(joining(" "));
+            process = new ProcessBuilder("/bin/sh", "-c",
+                    "exec " + escapedCommand + " 3<&0 4>&1 0<&- 1>&2")
+                    .redirectError(ProcessBuilder.Redirect.INHERIT)
+                    .redirectOutput(ProcessBuilder.Redirect.PIPE)
+                    .redirectInput(ProcessBuilder.Redirect.PIPE)
+                    .start();
+        } else {
+            process = new ProcessBuilder(command)
+                    .inheritIO()
+                    .redirectError(ProcessBuilder.Redirect.PIPE)
+                    .start();
+        }
+        java.lang.Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                if (usePipe) {
-                    // in pipe mode the browser expects to read CDP from FD 3 and write CDP to FD 4
-                    // we can't redirect arbitrary FDs in Java, so instead we use stdin and stdout
-                    // and get the shell to set the FDs up for us.
-                    String escapedCommand = command.stream()
-                            .map(arg -> "'" + arg.replace("'", "'\\''") + "'")
-                            .collect(joining(" "));
-                    process = new ProcessBuilder("/bin/sh", "-c",
-                            "exec " + escapedCommand + " 3<&0 4>&1 0<&- 1>&2")
-                            .redirectError(ProcessBuilder.Redirect.INHERIT)
-                            .redirectOutput(ProcessBuilder.Redirect.PIPE)
-                            .redirectInput(ProcessBuilder.Redirect.PIPE)
-                            .start();
-                } else {
-                    process = new ProcessBuilder(command)
-                            .inheritIO()
-                            .redirectError(ProcessBuilder.Redirect.PIPE)
-                            .start();
-                }
-            } catch (IOException e) {
-                continue; // try another one
-            }
-            java.lang.Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                try {
-                    if (process.waitFor(1, TimeUnit.SECONDS)) return;
-                    process.destroy();
-                    if (process.waitFor(10, TimeUnit.SECONDS)) return;
-                    process.destroyForcibly();
-                } catch (InterruptedException e) {
-                    // just exit
-                }
-            }));
-            try {
-                return new BrowserProcess(process, usePipe ?
-                        new CDPClient(process.getInputStream(), process.getOutputStream()) :
-                        new CDPClient(readDevtoolsUrl(process)));
-            } catch (Exception e) {
+                if (process.waitFor(1, TimeUnit.SECONDS)) return;
                 process.destroy();
-                throw e;
+                if (process.waitFor(10, TimeUnit.SECONDS)) return;
+                process.destroyForcibly();
+            } catch (InterruptedException e) {
+                // just exit
+            }
+        }));
+        try {
+            return new BrowserProcess(process, usePipe ?
+                    new CDPClient(process.getInputStream(), process.getOutputStream()) :
+                    new CDPClient(readDevtoolsUrl(process)));
+        } catch (Exception e) {
+            process.destroy();
+            throw e;
+        }
+    }
+
+    private static String probeForExecutable() throws IOException {
+        for (var executable : BROWSER_EXECUTABLES){
+            try {
+                new ProcessBuilder(executable, "--version")
+                        .inheritIO()
+                        .start();
+                return executable;
+            } catch (IOException e) {
+                // try next one
             }
         }
-        throw new IOException("Couldn't start browser");
+        throw new IOException("Couldn't detect browser. Use the --browser option");
     }
 
     private static URI readDevtoolsUrl(Process process) {
