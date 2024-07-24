@@ -1,22 +1,33 @@
 package org.netpreserve.warcbot.cdp.domains;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
+
 import java.util.List;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 public interface Fetch {
     void enable(List<RequestPattern> patterns);
     void disable();
 
-    void continueRequest(String requestId, boolean interceptResponse);
-    void continueResponse(String requestId);
-    Network.ResponseBody getResponseBody(String requestId);
+    void continueRequest(RequestId requestId, boolean interceptResponse);
+    void continueResponse(RequestId requestId);
+    Network.ResponseBody getResponseBody(RequestId requestId);
 
     void onRequestPaused(Consumer<RequestPaused> handler);
 
-    void fulfillRequest(String requestId, int responseCode, byte[] binaryResponseHeaders,
+    void fulfillRequest(RequestId requestId, int responseCode, byte[] binaryResponseHeaders,
                         byte[] body, String reasonPhrase);
 
-    void failRequest(String requestId, String errorReason);
+    void failRequest(RequestId requestId, String errorReason);
+
+    record RequestId(@JsonValue String value) {
+        @JsonCreator
+        public RequestId {
+            Objects.requireNonNull(value);
+        }
+    }
 
     record RequestPattern(
             String urlPattern,
@@ -26,7 +37,7 @@ public interface Fetch {
     }
 
     record RequestPaused(
-            String requestId,
+            RequestId requestId,
             Network.Request request,
             String frameId,
             String resourceType,
@@ -35,7 +46,7 @@ public interface Fetch {
             String responseStatusText,
             List<HeaderEntry> responseHeaders,
             String networkId,
-            String redirectedRequestId
+            RequestId redirectedRequestId
     ) {
         public boolean isResponseStage() {
             return responseStatusCode != null || responseErrorReason != null;

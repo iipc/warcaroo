@@ -87,7 +87,7 @@ class RequestInterceptorTest {
         );
 
         Fetch.RequestPaused event = new Fetch.RequestPaused(
-                "1",
+                new Fetch.RequestId("1"),
                 null,
                 "frame1",
                 "Document",
