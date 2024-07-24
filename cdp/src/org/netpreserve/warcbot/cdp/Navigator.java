@@ -5,6 +5,7 @@ import org.netpreserve.warcbot.cdp.domains.*;
 import org.netpreserve.warcbot.cdp.domains.Runtime;
 import org.netpreserve.warcbot.cdp.protocol.CDPException;
 import org.netpreserve.warcbot.cdp.protocol.CDPSession;
+import org.netpreserve.warcbot.cdp.protocol.CDPTimeoutException;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,7 +29,7 @@ public class Navigator implements AutoCloseable {
     private final RequestInterceptor requestInterceptor;
     private final Page.FrameTree frameTree;
     private volatile Runtime.ExecutionContextUniqueId isolatedContext;
-    Duration pageLoadTimeout = Duration.ofSeconds(30);
+    Duration pageLoadTimeout = Duration.ofSeconds(120);
 
     private void handleLifecycleEvent(Page.LifecycleEvent event) {
         var navigation = currentNavigation.get();
@@ -118,7 +119,13 @@ public class Navigator implements AutoCloseable {
 
     public Navigation navigateTo(Url url) throws NavigationException, InterruptedException {
         requestInterceptor.reset();
-        var result = page.navigate(url.toString());
+        Page.Navigate result;
+        try {
+            // TODO: maybe change the proxy so that we can pass a specific timeout for this command
+            result = page.navigate(url.toString());
+        } catch (CDPTimeoutException e) {
+            throw new NavigationTimedOutException(url, "Timed out waiting page.navigate()");
+        }
         var navigation = new Navigation(result.frameId(), result.loaderId());
         var previousNavigation = currentNavigation.getAndSet(navigation);
         if (previousNavigation != null) {
