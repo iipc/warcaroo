@@ -78,7 +78,7 @@ public interface Network {
             Initiator initiator,
             Response redirectResponse,
             String resourceType,
-            String frameId) {
+            Page.FrameId frameId) {
     }
 
     record RequestWillBeSentExtraInfo(
@@ -97,7 +97,7 @@ public interface Network {
             double timestamp,
             String type,
             Response response,
-            String frameId
+            Page.FrameId frameId
     ) {
     }
 

@@ -39,7 +39,7 @@ public interface Fetch {
     record RequestPaused(
             RequestId requestId,
             Network.Request request,
-            String frameId,
+            Page.FrameId frameId,
             String resourceType,
             String responseErrorReason,
             Integer responseStatusCode,
