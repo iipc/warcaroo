@@ -25,7 +25,11 @@ public interface Runtime {
     record ExecutionContextCreated(ExecutionContextDescription context) {
     }
 
-    record ExecutionContextDescription(ExecutionContextId id, String origin, String name, ExecutionContextUniqueId uniqueId) {
+    record ExecutionContextDescription(ExecutionContextId id, String origin, String name, ExecutionContextUniqueId uniqueId,
+                                       AuxData auxData) {
+    }
+
+    record AuxData(Page.FrameId frameId) {
     }
 
     record Evaluate(RemoteObject result, ExceptionDetails exceptionDetails) {

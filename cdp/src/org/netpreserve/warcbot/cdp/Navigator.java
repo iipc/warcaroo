@@ -84,7 +84,7 @@ public class Navigator implements AutoCloseable {
         this.frameTree = page.getFrameTree();
         runtime.onExecutionContextCreated(event -> {
             var context = event.context();
-            if (context.name().equals("warcbot")) {
+            if (context.auxData().frameId().equals(frameTree.frame().id()) && context.name().equals("warcbot")) {
                 isolatedContext = context.uniqueId();
             }
             log.info("{}", event);
