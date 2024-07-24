@@ -215,7 +215,6 @@ public class Navigator implements AutoCloseable {
                 const scrollInterval = 50;
 
                 function scroll() {
-                    console.log("Scroll: " + window.scrollY);
                     if (window.innerHeight + window.scrollY >= document.body.offsetHeight) {
                         // We've reached the bottom of the page
                         doneCallback();
