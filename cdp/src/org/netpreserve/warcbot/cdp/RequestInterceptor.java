@@ -132,6 +132,7 @@ public class RequestInterceptor {
 
         if (blocker.test(event.request().url())) {
             fetch.failRequest(event.requestId(), "BlockedByClient");
+            return;
         }
 
         if (requestHandler != null) {
