@@ -131,6 +131,7 @@ public class RequestInterceptor {
         log.debug("Request paused {}", event);
 
         if (blocker.test(event.request().url())) {
+            log.debug("Blocked request for {}", event.request().url());
             fetch.failRequest(event.requestId(), "BlockedByClient");
             return;
         }
