@@ -117,10 +117,10 @@ public class Navigator implements AutoCloseable {
         var navigation = new Navigation(result.frameId(), result.loaderId());
         var previousNavigation = currentNavigation.getAndSet(navigation);
         if (previousNavigation != null) {
-            previousNavigation.completeExceptionally(new NavigationException("Interrupted by navigateTo()"));
+            previousNavigation.completeExceptionally(new NavigationException(url, "Interrupted by navigateTo()"));
         }
         if (result.errorText() != null) {
-            var e = new NavigationException(result.errorText());
+            var e = new NavigationFailedException(url, result.errorText());
             navigation.completeExceptionally(e);
             throw e;
         }
@@ -129,7 +129,7 @@ public class Navigator implements AutoCloseable {
         } catch (ExecutionException e) {
             throw new RuntimeException(e);
         } catch (TimeoutException e) {
-            throw new NavigationTimedOutException("Timed out waiting for load event");
+            throw new NavigationTimedOutException(url, "Timed out waiting for load event");
         }
         return navigation;
     }

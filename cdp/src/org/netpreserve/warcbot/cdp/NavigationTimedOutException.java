@@ -1,7 +1,9 @@
 package org.netpreserve.warcbot.cdp;
 
+import org.netpreserve.warcbot.util.Url;
+
 public class NavigationTimedOutException extends NavigationException {
-    public NavigationTimedOutException(String message) {
-        super(message);
+    public NavigationTimedOutException(Url url, String message) {
+        super(url, message);
     }
 }

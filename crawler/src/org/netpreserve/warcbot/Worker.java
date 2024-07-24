@@ -107,7 +107,6 @@ public class Worker {
                 }
                 navigator.setUserAgent(config.getUserAgent());
 
-                //try (var ignored = browser.recordResources(storage, pageId)) {
                 log.info("Nav to {}", candidate.url());
                 navigator.navigateTo(candidate.url());
                 navigator.waitForLoadEvent();
@@ -115,12 +114,8 @@ public class Worker {
 
                 Thread.sleep(200);
 
-                log.info("Force lazy");
                 navigator.forceLoadLazyImages();
-
-                log.info("Scrolling");
                 navigator.scrollToBottom();
-
                 navigator.waitForRequestInterceptorIdle();
 
                 List<Url> links = navigator.extractLinks();
@@ -135,7 +130,10 @@ public class Worker {
                 storage.dao.addPage(pageId, navigator.currentUrl(), Instant.now(), navigator.title(),
                         visitTimeMs);
 
-                navigator.navigateToBlank();
+                frontier.markCrawled(candidate);
+            } catch (NavigationException e) {
+                log.error("NavigationException {}", e.getMessage());
+                frontier.markFailed(candidate, pageId, e);
             } catch (Throwable e) {
                 if (closed) return;
                 frontier.markFailed(candidate, pageId, e);
@@ -143,7 +141,8 @@ public class Worker {
             } finally {
                 log.info("Finished worker {} for {} [{}]", id, candidate.url(), pageId);
             }
-            frontier.markCrawled(candidate);
+
+            navigator.navigateToBlank();
         }
     }
 
@@ -153,7 +152,7 @@ public class Worker {
             try {
                 run();
             } catch (Exception e) {
-                log.error("Worker error", e);
+                log.error("Worker crashed", e);
             }
         }, "Worker-" + id);
         thread.start();
