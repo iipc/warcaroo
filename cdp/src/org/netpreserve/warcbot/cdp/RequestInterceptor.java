@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadFactory;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
@@ -39,6 +40,7 @@ public class RequestInterceptor {
     private final RequestHandler requestHandler;
     private final Path downloadPath;
     private static final ThreadFactory threadFactory = Thread.ofVirtual().name("RequestInterceptor", 0).factory();
+    private Predicate<String> blocker = url -> false;
 
     public RequestInterceptor(CDPSession cdpSession, IdleMonitor idleMonitor, Tracker tracker,
                               RequestHandler requestHandler, Consumer<ResourceFetched> resourceHandler,
@@ -86,6 +88,10 @@ public class RequestInterceptor {
         }
     }
 
+    public void block(Predicate<String> predicate) {
+        this.blocker = predicate;
+    }
+
     record PartialFetch(
             String url,
             byte[] requestHeader,
@@ -123,6 +129,10 @@ public class RequestInterceptor {
 
     private void handleRequestPaused(Fetch.RequestPaused event) {
         log.debug("Request paused {}", event);
+
+        if (blocker.test(event.request().url())) {
+            fetch.failRequest(event.requestId(), "BlockedByClient");
+        }
 
         if (requestHandler != null) {
             RequestHandler.Response response;

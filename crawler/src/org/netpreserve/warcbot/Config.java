@@ -2,6 +2,7 @@ package org.netpreserve.warcbot;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -15,6 +16,7 @@ public class Config {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private final List<String> seeds = new ArrayList<>();
     private final List<Pattern> includes = new ArrayList<>();
+    private final List<Pattern> blocks = new ArrayList<>();
     private String userAgent = "warcbot";
     private int workers = 1;
     private int crawlDelay = 2000;
@@ -43,6 +45,10 @@ public class Config {
         includes.add(Pattern.compile(regex));
     }
 
+    public void addBlock(String regex) {
+        blocks.add(Pattern.compile(regex));
+    }
+
     public void addSeed(String url) {
         seeds.add(url);
         var prefix = url.replaceFirst("/[^/]*$", "/");
@@ -55,11 +61,20 @@ public class Config {
 
     @JsonIgnore
     public Predicate<String> getScope() {
-        var scope = (Predicate<String>) url -> false;
-        for (var include: includes) {
-            scope = scope.or(include.asPredicate());
+        return patternsToPredicate(includes);
+    }
+
+    private static Predicate<String> patternsToPredicate(List<Pattern> patterns) {
+        var predicate = (Predicate<String>) url -> false;
+        for (var pattern: patterns) {
+            predicate = predicate.or(pattern.asPredicate());
         }
-        return scope;
+        return predicate;
+    }
+
+    @JsonIgnore
+    public Predicate<String> getBlockPredicate() {
+        return patternsToPredicate(blocks);
     }
 
     public List<Pattern> getIncludes() {

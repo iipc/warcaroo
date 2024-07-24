@@ -16,6 +16,8 @@ public interface Fetch {
     void fulfillRequest(String requestId, int responseCode, byte[] binaryResponseHeaders,
                         byte[] body, String reasonPhrase);
 
+    void failRequest(String requestId, String errorReason);
+
     record RequestPattern(
             String urlPattern,
             String resourceType,

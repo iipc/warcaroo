@@ -26,6 +26,7 @@ public class WarcBot {
                                 Usage: warcbot [options] seed-url...
                                 
                                 Options:
+                                  --block REGEX             Block fetching of resources that match the specified REGEX pattern.
                                   --browser PATH            Set the path to the browser binary
                                   --crawl-delay MILLIS      Wait this long before crawling another page from the same queue.
                                   --include REGEX           Include pages that match the specified REGEX pattern in the crawl scope.
@@ -42,6 +43,7 @@ public class WarcBot {
                                 """, config.getWorkers());
                         return;
                     }
+                    case "--block" -> config.addBlock(args[++i]);
                     case "--browser" -> config.setBrowserBinary(args[++i]);
                     case "--crawl-delay" -> config.setCrawlDelay(Integer.parseInt(args[++i]));
                     case "--include" -> config.addInclude(args[++i]);

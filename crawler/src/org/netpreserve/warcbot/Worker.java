@@ -106,6 +106,7 @@ public class Worker {
                     navigator = browserProcess.newWindow(this::handleResource, null, tracker);
                 }
                 navigator.setUserAgent(config.getUserAgent());
+                navigator.block(config.getBlockPredicate());
 
                 log.info("Nav to {}", candidate.url());
                 navigator.navigateTo(candidate.url());

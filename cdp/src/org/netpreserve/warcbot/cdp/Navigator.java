@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 public class Navigator implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Navigator.class);
@@ -42,6 +43,10 @@ public class Navigator implements AutoCloseable {
 
     public void setUserAgent(String userAgent) {
         emulation.setUserAgentOverride(userAgent);
+    }
+
+    public void block(Predicate<String> predicate) {
+        requestInterceptor.block(predicate);
     }
 
     public record Navigation(
