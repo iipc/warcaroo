@@ -40,6 +40,9 @@ class NavigatorTest {
                 exchange.close();
                 return;
             }
+
+            assertEquals("test-agent", exchange.getRequestHeaders().getFirst("User-Agent"));
+
             exchange.getResponseHeaders().add("Content-Type", "text/html");
             exchange.getResponseHeaders().add("Test", "1");
             exchange.getResponseHeaders().add("Test", "2");
@@ -80,37 +83,40 @@ class NavigatorTest {
 
         var recordedPaths = new HashSet<String>();
         try (var browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"), true);
-             var browser = browserProcess.newWindow(recording -> {
+             var navigator = browserProcess.newWindow(recording -> {
             recordedPaths.add(URI.create(recording.url()).getPath());
             System.out.println("Got resource! " + recording);
         }, null, null)) {
-            String title = browser.title();
-            browser.navigateToBlank();
+
+            navigator.setUserAgent("test-agent");
+
+            String title = navigator.title();
+            navigator.navigateToBlank();
 //            browser.fetchResource(new Url("http://127.0.0.1:" + port + "/robots.txt"));
-            title = browser.title();
+            title = navigator.title();
 
             httpServer.start();
 
 
             String baseUrl = "http://127.0.0.1:" + port + "/";
-            browser.navigateTo(new Url(baseUrl)).loadEvent().get(10, TimeUnit.SECONDS);
-            title = browser.title();
+            navigator.navigateTo(new Url(baseUrl)).loadEvent().get(10, TimeUnit.SECONDS);
+            title = navigator.title();
 
-            assertEquals("Test page", browser.title());
+            assertEquals("Test page", navigator.title());
             assertTrue(requestedPaths.contains("/"));
 
-            assertEquals(List.of("/link1"), browser.extractLinks().stream()
+            assertEquals(List.of("/link1"), navigator.extractLinks().stream()
                     .map(link -> link.toURI().getPath()).toList());
 
-            browser.forceLoadLazyImages();
+            navigator.forceLoadLazyImages();
             Thread.sleep(1000);
             assertTrue(requestedPaths.contains("/lazy.jpg"));
-            browser.scrollToBottom();
-            browser.waitForRequestInterceptorIdle();
+            navigator.scrollToBottom();
+            navigator.waitForRequestInterceptorIdle();
             assertTrue(requestedPaths.contains("/scroll.jpg"));
 
             try {
-                browser.navigateTo(new Url(baseUrl + "download"));
+                navigator.navigateTo(new Url(baseUrl + "download"));
             } catch (NavigationException e) {
                 assertEquals("net::ERR_ABORTED", e.getMessage(),
                         "Download should abort the page load");
