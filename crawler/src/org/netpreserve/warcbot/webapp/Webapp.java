@@ -105,9 +105,12 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/resources")
     Page<Resource> resources(ResourcesQuery query) throws IOException {
-        long count = crawl.db.storage().countResources();
+        var fmap = query.filterMap();
+        long count = crawl.db.storage().countResources(fmap.get("url"), fmap.get("pageId"));
+        var rows = crawl.db.storage().queryResources(query.orderBy(), fmap.get("url"), fmap.get("pageId"),
+                query.size, (query.page - 1) * query.size);
         return new Page(count / query.size + 1, count,
-                crawl.db.storage().queryResources(query.orderBy(), query.size, (query.page - 1) * query.size));
+                rows);
     }
 
     @GET("/")
@@ -183,6 +186,9 @@ public class Webapp implements HttpHandler {
         }
     }
 
+    public record Filter(String field, String type, String value) {
+    }
+
     abstract static class BaseQuery {
         @Doc("Page number of results to return. Starting from 1.")
         public long page = 1;
@@ -190,6 +196,13 @@ public class Webapp implements HttpHandler {
         public int size = 10;
         @Doc("Fields to order the results by.")
         public List<Sort> sort;
+        @Doc("Filter on the value of fields.")
+        public List<Filter> filter;
+
+        public Map<String,String> filterMap() {
+            if (filter == null || filter.isEmpty()) return Map.of();
+            return filter.stream().collect(Collectors.toMap(Filter::field, Filter::value));
+        }
     }
 
     static class FrontierQuery extends BaseQuery {

@@ -20,6 +20,7 @@
 <script>
     var table = new Tabulator("#myTable", {
         ajaxURL: '/api/resources',
+        filterMode: 'remote',
         height: '100%',
         layout: "dataFill",
         pagination: true,
@@ -28,6 +29,7 @@
         paginationSize: 100,
         sortMode: "remote",
         persistence: {
+            headerFilter: true,
             sort: true
         },
         persistenceReaderFunc: function(id, type) {
@@ -35,6 +37,15 @@
             if (type === 'sort' && state.sort) {
                 return state.sort.split(',').map(s => s.startsWith("-") ?
                     {column:s.substring(1), dir:"desc"} : {column:s, dir:"asc"});
+            } else if (type === 'headerFilter') {
+                const filters = [];
+                for (const column of this.getColumnLayout()) {
+                    const value = state[column.field];
+                    if (value) {
+                        filters.push({field: column.field, type: 'like', value: value});
+                    }
+                }
+                return filters;
             }
             return false;
         },
@@ -42,6 +53,10 @@
             var state = Object.fromEntries(new URLSearchParams(location.hash.substring(1)));
             if (type === 'sort') {
                 state.sort = data.map(item => (item.dir === 'desc' ? '-' : '') + item.column).join(',');
+            } else if (type === 'headerFilter') {
+                for (const filter of data) {
+                    state[filter.field] = filter.value;
+                }
             }
             window.history.replaceState(undefined, undefined, "#" + new URLSearchParams(state).toString());
         },
@@ -60,6 +75,10 @@
 
     window.addEventListener('hashchange', event => {
         table.setSort(table.modules.persistence.load('sort'));
+        table.clearHeaderFilter();
+        for (const filter of table.modules.persistence.load('headerFilter')) {
+            table.setHeaderFilterValue(filter.field, filter.value);
+        }
     });
 
     function formatSize(n) {

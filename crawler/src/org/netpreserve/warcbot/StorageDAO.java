@@ -5,6 +5,7 @@ import org.jdbi.v3.core.mapper.Nested;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.BindMethods;
 import org.jdbi.v3.sqlobject.customizer.Define;
+import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jetbrains.annotations.NotNull;
@@ -42,14 +43,24 @@ public interface StorageDAO {
             GROUP BY pages.id <orderBy> LIMIT :limit OFFSET :offset""")
     List<PageExt> queryPages(@Define String orderBy, int limit, long offset);
 
-    @SqlQuery("SELECT COUNT(*) FROM resources")
-    long countResources();
+    @SqlQuery("""
+         SELECT COUNT(*) FROM resources
+         WHERE (:url IS NULL OR url GLOB :url)
+           AND (:pageId IS NULL OR page_id GLOB :pageId)
+         """)
+    long countResources(String url, String pageId);
 
     @SqlQuery("""
             SELECT *
             FROM resources
+            WHERE (:url IS NULL OR url GLOB :url)
+              AND (:pageId IS NULL OR page_id GLOB :pageId)
             <orderBy> LIMIT :limit OFFSET :offset""")
-    List<Resource> queryResources(@Define String orderBy, int limit, long offset);
+    @DefineNamedBindings
+    List<Resource> queryResources(@Define String orderBy, String url, String pageId, int limit, long offset);
+
+    record ResourceFilters(String url, String pageId) {
+    }
 
     record Page(String id, String url, Instant date, String title, long visitTimeMs) {
     }
