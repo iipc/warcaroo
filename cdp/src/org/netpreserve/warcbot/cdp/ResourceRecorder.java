@@ -47,6 +47,7 @@ public class ResourceRecorder {
     private long bytesWritten = 0;
     private long bytesReceived = 0;
     CompletableFuture<Void> completionFuture = new CompletableFuture<>();
+    private double requestTimestamp;
 
     public ResourceRecorder(Network.RequestId networkId, Path downloadPath, Consumer<ResourceFetched> resourceHandler, Network network) {
         this.networkId = networkId;
@@ -101,6 +102,7 @@ public class ResourceRecorder {
 
         this.request = event.request();
         this.resourceType = event.type();
+        this.requestTimestamp = event.timestamp();
     }
 
     public void handleRequestWillBeSentExtraInfo(Network.RequestWillBeSentExtraInfo event) {
@@ -190,7 +192,12 @@ public class ResourceRecorder {
         }
         byte[] requestHeader = formatRequestHeader(request, fullRequestHeaders);
         byte[] responseHeader = formatResponseHeader(response, rawResponseHeader);
-        long fetchTimeMs = (long) ((timestamp - response.timing().requestTime()) * 1000);
+        long fetchTimeMs;
+        if (response.timing() != null) {
+            fetchTimeMs = (long) ((timestamp - response.timing().requestTime()) * 1000);
+        } else {
+            fetchTimeMs = (long) ((timestamp - requestTimestamp) * 1000);
+        }
         String redirect = response.headers().get("location");
         String responseType = response.headers().get("Content-Type");
         rewindChannel();
