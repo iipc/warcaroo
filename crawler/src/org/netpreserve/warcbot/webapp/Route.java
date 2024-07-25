@@ -2,20 +2,19 @@ package org.netpreserve.warcbot.webapp;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
-import org.netpreserve.warcbot.WarcBotException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+import java.util.zip.GZIPOutputStream;
 
 import static java.lang.annotation.ElementType.*;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
@@ -95,8 +94,19 @@ public class Route implements HttpHandler {
         }
         if (result != null) {
             exchange.getResponseHeaders().set("Content-Type", "application/json");
+            boolean gzip = false;
+            if (getAcceptedEncodings(exchange).contains("gzip")) {
+                exchange.getResponseHeaders().add("Content-Encoding", "gzip");
+                gzip = true;
+            }
             exchange.sendResponseHeaders(200, 0);
-            Webapp.JSON.writeValue(exchange.getResponseBody(), result);
+            var bodyStream = exchange.getResponseBody();
+            if (gzip) bodyStream = new GZIPOutputStream(bodyStream);
+            try {
+                Webapp.JSON.writeValue(bodyStream, result);
+            } finally {
+                bodyStream.close();
+            }
         } else {
             try {
                 exchange.sendResponseHeaders(200, -1);
@@ -106,6 +116,12 @@ public class Route implements HttpHandler {
                 }
             }
         }
+    }
+
+    private static Set<String> getAcceptedEncodings(HttpExchange exchange) {
+        var header = exchange.getRequestHeaders().getFirst("Accept-Encoding");
+        if (header == null) return Set.of();
+        return Set.of(header.split("\\s*,\\s*"));
     }
 
     @Target(METHOD)
