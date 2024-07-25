@@ -114,7 +114,7 @@ public interface Network {
             long wallTime,
             Initiator initiator,
             Response redirectResponse,
-            ResourceType resourceType,
+            ResourceType type,
             Page.FrameId frameId) {
     }
 

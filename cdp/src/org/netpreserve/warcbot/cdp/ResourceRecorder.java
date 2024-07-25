@@ -100,7 +100,7 @@ public class ResourceRecorder {
         }
 
         this.request = event.request();
-        this.resourceType = event.resourceType();
+        this.resourceType = event.type();
     }
 
     public void handleRequestWillBeSentExtraInfo(Network.RequestWillBeSentExtraInfo event) {
