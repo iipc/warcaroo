@@ -91,9 +91,7 @@ public class Crawl implements AutoCloseable {
         try {
             if (state != State.STOPPED) throw new BadStateException("Can only start a STOPPED crawl");
             state = State.STARTING;
-            for (var seed : config.getSeeds()) {
-                frontier.addUrl(new Url(seed), 0, null);
-            }
+            frontier.addUrls(config.getSeeds(), 0, null);
             for (int i = 0; i < config.getWorkers(); i++) {
                 workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker, tracker, config));
             }

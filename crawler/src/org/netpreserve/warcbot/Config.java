@@ -3,6 +3,7 @@ package org.netpreserve.warcbot;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.jetbrains.annotations.NotNull;
+import org.netpreserve.warcbot.util.Url;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,7 +15,7 @@ import java.util.stream.Stream;
 
 public class Config {
     private static final ObjectMapper MAPPER = new ObjectMapper();
-    private final List<String> seeds = new ArrayList<>();
+    private final List<Url> seeds = new ArrayList<>();
     private final List<Pattern> includes = new ArrayList<>();
     private final List<Pattern> blocks = new ArrayList<>();
     private String userAgent = "warcbot";
@@ -50,12 +51,12 @@ public class Config {
     }
 
     public void addSeed(String url) {
-        seeds.add(url);
+        seeds.add(new Url(url));
         var prefix = url.replaceFirst("/[^/]*$", "/");
         includes.add(Pattern.compile(Pattern.quote(prefix) + "(?:/|)"));
     }
 
-    public List<String> getSeeds() {
+    public List<Url> getSeeds() {
         return seeds;
     }
 
