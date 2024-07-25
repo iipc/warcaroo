@@ -47,14 +47,20 @@ public class Database implements AutoCloseable {
                 return ((position, statement, ctx) -> statement.setString(position, value.toString()));
             }
         });
-        jdbi.registerColumnMapper(Url.class, (ColumnMapper<Url>) (r, columnNumber, ctx) -> new Url(r.getString(columnNumber)));
+        jdbi.registerColumnMapper(Url.class, (ColumnMapper<Url>) (r, columnNumber, ctx) -> {
+            String value = r.getString(columnNumber);
+            return value == null ? null : new Url(value);
+        });
         jdbi.registerArgument(new AbstractArgumentFactory<WarcDigest>(Types.VARCHAR) {
             @Override
             protected Argument build(WarcDigest value, ConfigRegistry config) {
                 return ((position, statement, ctx) -> statement.setString(position, value.prefixedBase32()));
             }
         });
-        jdbi.registerColumnMapper(WarcDigest.class, (r, columnNumber, ctx) -> new WarcDigest(r.getString(columnNumber)));
+        jdbi.registerColumnMapper(WarcDigest.class, (r, columnNumber, ctx) -> {
+            String value = r.getString(columnNumber);
+            return value == null ? null : new WarcDigest(value);
+        });
         init();
     }
 
