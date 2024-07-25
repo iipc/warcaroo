@@ -92,6 +92,7 @@ public class WarcBot {
 
 
         if (port != null) {
+            System.setProperty("sun.net.httpserver.nodelay", "true");
             var httpServer = HttpServer.create(new InetSocketAddress(host, port), 0);
             httpServer.createContext("/", new Webapp(crawl));
             httpServer.setExecutor(Executors.newCachedThreadPool());
