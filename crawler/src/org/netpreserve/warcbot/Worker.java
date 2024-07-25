@@ -3,6 +3,7 @@ package org.netpreserve.warcbot;
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.NoArgGenerator;
 import org.netpreserve.warcbot.cdp.*;
+import org.netpreserve.warcbot.cdp.protocol.CDPException;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,17 +116,30 @@ public class Worker {
 
                 Thread.sleep(200);
 
-                navigator.forceLoadLazyImages();
-                navigator.scrollToBottom();
-                navigator.waitForRequestInterceptorIdle();
-
-                List<Url> links = navigator.extractLinks();
-                if (log.isTraceEnabled()) {
-                    for (var link : links) {
-                        log.trace("Link: {}", link);
+                try {
+                    navigator.forceLoadLazyImages();
+                    navigator.scrollToBottom();
+                } catch (CDPException e) {
+                    if (!e.getMessage().contains("uniqueContextId not found")) {
+                        throw e;
                     }
                 }
-                frontier.addUrls(links, candidate.depth() + 1, candidate.url());
+
+                navigator.waitForRequestInterceptorIdle();
+
+                try {
+                    List<Url> links = navigator.extractLinks();
+                    if (log.isTraceEnabled()) {
+                        for (var link : links) {
+                            log.trace("Link: {}", link);
+                        }
+                    }
+                    frontier.addUrls(links, candidate.depth() + 1, candidate.url());
+                } catch (CDPException e) {
+                    if (!e.getMessage().contains("uniqueContextId not found")) {
+                        throw e;
+                    }
+                }
 
                 var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
                 storage.dao.addPage(pageId, navigator.currentUrl(), Instant.now(), navigator.title(),
