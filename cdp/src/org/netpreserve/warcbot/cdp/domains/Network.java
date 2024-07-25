@@ -4,17 +4,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.jetbrains.annotations.Nullable;
+import org.netpreserve.warcbot.cdp.protocol.Unwrap;
 
-import java.util.Base64;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 public interface Network {
     void enable(Integer maxTotalBufferSize, Integer maxResourceBufferSize, Integer maxPostDataSize);
 
     ResponseBody getResponseBody(RequestId requestId);
+
+    CompletionStage<ResponseBody> getResponseBodyAsync(RequestId requestId);
 
     void onRequestWillBeSent(Consumer<RequestWillBeSent> handler);
 
@@ -31,6 +33,22 @@ public interface Network {
     void onResponseReceivedExtraInfo(Consumer<ResponseReceivedExtraInfo> handler);
 
     void onDataReceived(Consumer<DataReceived> handler);
+
+    @Unwrap("bufferedData")
+    CompletableFuture<byte[]> streamResourceContent(RequestId requestId);
+
+    void setRequestInterception(List<RequestPattern> patterns);
+
+    void onRequestIntercepted(Consumer<RequestIntercepted> handler);
+
+    void continueInterceptedRequest(InterceptionId interceptionId);
+
+
+    record RequestIntercepted(InterceptionId interceptionId, RequestId requestId) {
+    }
+
+    record RequestPattern() {
+    }
 
     class ResponseBody {
         private final byte[] body;
@@ -49,6 +67,13 @@ public interface Network {
         }
     }
 
+    record InterceptionId(@JsonValue String value) {
+        @JsonCreator
+        public InterceptionId {
+            Objects.requireNonNull(value);
+        }
+    }
+
     record LoaderId(@JsonValue String value) {
         @JsonCreator
         public LoaderId {
@@ -58,12 +83,24 @@ public interface Network {
 
     record MonotonicTime(@JsonValue double value) {
         @JsonCreator
-        public MonotonicTime {}
+        public MonotonicTime {
+        }
     }
 
     record RequestId(@JsonValue String value) {
         @JsonCreator
         public RequestId {
+            Objects.requireNonNull(value);
+        }
+
+        public String toString() {
+            return value;
+        }
+    }
+
+    record ResourceType(@JsonValue String value) {
+        @JsonCreator
+        public ResourceType {
             Objects.requireNonNull(value);
         }
     }
@@ -77,7 +114,7 @@ public interface Network {
             long wallTime,
             Initiator initiator,
             Response redirectResponse,
-            String resourceType,
+            ResourceType resourceType,
             Page.FrameId frameId) {
     }
 
@@ -95,7 +132,7 @@ public interface Network {
             RequestId requestId,
             LoaderId loaderId,
             double timestamp,
-            String type,
+            ResourceType type,
             Response response,
             Page.FrameId frameId
     ) {
@@ -129,10 +166,10 @@ public interface Network {
             String url,
             int status,
             String statusText,
-            Map<String, String> headers,
+            Headers headers,
             String mimeType,
             String charset,
-            Map<String, String> requestHeaders,
+            Headers requestHeaders,
             boolean connectionReused,
             long connectionId,
             String remoteIPAddress,
@@ -147,16 +184,22 @@ public interface Network {
             String protocol) {
     }
 
+    class Headers extends TreeMap<String, String> {
+        public Headers() {
+            super(String.CASE_INSENSITIVE_ORDER);
+        }
+    }
+
     record ResourceTiming(
             double requestTime
-    ){
+    ) {
     }
 
     record Request(
             String url,
             String urlFragment,
             String method,
-            Map<String, String> headers,
+            Headers headers,
             List<PostDataEntry> postDataEntries) {
 
         public byte[] body() {
@@ -194,6 +237,7 @@ public interface Network {
     record Initiator() {
     }
 
-    record DataReceived(RequestId requestId, double timestamp, int dataLength, int encodedDataLength, @Nullable byte[] data) {
+    record DataReceived(RequestId requestId, double timestamp, int dataLength, int encodedDataLength,
+                        @Nullable byte[] data) {
     }
 }

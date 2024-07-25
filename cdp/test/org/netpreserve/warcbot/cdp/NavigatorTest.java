@@ -1,6 +1,8 @@
 package org.netpreserve.warcbot.cdp;
 
 import com.sun.net.httpserver.HttpServer;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.netpreserve.warcbot.util.Url;
@@ -11,6 +13,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -22,6 +25,66 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class NavigatorTest {
     private static final Logger log = LoggerFactory.getLogger(NavigatorTest.class);
+    private static BrowserProcess browserProcess;
+
+    @BeforeAll
+    public static void setUp(@TempDir Path tempDir) throws IOException {
+        browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"), true);
+    }
+
+    @AfterAll
+    static void tearDown() {
+        browserProcess.close();
+    }
+
+    @Test
+    void testRedirect() throws Exception {
+        var httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0, "/", exchange -> {
+            switch (exchange.getRequestURI().toString()) {
+                case "/redirect1" -> {
+                    exchange.getResponseHeaders().add("Location", "/redirect2");
+                    exchange.sendResponseHeaders(301, 0);
+                    exchange.getResponseBody().write("r1 body".getBytes());
+                }
+                case "/redirect2" -> {
+                    exchange.getResponseHeaders().add("Location", "/end");
+                    exchange.sendResponseHeaders(301, 0);
+                    exchange.getResponseBody().write("r2 body".getBytes());
+                }
+                case "/end" -> {
+                    exchange.getResponseHeaders().add("Content-Type", "text/html");
+                    exchange.sendResponseHeaders(200, 0);
+                    exchange.getResponseBody().write("Arrived".getBytes());
+                }
+            }
+            exchange.close();
+        });
+        httpServer.start();
+        var resources = new ArrayList<ResourceFetched>();
+        try (var navigator = browserProcess.newWindow(resources::add, null, null)){
+            navigator.navigateTo(new Url("http://127.0.0.1:" + httpServer.getAddress().getPort() + "/redirect1"));
+            navigator.networkManager().waitForLoadingResources();
+
+            assertEquals(3, resources.size());
+            {
+                var resource = resources.get(0);
+                assertEquals("/redirect1", URI.create(resource.url()).getPath());
+                assertEquals("/redirect2", resource.redirect());
+            }
+            {
+                var resource = resources.get(1);
+                assertEquals("/redirect2", URI.create(resource.url()).getPath());
+                assertEquals("/end", resource.redirect());
+            }
+            {
+                var resource = resources.get(2);
+                assertEquals("/end", URI.create(resource.url()).getPath());
+                assertNull(resource.redirect());
+            }
+        } finally {
+            httpServer.stop(0);
+        }
+    }
 
     @Test
     public void testLazyImagesAndScroll(@TempDir Path tempDir) throws IOException, InterruptedException, ExecutionException, TimeoutException, NavigationException {
@@ -37,6 +100,21 @@ class NavigatorTest {
                 exchange.getResponseHeaders().add("Content-Type", "application/octet-stream");
                 exchange.sendResponseHeaders(200, 0);
                 exchange.getResponseBody().write("Download me".getBytes());
+                exchange.close();
+                return;
+            } else if (path.equals("/redirect1")) {
+                exchange.getResponseHeaders().add("Location", "/redirect2");
+                exchange.sendResponseHeaders(301, -1);
+                exchange.close();
+                return;
+            } else if (path.equals("/redirect2")) {
+                exchange.getResponseHeaders().add("Location", "/redirectend");
+                exchange.sendResponseHeaders(301, -1);
+                exchange.close();
+                return;
+            } else if (path.equals("/redirectend")) {
+                exchange.sendResponseHeaders(200, 0);
+                exchange.getResponseBody().write("Arrived".getBytes());
                 exchange.close();
                 return;
             }
@@ -82,8 +160,7 @@ class NavigatorTest {
         int port = httpServer.getAddress().getPort();
 
         var recordedPaths = new HashSet<String>();
-        try (var browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"), true);
-             var navigator = browserProcess.newWindow(recording -> {
+        try (var navigator = browserProcess.newWindow(recording -> {
             recordedPaths.add(URI.create(recording.url()).getPath());
             System.out.println("Got resource! " + recording);
         }, null, null)) {

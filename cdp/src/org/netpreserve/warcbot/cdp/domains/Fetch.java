@@ -2,9 +2,11 @@ package org.netpreserve.warcbot.cdp.domains;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.netpreserve.warcbot.cdp.protocol.Unwrap;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletionStage;
 import java.util.function.Consumer;
 
 public interface Fetch {
@@ -12,15 +14,25 @@ public interface Fetch {
     void disable();
 
     void continueRequest(RequestId requestId, boolean interceptResponse);
+    CompletionStage<Void> continueRequestAsync(RequestId requestId, boolean interceptResponse);
     void continueResponse(RequestId requestId);
     Network.ResponseBody getResponseBody(RequestId requestId);
+    @Unwrap("stream")
+    IO.StreamHandle takeResponseBodyAsStream(RequestId requestId);
 
     void onRequestPaused(Consumer<RequestPaused> handler);
 
     void fulfillRequest(RequestId requestId, int responseCode, byte[] binaryResponseHeaders,
                         byte[] body, String reasonPhrase);
+    CompletionStage<Void> fulfillRequestAsync(RequestId requestId, int responseCode, byte[] binaryResponseHeaders,
+                        byte[] body, String reasonPhrase);
+    void fulfillRequest(RequestId requestId, int responseCode, List<HeaderEntry> responseHeaders,
+                        byte[] body, String reasonPhrase);
+
 
     void failRequest(RequestId requestId, String errorReason);
+    CompletionStage<Void> failRequestAsync(RequestId requestId, String errorReason);
+
 
     record RequestId(@JsonValue String value) {
         @JsonCreator
@@ -40,7 +52,7 @@ public interface Fetch {
             RequestId requestId,
             Network.Request request,
             Page.FrameId frameId,
-            String resourceType,
+            Network.ResourceType resourceType,
             String responseErrorReason,
             Integer responseStatusCode,
             String responseStatusText,

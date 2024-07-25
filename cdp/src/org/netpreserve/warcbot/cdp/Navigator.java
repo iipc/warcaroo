@@ -26,7 +26,7 @@ public class Navigator implements AutoCloseable {
     private final AtomicReference<Navigation> currentNavigation = new AtomicReference<>();
     private final IdleMonitor idleMonitor = new IdleMonitor();
     private final CDPSession cdpSession;
-    private final RequestInterceptor requestInterceptor;
+    private final NetworkManager networkManager;
     private final Page.FrameTree frameTree;
     private volatile Runtime.ExecutionContextUniqueId isolatedContext;
     Duration pageLoadTimeout = Duration.ofSeconds(120);
@@ -47,7 +47,7 @@ public class Navigator implements AutoCloseable {
     }
 
     public void block(Predicate<String> predicate) {
-        requestInterceptor.block(predicate);
+        networkManager.block(predicate);
     }
 
     public record Navigation(
@@ -77,7 +77,7 @@ public class Navigator implements AutoCloseable {
         this.emulation = cdpSession.domain(Emulation.class);
         this.page = cdpSession.domain(Page.class);
         this.runtime = cdpSession.domain(Runtime.class);
-        this.requestInterceptor = new RequestInterceptor(cdpSession, idleMonitor, tracker, requestHandler,
+        this.networkManager = new NetworkManager(cdpSession, idleMonitor, tracker, requestHandler,
                 resourceHandler, Path.of("data", "downloads"));
 
         page.onLifecycleEvent(this::handleLifecycleEvent);
@@ -88,7 +88,6 @@ public class Navigator implements AutoCloseable {
             if (context.auxData().frameId().equals(frameTree.frame().id()) && context.name().equals("warcbot")) {
                 isolatedContext = context.uniqueId();
             }
-            log.info("{}", event);
         });
         runtime.enable();
         page.setLifecycleEventsEnabled(true);
@@ -118,7 +117,6 @@ public class Navigator implements AutoCloseable {
     }
 
     public Navigation navigateTo(Url url) throws NavigationException, InterruptedException {
-        requestInterceptor.reset();
         Page.Navigate result;
         try {
             // TODO: maybe change the proxy so that we can pass a specific timeout for this command
@@ -280,5 +278,9 @@ public class Navigator implements AutoCloseable {
 
     public String title() {
         return eval("document.title");
+    }
+
+    public NetworkManager networkManager() {
+        return networkManager;
     }
 }

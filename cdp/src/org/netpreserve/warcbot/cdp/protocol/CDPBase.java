@@ -110,26 +110,57 @@ public abstract class CDPBase {
         });
     }
 
-    <T> T sendCommand(String method, Map<String, Object> params, Type returnType, Unwrap unwrap) {
-        if (Thread.currentThread() == executorThread) {
+    Object sendCommand(String method, Map<String, Object> params, Type returnType, Unwrap unwrap) {
+        if (Thread.currentThread() == executorThread
+            && !(returnType instanceof ParameterizedType parameterizedType &&
+                 CompletionStage.class.isAssignableFrom((Class<?>) parameterizedType.getRawType()))) {
             throw new IllegalStateException("Sending command on the event handler thread would deadlock");
         }
+
+        if (method.endsWith("Async")) {
+            method = method.substring(0, method.length() - "Async".length());
+        }
+
         long commandId = nextCommandId();
+        boolean leaveCommandInMap = false;
         try {
             var future = new CompletableFuture<JsonNode>();
             commands.put(commandId, future);
             sendCommandMessage(commandId, method, params);
-            JsonNode result = future.get(120, TimeUnit.SECONDS);
-            ObjectReader reader;
-            if (unwrap != null) {
-                String rootName = unwrap.value().isEmpty() ?
-                        lowercaseFirstLetter(((Class<?>) returnType).getSimpleName()) : unwrap.value();
-                reader = RPC.JSON.reader(DeserializationFeature.UNWRAP_ROOT_VALUE)
-                        .withRootName(rootName);
+
+            Type valueType;
+            boolean returnsCompletionStage;
+            if (returnType instanceof ParameterizedType parameterizedType &&
+                CompletionStage.class.isAssignableFrom((Class<?>)parameterizedType.getRawType())) {
+                valueType = parameterizedType.getActualTypeArguments()[0];
+                returnsCompletionStage = true;
             } else {
-                reader = RPC.JSON.reader();
+                valueType = returnType;
+                returnsCompletionStage = false;
             }
-            return reader.treeToValue(result, RPC.JSON.constructType(returnType));
+
+            CompletableFuture<?> mappedFuture = future.thenApply(result -> {
+                ObjectReader reader;
+                if (unwrap != null) {
+                    String rootName = unwrap.value().isEmpty() ?
+                            lowercaseFirstLetter(((Class<?>)valueType).getSimpleName()) : unwrap.value();
+                    reader = RPC.JSON.reader(DeserializationFeature.UNWRAP_ROOT_VALUE)
+                            .withRootName(rootName);
+                } else {
+                    reader = RPC.JSON.reader();
+                }
+                try {
+                    return reader.treeToValue(result, RPC.JSON.constructType(valueType));
+                } catch (JsonProcessingException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+            if (returnsCompletionStage) {
+                leaveCommandInMap = true;
+                return mappedFuture;
+            } else {
+                return mappedFuture.get(120, TimeUnit.SECONDS);
+            }
         } catch (ExecutionException e) {
             if (e.getCause() instanceof CDPException cdpException) {
                 cdpException.actuallyFillInStackTrace();
@@ -146,7 +177,7 @@ public abstract class CDPBase {
         } catch (InterruptedException e) {
             throw new CDPTimeoutException("Interrupted");
         } finally {
-            commands.remove(commandId);
+            if (!leaveCommandInMap) commands.remove(commandId);
         }
     }
 

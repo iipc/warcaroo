@@ -4,13 +4,11 @@ import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import org.netpreserve.jwarc.*;
 import org.netpreserve.warcbot.cdp.ResourceFetched;
+import org.netpreserve.warcbot.cdp.domains.Network;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
-import java.io.Closeable;
-import java.io.IOException;
-import java.io.SequenceInputStream;
+import java.io.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.nio.channels.Channels;
@@ -77,6 +75,21 @@ public class Storage implements Closeable {
         }
     }
 
+    private WarcDigest sha1(InputStream stream) throws IOException {
+        try {
+            var digest = MessageDigest.getInstance("SHA-1");
+            byte[] buffer = new byte[8192];
+            while (true) {
+                int n = stream.read(buffer);
+                if (n == -1) break;
+                digest.update(buffer, 0, n);
+            }
+            return new WarcDigest(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * Stores an HTTP response chain.
      *
@@ -109,12 +122,13 @@ public class Storage implements Closeable {
                     null,
                     httpResponse.serializeHeader(),
                     response.body(),
+                    null,
                     metadata.ipAddress(),
                     metadata.fetchTimeMs(),
                     httpResponse.status(),
                     httpResponse.headers().first("Location").orElse(null),
-                    httpResponse.contentType().base().toString(), "RobotsTxt",
-                    response.version() == HttpClient.Version.HTTP_2 ? "http/2" : null);
+                    httpResponse.contentType().base().toString(), new Network.ResourceType("RobotsTxt"),
+                    response.version() == HttpClient.Version.HTTP_2 ? "h2c" : null);
             Resource resource = save(metadata.pageId(), fetch);
             if (resource != null) resources.add(resource);
         }
@@ -141,9 +155,22 @@ public class Storage implements Closeable {
     }
 
     public Resource save(UUID pageId, ResourceFetched fetch) throws IOException {
-        var responseDigest = sha1(fetch.responseBody());
+        long responseBodyLength;
+        WarcDigest responseDigest;
+        if (fetch.responseBodyChannel() != null) {
+            fetch.responseBodyChannel().position(0);
+            responseDigest = sha1(Channels.newInputStream(fetch.responseBodyChannel()));
+            responseBodyLength = fetch.responseBodyChannel().size();
+            fetch.responseBodyChannel().position(0);
+        } else if (fetch.responseBody() != null) {
+            responseDigest = sha1(fetch.responseBody());
+            responseBodyLength = fetch.responseBody().length;
+        } else {
+            responseDigest = null;
+            responseBodyLength = 0;
+        }
         var existingDuplicate = dao.findResourceByUrlAndPayload(fetch.url(),
-                fetch.responseBody().length,
+                responseBodyLength,
                 responseDigest == null ? null : responseDigest.prefixedBase32());
         if (existingDuplicate != null) {
             log.debug("Not saving duplicate of resource {}: {}", existingDuplicate.id(), fetch.url());
@@ -155,7 +182,15 @@ public class Storage implements Closeable {
         var warcResponseBuilder = new WarcResponse.Builder(fetch.url())
                 .date(now)
                 .recordId(responseUuid);
-        setBody(warcResponseBuilder, HTTP_RESPONSE, fetch.responseHeader(), fetch.responseBody());
+        if (fetch.responseBodyChannel() != null) {
+            var headerPlusBody = new SequenceInputStream(new ByteArrayInputStream(fetch.responseHeader()),
+                    Channels.newInputStream(fetch.responseBodyChannel()));
+            warcResponseBuilder.body(HTTP_RESPONSE, Channels.newChannel(headerPlusBody),
+                    fetch.responseHeader().length + fetch.responseBodyChannel().size());
+            warcResponseBuilder.payloadDigest(responseDigest);
+        } else {
+            setBody(warcResponseBuilder, HTTP_RESPONSE, fetch.responseHeader(), fetch.responseBody());
+        }
         if (fetch.protocol() != null) warcResponseBuilder.addHeader("WARC-Protocol", fetch.protocol());
         WarcResponse warcResponse = warcResponseBuilder.build();
 
@@ -185,9 +220,9 @@ public class Storage implements Closeable {
                 responseOffset, responseLength, requestLength,
                 fetch.status(), fetch.redirect(),
                 fetch.responseType(),
-                fetch.responseBody().length,
+                responseBodyLength,
                 responseDigest,
-                fetch.fetchTimeMs(), fetch.ipAddress(), fetch.type(),
+                fetch.fetchTimeMs(), fetch.ipAddress(), fetch.type().value(),
                 fetch.protocol());
         dao.addResource(resource);
         return resource;

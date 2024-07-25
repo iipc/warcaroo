@@ -159,7 +159,9 @@ public interface RPC {
         public void send(Command message) throws IOException {
             writeLock.lock();
             try {
-                if (log.isTraceEnabled()) log.trace("-> {}", JSON.writeValueAsString(message));
+                if (log.isTraceEnabled()) {
+                    log.trace("-> {}", BIG_STRING.matcher(JSON.writeValueAsString(message)).replaceAll("\"$1...$2\""));
+                }
                 JSON.writeValue(outputStream, message);
                 outputStream.write(0);
                 outputStream.flush();
