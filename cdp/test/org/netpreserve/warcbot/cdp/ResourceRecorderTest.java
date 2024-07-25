@@ -33,7 +33,7 @@ class ResourceRecorderTest {
         var response = new Network.Response(request.url(), 200, "OK", responseHeaders, "text/html",
                 null, request.headers(), false, 1, "1.2.3.4", 1234,
                 false, false, false, false, 8, timing,
-                10000, "h2c");
+                10000, "h2");
         var requestWillBeSentExtraInfo = new Network.RequestWillBeSentExtraInfo(networkId, List.of(), Map.of("User-Agent", "bob"));
         var responseReceivedExtraInfo = new Network.ResponseReceivedExtraInfo(networkId, Map.of(), 200, null);
         var requestPaused = new Fetch.RequestPaused(fetchId, request, null, null, null, 200,
@@ -67,7 +67,7 @@ class ResourceRecorderTest {
         var resource = resources.get(0);
         assertEquals(request.url(), resource.url());
         assertEquals(200, resource.status());
-        assertEquals("h2c", resource.protocol());
+        assertEquals("h2", resource.protocol());
         assertEquals("GET / HTTP/1.1\r\nUser-Agent: bob\r\n\r\n",
                 new String(resource.requestHeader(), US_ASCII));
         assertEquals("HTTP/1.1 200 OK\r\n" +

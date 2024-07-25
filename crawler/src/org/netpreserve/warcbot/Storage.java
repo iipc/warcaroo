@@ -128,7 +128,7 @@ public class Storage implements Closeable {
                     httpResponse.status(),
                     httpResponse.headers().first("Location").orElse(null),
                     httpResponse.contentType().base().toString(), new Network.ResourceType("RobotsTxt"),
-                    response.version() == HttpClient.Version.HTTP_2 ? "h2c" : null);
+                    response.version() == HttpClient.Version.HTTP_2 ? "h2" : null);
             Resource resource = save(metadata.pageId(), fetch);
             if (resource != null) resources.add(resource);
         }
