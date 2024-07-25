@@ -275,6 +275,9 @@ public class Webapp implements HttpHandler {
             try (var stream = connection.getInputStream()) {
                 String type = path.endsWith(".mjs") ? "application/javascript" : URLConnection.guessContentTypeFromName(path);
                 if (type != null) exchange.getResponseHeaders().set("Content-Type", type);
+                if (path.startsWith("/webjars/")) {
+                    exchange.getResponseHeaders().add("Cache-Control", "public, max-age=604800, immutable");
+                }
                 exchange.sendResponseHeaders(200, connection.getContentLengthLong());
                 stream.transferTo(exchange.getResponseBody());
                 return;
