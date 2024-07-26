@@ -47,6 +47,7 @@ public class RobotsTxtChecker {
         try {
             long fetchStart = System.currentTimeMillis();
             var response = httpClient.send(HttpRequest.newBuilder(robotsUri)
+                    .timeout(Duration.ofSeconds(30))
                     .header("User-Agent", userAgent)
                     .build(), BodyHandlers.ofByteArray());
             long fetchTimeMs = System.currentTimeMillis() - fetchStart;
