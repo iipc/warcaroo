@@ -209,7 +209,7 @@ public class ResourceRecorder {
         String redirect = response.headers().get("location");
         String responseType = response.headers().get("Content-Type");
         rewindChannel();
-        resourceHandler.accept(new ResourceFetched(response.url(), requestHeader, request.body(), responseHeader,
+        resourceHandler.accept(new ResourceFetched(request.method(), response.url(), requestHeader, request.body(), responseHeader,
                 null, channel, response.remoteIPAddress(), fetchTimeMs, response.status(),
                 redirect, responseType, resourceType, response.protocol()));
     }

@@ -117,7 +117,9 @@ public class Storage implements Closeable {
                     .addHeaders(stripHttp2Headers(request.headers()))
                     .build();
 
-            var fetch = new ResourceFetched(request.uri().toString(),
+            var fetch = new ResourceFetched(
+                    request.method(),
+                    request.uri().toString(),
                     httpRequest.serializeHeader(),
                     null,
                     httpResponse.serializeHeader(),
@@ -214,6 +216,7 @@ public class Storage implements Closeable {
         }
 
         Resource resource = new Resource(responseUuid, pageId,
+                fetch.method(),
                 warcResponse.target(),
                 warcResponse.date(),
                 filename,

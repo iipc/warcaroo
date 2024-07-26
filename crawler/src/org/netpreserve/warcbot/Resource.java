@@ -7,7 +7,7 @@ import org.netpreserve.jwarc.WarcDigest;
 import java.time.Instant;
 import java.util.UUID;
 
-public record Resource(@NotNull UUID id, @NotNull UUID pageId, @NotNull String url, @NotNull Instant date,
+public record Resource(@NotNull UUID id, @NotNull UUID pageId, String method, @NotNull String url, @NotNull Instant date,
                        String filename, long responseOffset, long responseLength, long requestLength, int status,
                        @Nullable String redirect,
                        String payloadType, long payloadSize, WarcDigest payloadDigest,

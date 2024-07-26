@@ -70,6 +70,7 @@ END;
 create table if not exists resources
 (
     id              TEXT PRIMARY KEY NOT NULL,
+    method          TEXT             NOT NULL,
     url             TEXT             NOT NULL,
     date            INTEGER          NOT NULL,
     page_id         TEXT             NOT NULL,
