@@ -120,7 +120,8 @@ public class Worker {
                     navigator.forceLoadLazyImages();
                     navigator.scrollToBottom();
                 } catch (CDPException e) {
-                    if (!e.getMessage().contains("uniqueContextId not found")) {
+                    if (!e.getMessage().contains("uniqueContextId not found") &&
+                        !e.getMessage().contains("Execution context was destroyed.")) {
                         throw e;
                     }
                 }
