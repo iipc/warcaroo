@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.netpreserve.warcbot.util.LogUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -117,7 +118,6 @@ public interface RPC {
 
     class Pipe implements RPC {
         private static final Logger log = LoggerFactory.getLogger(Pipe.class);
-        private static final Pattern BIG_STRING = Pattern.compile("\"([^\"]{20})[^\"]{40,}([^\"]{20})", Pattern.DOTALL | Pattern.MULTILINE);
         private final InputStream inputStream;
         private final OutputStream outputStream;
         private final Consumer<ServerMessage> messageHandler;
@@ -143,7 +143,7 @@ public interface RPC {
                         buffer.write(b);
                     }
                     if (log.isTraceEnabled()) {
-                        log.trace("<- {}", BIG_STRING.matcher(buffer.toString()).replaceAll("\"$1...$2\""));
+                        log.trace("<- {}", LogUtils.ellipses(buffer.toString()));
                     }
                     var message = JSON.readValue(buffer.toByteArray(), ServerMessage.class);
                     messageHandler.accept(message);
@@ -160,7 +160,7 @@ public interface RPC {
             writeLock.lock();
             try {
                 if (log.isTraceEnabled()) {
-                    log.trace("-> {}", BIG_STRING.matcher(JSON.writeValueAsString(message)).replaceAll("\"$1...$2\""));
+                    log.trace("-> {}", LogUtils.ellipses(JSON.writeValueAsString(message)));
                 }
                 JSON.writeValue(outputStream, message);
                 outputStream.write(0);

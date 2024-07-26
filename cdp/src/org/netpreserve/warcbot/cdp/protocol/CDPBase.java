@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
+import org.netpreserve.warcbot.util.LogUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -18,8 +19,10 @@ import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
+import static org.netpreserve.warcbot.util.LogUtils.ellipses;
+
 public abstract class CDPBase {
-    private static final Logger log = LoggerFactory.getLogger(CDPClient.class);
+    private static final Logger log = LoggerFactory.getLogger(CDPBase.class);
     private final Map<Long, CompletableFuture<JsonNode>> commands = new ConcurrentHashMap<>();
     private final Map<String, Consumer<JsonNode>> listeners = new ConcurrentHashMap<>();
     private final ExecutorService executor;
@@ -122,9 +125,31 @@ public abstract class CDPBase {
         }
 
         long commandId = nextCommandId();
+
+        if (log.isTraceEnabled()) {
+            try {
+                log.trace("[{}] {}({})", commandId, method, ellipses(RPC.JSON.writeValueAsString(params)));
+            } catch (JsonProcessingException ignored) {}
+        }
+
+
         boolean leaveCommandInMap = false;
         try {
             var future = new CompletableFuture<JsonNode>();
+
+            if (log.isTraceEnabled()) {
+                String methodName = method;
+                future.whenComplete((result, ex) -> {
+                    try {
+                        if (ex == null) {
+                            log.trace("[{}] {} [{}]", commandId, ellipses(RPC.JSON.writeValueAsString(result)), methodName);
+                        } else {
+                            log.trace("[{}] {}", commandId, ex.getMessage());
+                        }
+                    } catch (JsonProcessingException ignored) {}
+                });
+            }
+
             commands.put(commandId, future);
             sendCommandMessage(commandId, method, params);
 
