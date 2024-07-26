@@ -2,6 +2,7 @@ package org.netpreserve.warcbot.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.netpreserve.urlcanon.Canonicalizer;
 import org.netpreserve.urlcanon.ParsedUrl;
 
 import java.net.URI;
@@ -101,5 +102,11 @@ public class Url {
         ParsedUrl parsed = parse();
         return new Url(parsed.getScheme() + parsed.getColonAfterScheme() + parsed.getSlashes() +
                        parsed.getHost() + parsed.getColonBeforePort() + parsed.getPort() + path);
+    }
+
+    public Url whatwg() {
+        ParsedUrl copy = new ParsedUrl(parse());
+        Canonicalizer.WHATWG.canonicalize(copy);
+        return new Url(copy);
     }
 }

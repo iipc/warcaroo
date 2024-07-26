@@ -51,8 +51,9 @@ public class Config {
     }
 
     public void addSeed(String url) {
-        seeds.add(new Url(url));
-        var prefix = url.replaceFirst("/[^/]*$", "/");
+        Url cleanUrl = new Url(url).whatwg();
+        seeds.add(cleanUrl);
+        var prefix = cleanUrl.toString().replaceFirst("/[^/]*$", "/");
         includes.add(Pattern.compile(Pattern.quote(prefix) + "(?:/|)"));
     }
 
