@@ -51,6 +51,7 @@ public class WarcBot {
                     case "--host" -> host = args[++i];
                     case "--port" -> port = Integer.parseInt(args[++i]);
                     case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));
+                    case "--trace-cdp" -> ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot.cdp.protocol.CDPBase")).setLevel(Level.TRACE);
                     case "-A", "--user-agent", "--userAgent" -> config.setUserAgent(args[++i]);
                     case "-w", "--workers" -> config.setWorkers(Integer.parseInt(args[++i]));
                     case "-v", "--verbose" -> verbosity++;
