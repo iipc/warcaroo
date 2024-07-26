@@ -254,7 +254,7 @@ public class ResourceRecorder {
      */
     static byte[] formatResponseHeader(Network.Response response, String rawResponseHeader) {
         if (rawResponseHeader != null) {
-            rawResponseHeader = rawResponseHeader.replaceAll("(?mi)^Content-Encoding:.*?\\r?\\n", "");
+            rawResponseHeader = rawResponseHeader.replaceAll("(?mi)^(Content|Transfer)-Encoding:.*?\\r?\\n", "");
             return rawResponseHeader.getBytes(US_ASCII);
         }
         var builder = new StringBuilder();
@@ -263,6 +263,7 @@ public class ResourceRecorder {
         builder.append("HTTP/1.1 ").append(response.status()).append(" ").append(reason).append("\r\n");
         response.headers().forEach((name, value) -> {
             if (name.equalsIgnoreCase("content-encoding")) return;
+            if (name.equalsIgnoreCase("transfer-encoding")) return;
             builder.append(name).append(": ").append(value).append("\r\n");
         });
         builder.append("\r\n");
