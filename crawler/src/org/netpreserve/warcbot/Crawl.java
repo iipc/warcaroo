@@ -122,6 +122,10 @@ public class Crawl implements AutoCloseable {
         }
     }
 
+    public Config config() {
+        return config;
+    }
+
     public State state() {
         return state;
     }

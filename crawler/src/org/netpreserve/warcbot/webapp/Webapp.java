@@ -11,10 +11,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.netpreserve.jwarc.WarcDigest;
-import org.netpreserve.warcbot.Candidate;
-import org.netpreserve.warcbot.Resource;
-import org.netpreserve.warcbot.StorageDAO;
-import org.netpreserve.warcbot.Crawl;
+import org.netpreserve.warcbot.*;
 import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
 import org.netpreserve.warcbot.webapp.Route.GET;
 import org.slf4j.Logger;
@@ -94,6 +91,11 @@ public class Webapp implements HttpHandler {
             super(lastPage, lastRow, data);
             this.queueStateCounts = queueStateCounts;
         }
+    }
+
+    @GET("/api/config")
+    Config getConfig() {
+        return crawl.config();
     }
 
     @GET("/api/pages")
