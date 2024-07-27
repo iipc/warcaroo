@@ -98,7 +98,7 @@ public class ResourceRecorder {
             // if we redirected, dispatch the redirect response.
             if (event.redirectResponse() != null) {
                 response = event.redirectResponse();
-                dispatchResource(event.timestamp());
+                dispatchResource(event.timestamp(), event.redirectResponse().encodedDataLength());
             } else {
                 network.streamResourceContent(networkId).thenAccept(this::handleBufferedData);
             }
@@ -165,7 +165,7 @@ public class ResourceRecorder {
                         try {
                             if (ex == null) {
                                 write(responseBody.body());
-                                dispatchResource(event.timestamp());
+                                dispatchResource(event.timestamp(), event.encodedDataLength());
                             } else {
                                 log.atError().addKeyValue("networkId", network).log("Error getting response body", ex);
                             }
@@ -178,14 +178,14 @@ public class ResourceRecorder {
         }
 
         try {
-            dispatchResource(event.timestamp());
+            dispatchResource(event.timestamp(), event.encodedDataLength());
         } finally {
             closeChannel();
             completionFuture.complete(null);
         }
     }
 
-    private void dispatchResource(double timestamp) {
+    private void dispatchResource(double timestamp, long encodedDataLength) {
         if (request == null) {
             wrap(log.atWarn()).log("never received request");
             return;
@@ -208,7 +208,7 @@ public class ResourceRecorder {
         rewindChannel();
         resourceHandler.accept(new ResourceFetched(request.method(), response.url(), requestHeader, request.body(), responseHeader,
                 null, channel, response.remoteIPAddress(), fetchTimeMs, response.status(),
-                redirect, responseType, resourceType, response.protocol()));
+                redirect, responseType, resourceType, response.protocol(), encodedDataLength));
     }
 
     public void handleLoadingFailed(Network.LoadingFailed event) {

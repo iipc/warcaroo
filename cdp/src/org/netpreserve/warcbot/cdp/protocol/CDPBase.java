@@ -1,10 +1,11 @@
 package org.netpreserve.warcbot.cdp.protocol;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectReader;
-import org.netpreserve.warcbot.util.LogUtils;
+import com.fasterxml.jackson.core.json.JsonWriteFeature;
+import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.core.util.Separators;
+import com.fasterxml.jackson.core.util.Separators.Spacing;
+import com.fasterxml.jackson.databind.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +24,14 @@ import static org.netpreserve.warcbot.util.LogUtils.ellipses;
 
 public abstract class CDPBase {
     private static final Logger log = LoggerFactory.getLogger(CDPBase.class);
+    private static final ObjectWriter logJson = RPC.JSON.copy()
+            .writer().without(JsonWriteFeature.QUOTE_FIELD_NAMES)
+            .with(new DefaultPrettyPrinter()
+                    .withArrayIndenter(null)
+                    .withObjectIndenter(null)
+                    .withSeparators(new Separators()
+                            .withObjectEntrySpacing(Spacing.AFTER)
+                            .withObjectFieldValueSpacing(Spacing.AFTER)));
     private final Map<Long, CompletableFuture<JsonNode>> commands = new ConcurrentHashMap<>();
     private final Map<String, Consumer<JsonNode>> listeners = new ConcurrentHashMap<>();
     private final ExecutorService executor;
@@ -86,6 +95,11 @@ public abstract class CDPBase {
     }
 
     private void handleEvent(RPC.Event event) {
+        if (log.isTraceEnabled()) {
+            try {
+                log.trace("{}{}", event.method(), logJson.writeValueAsString(event.params()));
+            } catch (JsonProcessingException ignored) {}
+        }
         Consumer<JsonNode> handler = listeners.get(event.method());
         if (handler != null) {
             try {
@@ -128,7 +142,7 @@ public abstract class CDPBase {
 
         if (log.isTraceEnabled()) {
             try {
-                log.trace("[{}] {}({})", commandId, method, ellipses(RPC.JSON.writeValueAsString(params)));
+                log.trace("[{}] {}{}", commandId, method, ellipses(logJson.writeValueAsString(params)));
             } catch (JsonProcessingException ignored) {}
         }
 
@@ -142,7 +156,7 @@ public abstract class CDPBase {
                 future.whenComplete((result, ex) -> {
                     try {
                         if (ex == null) {
-                            log.trace("[{}] {} [{}]", commandId, ellipses(RPC.JSON.writeValueAsString(result)), methodName);
+                            log.trace("[{}] {} [{}]", commandId, ellipses(logJson.writeValueAsString(result)), methodName);
                         } else {
                             log.trace("[{}] {}", commandId, ex.getMessage());
                         }

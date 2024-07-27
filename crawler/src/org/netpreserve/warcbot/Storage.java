@@ -119,12 +119,13 @@ public class Storage implements Closeable {
                     .addHeaders(stripHttp2Headers(request.headers()))
                     .build();
 
+            byte[] responseHeader = httpResponse.serializeHeader();
             var fetch = new ResourceFetched(
                     request.method(),
                     new Url(request.uri().toString()),
                     httpRequest.serializeHeader(),
                     null,
-                    httpResponse.serializeHeader(),
+                    responseHeader,
                     response.body(),
                     null,
                     metadata.ipAddress(),
@@ -132,7 +133,8 @@ public class Storage implements Closeable {
                     httpResponse.status(),
                     httpResponse.headers().first("Location").orElse(null),
                     new BareMediaType(httpResponse.contentType().base().toString()), new Network.ResourceType("RobotsTxt"),
-                    response.version() == HttpClient.Version.HTTP_2 ? "h2" : null);
+                    response.version() == HttpClient.Version.HTTP_2 ? "h2" : null,
+                    responseHeader.length + response.body().length);
             Resource resource = save(metadata.pageId(), fetch);
             if (resource != null) resources.add(resource);
         }

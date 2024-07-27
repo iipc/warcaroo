@@ -21,7 +21,7 @@ public record ResourceFetched(
         String redirect,
         BareMediaType responseType,
         Network.ResourceType type,
-        String protocol) {
+        String protocol, long transferred) {
     public ResourceFetched {
         Objects.requireNonNull(url);
     }

@@ -87,7 +87,8 @@ create table if not exists resources
     ip_address      TEXT,
     type            TEXT,
     protocol        TEXT,
-    rhost           TEXT             NOT NULL
+    rhost           TEXT             NOT NULL,
+    transferred     INTEGER          NOT NULL
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS resources_url_date ON resources (url, date);
