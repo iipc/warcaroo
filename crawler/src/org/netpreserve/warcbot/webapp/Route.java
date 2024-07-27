@@ -94,18 +94,8 @@ public class Route implements HttpHandler {
         }
         if (result != null) {
             exchange.getResponseHeaders().set("Content-Type", "application/json");
-            boolean gzip = false;
-            if (getAcceptedEncodings(exchange).contains("gzip")) {
-                exchange.getResponseHeaders().add("Content-Encoding", "gzip");
-                gzip = true;
-            }
-            exchange.sendResponseHeaders(200, 0);
-            var bodyStream = exchange.getResponseBody();
-            if (gzip) bodyStream = new GZIPOutputStream(bodyStream);
-            try {
+            try (var bodyStream = encodeResponse(exchange, 200, 0)) {
                 Webapp.JSON.writeValue(bodyStream, result);
-            } finally {
-                bodyStream.close();
             }
         } else {
             try {
@@ -115,6 +105,19 @@ public class Route implements HttpHandler {
                     throw e;
                 }
             }
+        }
+    }
+
+    public static OutputStream encodeResponse(HttpExchange exchange, int status, long length) throws IOException {
+        String contentType = exchange.getResponseHeaders().getFirst("Content-Type");
+        if (length != -1 && getAcceptedEncodings(exchange).contains("gzip")
+            && contentType != null && !contentType.startsWith("image/")) {
+            exchange.getResponseHeaders().add("Content-Encoding", "gzip");
+            exchange.sendResponseHeaders(status, 0);
+            return new GZIPOutputStream(exchange.getResponseBody());
+        } else {
+            exchange.sendResponseHeaders(status, length);
+            return exchange.getResponseBody();
         }
     }
 

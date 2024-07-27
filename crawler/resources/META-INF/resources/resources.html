@@ -13,12 +13,10 @@
         font-family: sans-serif;
     }
 </style>
-<link rel="stylesheet" href="/webjars/tabulator-tables/6.2.1/dist/css/tabulator.min.css">
-<link rel="stylesheet" href="/webjars/tabulator-tables/6.2.1/dist/css/tabulator_simple.min.css">
-<script src="/webjars/tabulator-tables/6.2.1/dist/js/tabulator.min.js"></script>
-<script src="/webjars/luxon/3.4.4/build/global/luxon.min.js"></script>
-<script>
-    var table = new Tabulator("#myTable", {
+<script type="module">
+    import {WarcBotTabulator, formatSize} from "./tables.js";
+
+    const table = new WarcBotTabulator("#myTable", {
         ajaxURL: '/api/resources',
         filterMode: 'remote',
         height: '100%',
@@ -31,34 +29,6 @@
         persistence: {
             headerFilter: true,
             sort: true
-        },
-        persistenceReaderFunc: function(id, type) {
-            var state = Object.fromEntries(new URLSearchParams(location.hash.substring(1)));
-            if (type === 'sort' && state.sort) {
-                return state.sort.split(',').map(s => s.startsWith("-") ?
-                    {column:s.substring(1), dir:"desc"} : {column:s, dir:"asc"});
-            } else if (type === 'headerFilter') {
-                const filters = [];
-                for (const column of this.getColumnLayout()) {
-                    const value = state[column.field];
-                    if (value) {
-                        filters.push({field: column.field, type: 'like', value: value});
-                    }
-                }
-                return filters;
-            }
-            return false;
-        },
-        persistenceWriterFunc: function(id, type, data) {
-            var state = Object.fromEntries(new URLSearchParams(location.hash.substring(1)));
-            if (type === 'sort') {
-                state.sort = data.map(item => (item.dir === 'desc' ? '-' : '') + item.column).join(',');
-            } else if (type === 'headerFilter') {
-                for (const filter of data) {
-                    state[filter.field] = filter.value;
-                }
-            }
-            window.history.replaceState(undefined, undefined, "#" + new URLSearchParams(state).toString());
         },
         columns: [
             {title: "Date", field: "date", formatter: "datetime", formatterParams: {inputFormat: "iso"}, width: 140},
@@ -75,19 +45,4 @@
             {title: "Digest", field: "payloadDigest", headerFilter: 'input', headerFilterPlaceholder: "Search"},
         ],
     });
-
-    window.addEventListener('hashchange', event => {
-        table.setSort(table.modules.persistence.load('sort'));
-        table.clearHeaderFilter();
-        for (const filter of table.modules.persistence.load('headerFilter')) {
-            table.setHeaderFilterValue(filter.field, filter.value);
-        }
-    });
-
-    function formatSize(n) {
-        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-        let i = 0;
-        while (n >= 1024 && ++i < units.length) n /= 1024;
-        return `${n.toFixed(n > 0 && n < 10 ? 1 : 0)} ${units[i]}`;
-    }
 </script>

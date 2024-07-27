@@ -237,8 +237,9 @@ public class Webapp implements HttpHandler {
                 if (path.startsWith("/webjars/")) {
                     exchange.getResponseHeaders().add("Cache-Control", "public, max-age=604800, immutable");
                 }
-                exchange.sendResponseHeaders(200, connection.getContentLengthLong());
-                stream.transferTo(exchange.getResponseBody());
+                try (var out = Route.encodeResponse(exchange, 200, connection.getContentLengthLong())) {
+                    stream.transferTo(out);
+                }
                 return;
             }
         }

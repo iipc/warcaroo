@@ -23,7 +23,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.6.0</version>
+                <version>3.7.1</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
@@ -36,7 +36,7 @@
                                     <artifact>org.webjars.npm:luxon</artifact>
                                     <includes>
                                         <include>META-INF/resources/webjars/luxon/*/LICENSE.md</include>
-                                        <include>META-INF/resources/webjars/luxon/*/build/global/luxon.min.js</include>
+                                        <include>META-INF/resources/webjars/luxon/*/build/es6/luxon.js</include>
                                     </includes>
                                 </filter>
                                 <filter>
@@ -45,7 +45,7 @@
                                         <include>META-INF/resources/webjars/tabulator-tables/*/LICENSE</include>
                                         <include>META-INF/resources/webjars/tabulator-tables/*/dist/css/tabulator.min.css</include>
                                         <include>META-INF/resources/webjars/tabulator-tables/*/dist/css/tabulator_simple.min.css</include>
-                                        <include>META-INF/resources/webjars/tabulator-tables/*/dist/js/tabulator.min.js</include>
+                                        <include>META-INF/resources/webjars/tabulator-tables/*/dist/js/tabulator_esm.js</include>
                                     </includes>
                                 </filter>
                                 <filter>
@@ -63,6 +63,25 @@
                                     </excludes>
                                 </filter>
                             </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!-- unpack webjars for IDE type completion -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>unpack-webjars</id>
+                        <phase>generate-resources</phase>
+                        <goals>
+                            <goal>unpack-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <includeGroupIds>org.webjars.npm</includeGroupIds>
+                            <includes>/META-INF/resources/webjars/**</includes>
                         </configuration>
                     </execution>
                 </executions>
