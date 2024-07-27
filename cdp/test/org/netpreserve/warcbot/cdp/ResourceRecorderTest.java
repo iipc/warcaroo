@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import org.netpreserve.warcbot.cdp.domains.Fetch;
 import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcbot.util.Url;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -26,7 +27,7 @@ class ResourceRecorderTest {
         var fetchId = new Fetch.RequestId("fetch-1");
         var networkId = new Network.RequestId("net-1");
         byte[] data = new byte[]{'h', 'i'};
-        var request = new Network.Request("http://example/", null, "GET", new Network.Headers(), null);
+        var request = new Network.Request(new Url("http://example/"), null, "GET", new Network.Headers(), null);
         var timing = new Network.ResourceTiming(0);
         Network.Headers responseHeaders = new Network.Headers();
         responseHeaders.put("CONTENT-Type", "text/html");

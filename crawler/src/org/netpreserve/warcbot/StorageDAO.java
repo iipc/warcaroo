@@ -83,6 +83,6 @@ public interface StorageDAO {
             WHERE url = :uri
             ORDER BY date DESC
             LIMIT 1""")
-    Resource findResourceByUrl(String uri);
+    Resource findResourceByUrl(Url uri);
 
 }

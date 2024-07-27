@@ -68,17 +68,17 @@ class NavigatorTest {
             assertEquals(3, resources.size());
             {
                 var resource = resources.get(0);
-                assertEquals("/redirect1", URI.create(resource.url()).getPath());
+                assertEquals("/redirect1", resource.url().path());
                 assertEquals("/redirect2", resource.redirect());
             }
             {
                 var resource = resources.get(1);
-                assertEquals("/redirect2", URI.create(resource.url()).getPath());
+                assertEquals("/redirect2", resource.url().path());
                 assertEquals("/end", resource.redirect());
             }
             {
                 var resource = resources.get(2);
-                assertEquals("/end", URI.create(resource.url()).getPath());
+                assertEquals("/end", resource.url().path());
                 assertNull(resource.redirect());
             }
         } finally {
@@ -161,7 +161,7 @@ class NavigatorTest {
 
         var recordedPaths = new HashSet<String>();
         try (var navigator = browserProcess.newWindow(recording -> {
-            recordedPaths.add(URI.create(recording.url()).getPath());
+            recordedPaths.add(recording.url().path());
             System.out.println("Got resource! " + recording);
         }, null, null)) {
 

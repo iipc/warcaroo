@@ -2,6 +2,7 @@ package org.netpreserve.warcbot.cdp;
 
 import org.junit.jupiter.api.Test;
 import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcbot.util.Url;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -17,7 +18,7 @@ class ResourceRecorderInterceptorTest {
         headers.put("Accept", "text/html");
         headers.put("User-Agent", "MyCrawler/1.0");
         var request = new Network.Request(
-                "http://example.com/test",
+                new Url("http://example.com/test"),
                 null,
                 "GET",
                 headers,
@@ -44,7 +45,7 @@ class ResourceRecorderInterceptorTest {
         headers.put("Accept", "text/html");
         headers.put("User-Agent", "MyCrawler/1.0");
         var request = new Network.Request(
-                "http://example.com/test",
+                new Url("http://example.com/test"),
                 null,
                 "GET",
                 headers,

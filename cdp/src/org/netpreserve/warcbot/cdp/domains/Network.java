@@ -197,7 +197,7 @@ public interface Network {
     }
 
     record Request(
-            String url,
+            Url url,
             String urlFragment,
             String method,
             Headers headers,

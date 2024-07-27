@@ -62,7 +62,7 @@ public class ResourceRecorder {
      */
     static byte[] formatRequestHeader(Network.Request request, Map<String, String> extraInfoHeaders) {
         var builder = new StringBuilder();
-        Url url = new Url(request.url());
+        Url url = request.url();
 
         builder.append(request.method()).append(" ").append(url.pathAndQuery()).append(" HTTP/1.1\r\n");
 
@@ -90,11 +90,11 @@ public class ResourceRecorder {
     }
 
     public void handleRequestWillBeSent(Network.RequestWillBeSent event) {
-        String url = event.request().url();
+        Url url = event.request().url();
         log.atDebug().addKeyValue("networkId", networkId)
                 .addKeyValue("url", url).log("Request will be sent");
 
-        if (isRecordableUrl(url)) {
+        if (url.isHttp()) {
             // if we redirected, dispatch the redirect response.
             if (event.redirectResponse() != null) {
                 response = event.redirectResponse();
@@ -107,10 +107,6 @@ public class ResourceRecorder {
         this.request = event.request();
         this.resourceType = event.type();
         this.requestTimestamp = event.timestamp();
-    }
-
-    private static boolean isRecordableUrl(String url) {
-        return url.startsWith("http:") || url.startsWith("https:");
     }
 
     public void handleRequestWillBeSentExtraInfo(Network.RequestWillBeSentExtraInfo event) {
@@ -160,7 +156,7 @@ public class ResourceRecorder {
     public void handleLoadingFinished(Network.LoadingFinished event) {
         wrap(log.atDebug()).log("Loading finished");
 
-        if (bytesWritten < bytesReceived && request != null && isRecordableUrl(request.url())) {
+        if (bytesWritten < bytesReceived && request != null && request.url().isHttp()) {
             // Sometimes the browser can finish the request before it processes our streamResourceContent() command.
             // Unfortunately this even happens if we issue it before resuming a paused request.
             log.trace("Received {} but only wrote {}", bytesReceived, bytesWritten);
@@ -198,7 +194,7 @@ public class ResourceRecorder {
             wrap(log.atWarn()).log("never received response");
             return;
         }
-        if (!isRecordableUrl(request.url())) return;
+        if (!request.url().isHttp()) return;
         byte[] requestHeader = formatRequestHeader(request, fullRequestHeaders);
         byte[] responseHeader = formatResponseHeader(response, rawResponseHeader);
         long fetchTimeMs;

@@ -134,7 +134,7 @@ public class NetworkManager {
     }
 
     private void handleRequestPaused(Fetch.RequestPaused event) {
-        if (blocker.test(event.request().url())) {
+        if (blocker.test(event.request().url().toString())) {
             log.debug("Blocked request for {}", event.request().url());
             fetch.failRequestAsync(event.requestId(), "BlockedByClient");
             return;

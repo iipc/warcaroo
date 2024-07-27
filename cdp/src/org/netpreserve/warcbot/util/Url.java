@@ -190,4 +190,8 @@ public class Url {
             return -1;
         }
     }
+
+    public String path() {
+        return parse().getPath();
+    }
 }
