@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.jetbrains.annotations.Nullable;
 import org.netpreserve.warcbot.cdp.protocol.Unwrap;
+import org.netpreserve.warcbot.util.Url;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -163,7 +164,7 @@ public interface Network {
     }
 
     record Response(
-            String url,
+            Url url,
             int status,
             String statusText,
             Headers headers,

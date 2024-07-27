@@ -41,6 +41,19 @@ public class Url {
         return parse().getHost();
     }
 
+    public String rhost() {
+        var host = host();
+        if (host.startsWith("[")) return host;
+        if (parseIpv4(host) != -1) return host;
+        var builder = new StringBuilder();
+        String[] segments = host.split("\\.");
+        for (int i = segments.length - 1; i >= 0; i--) {
+            builder.append(segments[i]);
+            builder.append(",");
+        }
+        return builder.toString();
+    }
+
     public String scheme() {
         return parse().getScheme();
     }
@@ -108,5 +121,73 @@ public class Url {
         ParsedUrl copy = new ParsedUrl(parse());
         Canonicalizer.WHATWG.canonicalize(copy);
         return new Url(copy);
+    }
+
+    private static long parseIpv4(String host) {
+        long ipv4 = 0;
+        int startOfPart = 0;
+
+        if (host.isEmpty()) {
+            return -1;
+        }
+
+        for (int i = 0;; i++) {
+            // find the end of this part
+            int endOfPart = host.indexOf(".", startOfPart);
+            if (endOfPart == -1) {
+                endOfPart = host.length();
+            }
+
+            // if there's more than 4 return failure
+            if (i >= 4) {
+                return -1;
+            }
+
+            long part;
+            if (startOfPart == endOfPart) { // treat empty parts as zero
+                part = 0;
+            } else {
+                part = parseIpv4Num(host, startOfPart, endOfPart);
+                if (part == -1) return -1; // not a number
+            }
+
+            // if this is the last part (or second-last part and last part is empty)
+            if (endOfPart >= host.length() - 1) {
+                if (part >= (1L << (8 * (4 - i)))) {
+                    return -1; // too big
+                }
+
+                // 1.2 => 1.0.0.2
+                ipv4 <<= 8 * (4 - i);
+                ipv4 += part;
+                return ipv4;
+            }
+
+            // if any but the last item is larger than 255 return failure
+            if (part > 255) {
+                return -1;
+            }
+            ipv4 = ipv4 * 256 + part;
+            startOfPart = endOfPart + 1;
+        }
+    }
+
+    private static long parseIpv4Num(String host, int start, int end) {
+        int radix = 10;
+        if (end - start >= 2 && host.charAt(start) == '0') {
+            char c = host.charAt(start + 1);
+            if (c == 'x' || c == 'X') {
+                radix = 16;
+                start += 2;
+            } else {
+                radix = 8;
+                start++;
+            }
+        }
+        try {
+            return Long.parseUnsignedLong(host, start, end, radix);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
     }
 }

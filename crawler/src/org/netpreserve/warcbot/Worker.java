@@ -143,8 +143,9 @@ public class Worker {
                 }
 
                 var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
-                storage.dao.addPage(pageId, navigator.currentUrl(), Instant.now(), navigator.title(),
-                        visitTimeMs);
+                Url url = navigator.currentUrl();
+                storage.dao.addPage(new StorageDAO.Page(pageId, url, Instant.now(), navigator.title(),
+                        visitTimeMs, url.rhost()));
 
                 frontier.markCrawled(candidate);
             } catch (NavigationException e) {

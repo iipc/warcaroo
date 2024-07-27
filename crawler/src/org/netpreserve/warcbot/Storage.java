@@ -121,7 +121,7 @@ public class Storage implements Closeable {
 
             var fetch = new ResourceFetched(
                     request.method(),
-                    request.uri().toString(),
+                    new Url(request.uri().toString()),
                     httpRequest.serializeHeader(),
                     null,
                     httpResponse.serializeHeader(),
@@ -173,7 +173,7 @@ public class Storage implements Closeable {
             responseDigest = null;
             responseBodyLength = 0;
         }
-        var existingDuplicate = dao.findResourceByUrlAndPayload(fetch.url(),
+        var existingDuplicate = dao.findResourceByUrlAndPayload(fetch.url().toString(),
                 responseBodyLength,
                 responseDigest == null ? null : responseDigest.prefixedBase32());
         if (existingDuplicate != null) {
@@ -183,7 +183,7 @@ public class Storage implements Closeable {
 
         Instant now = Instant.now();
         UUID responseUuid = uuidGenerator.construct(now.toEpochMilli());
-        var warcResponseBuilder = new WarcResponse.Builder(fetch.url())
+        var warcResponseBuilder = new WarcResponse.Builder(fetch.url().toString())
                 .date(now)
                 .recordId(responseUuid);
         if (fetch.responseBodyChannel() != null) {
@@ -198,7 +198,7 @@ public class Storage implements Closeable {
         if (fetch.protocol() != null) warcResponseBuilder.addHeader("WARC-Protocol", fetch.protocol());
         WarcResponse warcResponse = warcResponseBuilder.build();
 
-        var warcRequestBuilder = new WarcRequest.Builder(fetch.url())
+        var warcRequestBuilder = new WarcRequest.Builder(fetch.url().toString())
                 .date(now)
                 .recordId(uuidGenerator.construct(now.toEpochMilli()))
                 .concurrentTo(warcResponse.id());
@@ -219,7 +219,8 @@ public class Storage implements Closeable {
 
         Resource resource = new Resource(responseUuid, pageId,
                 fetch.method(),
-                new Url(warcResponse.target()),
+                fetch.url(),
+                fetch.url().rhost(),
                 warcResponse.date(),
                 filename,
                 responseOffset, responseLength, requestLength,

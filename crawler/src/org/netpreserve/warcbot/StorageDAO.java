@@ -18,16 +18,17 @@ import java.util.UUID;
 @RegisterConstructorMapper(Resource.class)
 public interface StorageDAO {
     @SqlUpdate("""
-            INSERT INTO resources (id, page_id, method, url, date, filename, response_offset, response_length, request_length,
+            INSERT INTO resources (id, page_id, method, url, rhost, date, filename, response_offset, response_length, request_length,
                status, redirect, payload_type, payload_size, payload_digest, fetch_time_ms, ip_address, type,
                protocol)
-            VALUES (:id, :pageId, :method, :url, :date, :filename, :responseOffset, :responseLength, :requestLength,
+            VALUES (:id, :pageId, :method, :url, :rhost, :date, :filename, :responseOffset, :responseLength, :requestLength,
                     :status, :redirect, :payloadType, :payloadSize, :payloadDigest, :fetchTimeMs, :ipAddress, :type,
                     :protocol)""")
     void addResource(@BindMethods Resource resource);
 
-    @SqlUpdate("INSERT INTO pages (id, url, date, title, visit_time_ms) VALUES (?, ?, ?, ?, ?)")
-    void addPage(@NotNull UUID id, @NotNull Url url, @NotNull Instant date, String title, long visitTimeMs);
+    @SqlUpdate("INSERT INTO pages (id, url, date, title, visit_time_ms, rhost) " +
+               "VALUES (:id, :url, :date, :title, :visitTimeMs, :rhost)")
+    void addPage(@BindMethods Page page);
 
     @SqlQuery("SELECT COUNT(*) FROM pages")
     long countPages();
@@ -62,7 +63,7 @@ public interface StorageDAO {
     record ResourceFilters(String url, String pageId) {
     }
 
-    record Page(String id, String url, Instant date, String title, long visitTimeMs) {
+    record Page(UUID id, Url url, Instant date, String title, long visitTimeMs, String rhost) {
     }
 
     record PageExt(@Nested @JsonUnwrapped Page page, long resources, long size) {

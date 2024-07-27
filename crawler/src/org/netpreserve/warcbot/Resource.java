@@ -8,15 +8,33 @@ import org.netpreserve.warcbot.util.BareMediaType;
 import org.netpreserve.warcbot.util.Url;
 
 import java.time.Instant;
-import java.util.Objects;
 import java.util.UUID;
 
 import static java.util.Objects.requireNonNull;
 
-public record Resource(@NotNull UUID id, @NotNull UUID pageId, @NotNull String method, @NotNull Url url, @NotNull Instant date,
-                       String filename, long responseOffset, long responseLength, long requestLength, int status,
-                       @Nullable String redirect, BareMediaType payloadType, long payloadSize, WarcDigest payloadDigest,
-                       long fetchTimeMs, String ipAddress, Network.ResourceType type, String protocol) {
+public record Resource(
+        @NotNull UUID id,
+        @NotNull UUID pageId,
+        @NotNull String method,
+        @NotNull Url url,
+        @NotNull String rhost,
+        @NotNull Instant date,
+        String filename,
+        long responseOffset,
+        long responseLength,
+        long requestLength,
+        int status,
+        @Nullable String redirect,
+        BareMediaType payloadType,
+        long payloadSize,
+        WarcDigest payloadDigest,
+        long fetchTimeMs,
+        String ipAddress,
+        Network.ResourceType type,
+        String protocol) {
+    public Resource {
+    }
+
     public record Metadata(UUID pageId, long fetchTimeMs, String ipAddress) {
     }
 }

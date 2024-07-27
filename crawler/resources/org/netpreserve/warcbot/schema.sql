@@ -86,7 +86,8 @@ create table if not exists resources
     fetch_time_ms   INTEGER          NOT NULL,
     ip_address      TEXT,
     type            TEXT,
-    protocol        TEXT
+    protocol        TEXT,
+    rhost           TEXT             NOT NULL
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS resources_url_date ON resources (url, date);
@@ -98,7 +99,8 @@ create table if not exists pages
     url           TEXT             NOT NULL,
     date          INTEGER          NOT NULL,
     title         TEXT,
-    visit_time_ms INTEGER          NOT NULL
+    visit_time_ms INTEGER          NOT NULL,
+    rhost         TEXT             NOT NULL
 ) STRICT;
 
 create table if not exists robotstxt
