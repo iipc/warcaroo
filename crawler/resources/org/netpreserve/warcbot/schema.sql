@@ -13,6 +13,7 @@ create table if not exists frontier
     state      TEXT CHECK (state IN ('PENDING', 'IN_PROGRESS', 'CRAWLED', 'FAILED',
                                      'ROBOTS_EXCLUDED')) NOT NULL DEFAULT 'PENDING',
     url        TEXT                                      NOT NULL UNIQUE,
+    rhost      TEXT NOT NULL,
     via        TEXT,
     time_added INTEGER,
     FOREIGN KEY (queue) references queues (name)
@@ -119,3 +120,40 @@ CREATE TABLE IF NOT EXISTS errors
     date       INTEGER NOT NULL,
     stacktrace TEXT    NOT NULL
 );
+
+DROP VIEW IF EXISTS hosts;
+
+CREATE VIEW hosts AS
+SELECT
+    COALESCE(f.rhost, r.rhost) AS rhost,
+    f.seeds AS seeds,
+    f.pending AS pending,
+    f.failed AS failed,
+    f.robots_excluded AS robots_excluded,
+    f.total AS total,
+    r.pages AS pages,
+    r.resources AS resources,
+    r.size AS size,
+    r.transferred AS transferred,
+    r.storage AS storage
+FROM
+    (SELECT
+         rhost,
+         COUNT(*) FILTER (WHERE depth = 0) AS seeds,
+         COUNT(*) FILTER (WHERE state = 'PENDING') AS pending,
+         COUNT(*) FILTER (WHERE state = 'FAILED') AS failed,
+         COUNT(*) FILTER (WHERE state = 'ROBOTS_EXCLUDED') AS robots_excluded,
+         COUNT(*) AS total
+     FROM frontier
+     GROUP BY rhost) f
+    FULL OUTER JOIN
+    (SELECT
+        rhost,
+        (SELECT COUNT(*) FROM pages p WHERE p.rhost = resources.rhost) AS pages,
+        COUNT(*) AS resources,
+        SUM(payload_size) AS size,
+        SUM(transferred) AS transferred,
+        SUM(request_length) + SUM(response_length) AS storage
+    FROM resources
+    GROUP BY rhost) r
+ON f.rhost = r.rhost;

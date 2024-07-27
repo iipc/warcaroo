@@ -132,7 +132,8 @@ public class Storage implements Closeable {
                     metadata.fetchTimeMs(),
                     httpResponse.status(),
                     httpResponse.headers().first("Location").orElse(null),
-                    new BareMediaType(httpResponse.contentType().base().toString()), new Network.ResourceType("RobotsTxt"),
+                    new BareMediaType(httpResponse.contentType().base().toString()),
+                    new Network.ResourceType("Robots"),
                     response.version() == HttpClient.Version.HTTP_2 ? "h2" : null,
                     responseHeader.length + response.body().length);
             Resource resource = save(metadata.pageId(), fetch);

@@ -102,13 +102,18 @@ public class Webapp implements HttpHandler {
         return crawl.config();
     }
 
-    static class HostsQuery extends Query {
+    public static class HostsQuery extends Query {
+        public String rhost;
+
+        public void setHost(String host) {
+            rhost = Url.reverseHost(host);
+        }
     }
 
     @GET("/api/hosts")
     Page<StorageDAO.HostExt> hosts(HostsQuery query) {
-        long count = crawl.db.storage().countHosts();
-        var rows = crawl.db.storage().queryHosts(query.orderBy(StorageDAO.HostExt.class), query.limit, (query.page - 1) * query.limit);
+        long count = crawl.db.storage().countHosts(query);
+        var rows = crawl.db.storage().queryHosts(query.orderBy(StorageDAO.HostExt.class), query);
         return new Page(count / query.limit + 1, count, rows);
     }
 

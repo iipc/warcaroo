@@ -19,8 +19,9 @@
 
     const table = new WarcBotTabulator("#myTable", {
         ajaxURL: '/api/hosts',
+        filterMode: "remote",
         height: '100%',
-        layout: "fitColumns",
+        layout: "fitDataFill",
         pagination: true,
         paginationMode: "remote",
         paginationCounter: "rows",
@@ -30,43 +31,64 @@
             sort: true
         },
         columns: [
-            {title: "Host", field: "host"},
             {
-                field: "pages",
-                formatter: 'link',
-                formatterParams: {
-                    urlPrefix: 'pages.html#host=',
-                    urlField: 'host'
-                },
-                hozAlign: "right",
-                title: "Pages",
-                width: "70"
+                title: "Host",
+                field: "host",
+                headerFilter: "input"
             },
             {
-                field: "resources",
-                formatter: 'link',
-                formatterParams: {
-                    urlPrefix: 'resources.html#host=',
-                    urlField: 'host'
-                },
-                hozAlign: "right",
-                title: "Resource",
-                width: "70"
+                title: "Frontier",
+                columns: [
+                    {title: "Seeds", field: "seeds", hozAlign: "right"},
+                    {title: "Pending", field: "pending", hozAlign: "right"},
+                    {title: "Failed", field: "failed", hozAlign: "right"},
+                    {title: "Robots", field: "robotsExcluded", hozAlign: "right"},
+                    {title: "Total", field: "total", hozAlign: "right"},
+                ]
             },
             {
-                title: "Size",
-                field: "payloadSize",
-                width: "70",
-                hozAlign: 'right',
-                formatter: cell => formatSize(cell.getValue())
-            },
-            {
-                title: "Transferred",
-                field: "transferred",
-                width: "70",
-                hozAlign: 'right',
-                formatter: cell => formatSize(cell.getValue())
-            },
+                title: "Crawled",
+                columns: [
+                    {
+                        field: "pages",
+                        formatter: 'link',
+                        formatterParams: {
+                            urlPrefix: 'pages.html#host=',
+                            urlField: 'host'
+                        },
+                        hozAlign: "right",
+                        title: "Pages",
+                    },
+                    {
+                        field: "resources",
+                        formatter: 'link',
+                        formatterParams: {
+                            urlPrefix: 'resources.html#host=',
+                            urlField: 'host'
+                        },
+                        hozAlign: "right",
+                        title: "Resources",
+                    },
+                    {
+                        title: "Size",
+                        field: "size",
+                        hozAlign: 'right',
+                        formatter: cell => formatSize(cell.getValue())
+                    },
+                    {
+                        title: "Network",
+                        field: "transferred",
+                        hozAlign: 'right',
+                        formatter: cell => formatSize(cell.getValue())
+                    },
+                    {
+                        title: "Storage",
+                        field: "storage",
+                        hozAlign: 'right',
+                        formatter: cell => formatSize(cell.getValue())
+                    },
+                ]
+            }
         ],
     });
 

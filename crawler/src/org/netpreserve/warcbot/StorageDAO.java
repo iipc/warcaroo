@@ -7,7 +7,6 @@ import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.*;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
-import org.jetbrains.annotations.NotNull;
 import org.netpreserve.warcbot.util.Url;
 import org.netpreserve.warcbot.webapp.Webapp;
 
@@ -88,7 +87,8 @@ public interface StorageDAO {
             LIMIT 1""")
     Resource findResourceByUrl(Url uri);
 
-    record HostExt(String rhost, long pages, long resources, long payloadSize, long transferred) {
+    record HostExt(String rhost, Long seeds, Long pending, Long failed, Long robotsExcluded, Long total,
+                   long pages, long resources, long size, long transferred, long storage) {
         @JsonProperty
         public String host() {
             if (rhost.contains(",")) {
@@ -101,21 +101,20 @@ public interface StorageDAO {
         }
     }
 
-    @SqlQuery("SELECT COUNT(*) FROM resources GROUP BY rhost")
-    long countHosts();
+    String HOSTS_WHERE = """
+            WHERE (:rhost IS NULL OR rhost GLOB :rhost)
+            """;
+
+    @SqlQuery("SELECT COUNT(*) FROM hosts " + HOSTS_WHERE)
+    long countHosts(@BindFields Webapp.HostsQuery query);
 
     @SqlQuery("""
-            SELECT rhost,
-              (SELECT COUNT(*) FROM pages p WHERE p.rhost = r.rhost) AS pages,
-              COUNT(*) AS resources,
-              SUM(payload_size) AS payloadSize,
-              SUM(transferred) AS transferred
-            FROM resources r
-            GROUP BY rhost
-            <orderBy> LIMIT :limit OFFSET :offset""")
+            SELECT * FROM hosts
+            """ + HOSTS_WHERE + """
+            <orderBy> LIMIT :limit OFFSET (:page - 1) * :limit""")
     @DefineNamedBindings
     @RegisterConstructorMapper(StorageDAO.HostExt.class)
-    List<HostExt> queryHosts(@Define String orderBy, int limit, long offset);
+    List<HostExt> queryHosts(@Define String orderBy, @BindFields Webapp.HostsQuery query);
 
 
 }

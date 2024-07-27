@@ -22,8 +22,8 @@ public interface FrontierDAO {
     Candidate getCandidate(Url url);
 
     @SqlBatch("""
-            INSERT INTO frontier (queue, depth, url, via, time_added, state)
-            VALUES (:queue, :depth, :url, :via, :timeAdded, :state)
+            INSERT INTO frontier (queue, depth, url, rhost, via, time_added, state)
+            VALUES (:queue, :depth, :url, :url.rhost, :via, :timeAdded, :state)
             ON CONFLICT(url) DO NOTHING""")
     boolean[] addCandidates(@BindMethods Collection<Candidate> candidates);
 
