@@ -5,10 +5,14 @@ import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
 import org.jdbi.v3.core.argument.AbstractArgumentFactory;
 import org.jdbi.v3.core.argument.Argument;
+import org.jdbi.v3.core.argument.ArgumentFactory;
+import org.jdbi.v3.core.argument.NullArgument;
 import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.netpreserve.jwarc.WarcDigest;
+import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcbot.util.BareMediaType;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,10 +21,13 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.sql.*;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.jdbi.v3.core.generic.GenericTypes.getErasedType;
 
 public class Database implements AutoCloseable {
     private final Logger log = LoggerFactory.getLogger(Database.class);
@@ -41,27 +48,32 @@ public class Database implements AutoCloseable {
         this.dataSource = new HikariDataSource(config);
         this.jdbi = Jdbi.create(dataSource);
         jdbi.installPlugin(new SqlObjectPlugin());
-        jdbi.registerArgument(new AbstractArgumentFactory<Url>(Types.VARCHAR) {
-            @Override
-            protected Argument build(Url value, ConfigRegistry config) {
-                return ((position, statement, ctx) -> statement.setString(position, value.toString()));
-            }
-        });
-        jdbi.registerColumnMapper(Url.class, (ColumnMapper<Url>) (r, columnNumber, ctx) -> {
-            String value = r.getString(columnNumber);
-            return value == null ? null : new Url(value);
-        });
-        jdbi.registerArgument(new AbstractArgumentFactory<WarcDigest>(Types.VARCHAR) {
-            @Override
-            protected Argument build(WarcDigest value, ConfigRegistry config) {
-                return ((position, statement, ctx) -> statement.setString(position, value.prefixedBase32()));
-            }
-        });
-        jdbi.registerColumnMapper(WarcDigest.class, (r, columnNumber, ctx) -> {
-            String value = r.getString(columnNumber);
-            return value == null ? null : new WarcDigest(value);
-        });
+        jdbi.registerColumnMapper(BareMediaType.class, stringColumnMapper(BareMediaType::new));
+        jdbi.registerColumnMapper(Network.ResourceType.class, stringColumnMapper(Network.ResourceType::new));
+        jdbi.registerColumnMapper(Url.class, stringColumnMapper(Url::new));
+        jdbi.registerColumnMapper(WarcDigest.class, stringColumnMapper(WarcDigest::new));
+        jdbi.registerArgument(stringArgument(BareMediaType.class, BareMediaType::value));
+        jdbi.registerArgument(stringArgument(Network.ResourceType.class, Network.ResourceType::value));
+        jdbi.registerArgument(stringArgument(Url.class, Url::toString));
+        jdbi.registerArgument(stringArgument(WarcDigest.class, WarcDigest::prefixedBase32));
         init();
+    }
+
+    private static <T> ColumnMapper<T> stringColumnMapper(Function<String,T> constructor) {
+        return (r, col, ctx) -> {
+            String value = r.getString(col);
+            return value == null ? null : constructor.apply(value);
+        };
+    }
+
+    private static <T> ArgumentFactory.Preparable stringArgument(Class<T> clazz, Function<T, String> getter) {
+        return (type, config) -> {
+            if (!clazz.isAssignableFrom(getErasedType(type))) return Optional.empty();
+            return Optional.of(value -> {
+                if (value == null) return new NullArgument(Types.VARCHAR);
+                return (pos, stmt, ctx) -> stmt.setString(pos, getter.apply((T) value));
+            });
+        };
     }
 
     public void init() throws IOException {

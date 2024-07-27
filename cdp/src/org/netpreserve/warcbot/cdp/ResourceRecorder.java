@@ -2,6 +2,7 @@ package org.netpreserve.warcbot.cdp;
 
 import org.netpreserve.warcbot.cdp.domains.Fetch;
 import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcbot.util.BareMediaType;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -207,7 +208,7 @@ public class ResourceRecorder {
             fetchTimeMs = (long) ((timestamp - requestTimestamp) * 1000);
         }
         String redirect = response.headers().get("location");
-        String responseType = response.headers().get("Content-Type");
+        var responseType = BareMediaType.of(response.headers().get("Content-Type"));
         rewindChannel();
         resourceHandler.accept(new ResourceFetched(request.method(), response.url(), requestHeader, request.body(), responseHeader,
                 null, channel, response.remoteIPAddress(), fetchTimeMs, response.status(),

@@ -1,6 +1,7 @@
 package org.netpreserve.warcbot.cdp;
 
 import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcbot.util.BareMediaType;
 
 import java.nio.channels.FileChannel;
 import java.util.Objects;
@@ -17,7 +18,7 @@ public record ResourceFetched(
         long fetchTimeMs,
         int status,
         String redirect,
-        String responseType,
+        BareMediaType responseType,
         Network.ResourceType type,
         String protocol) {
     public ResourceFetched {

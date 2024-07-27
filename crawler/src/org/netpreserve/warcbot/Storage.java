@@ -5,6 +5,8 @@ import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import org.netpreserve.jwarc.*;
 import org.netpreserve.warcbot.cdp.ResourceFetched;
 import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcbot.util.BareMediaType;
+import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -129,7 +131,7 @@ public class Storage implements Closeable {
                     metadata.fetchTimeMs(),
                     httpResponse.status(),
                     httpResponse.headers().first("Location").orElse(null),
-                    httpResponse.contentType().base().toString(), new Network.ResourceType("RobotsTxt"),
+                    new BareMediaType(httpResponse.contentType().base().toString()), new Network.ResourceType("RobotsTxt"),
                     response.version() == HttpClient.Version.HTTP_2 ? "h2" : null);
             Resource resource = save(metadata.pageId(), fetch);
             if (resource != null) resources.add(resource);
@@ -217,7 +219,7 @@ public class Storage implements Closeable {
 
         Resource resource = new Resource(responseUuid, pageId,
                 fetch.method(),
-                warcResponse.target(),
+                new Url(warcResponse.target()),
                 warcResponse.date(),
                 filename,
                 responseOffset, responseLength, requestLength,
@@ -225,7 +227,7 @@ public class Storage implements Closeable {
                 fetch.responseType(),
                 responseBodyLength,
                 responseDigest,
-                fetch.fetchTimeMs(), fetch.ipAddress(), fetch.type().value(),
+                fetch.fetchTimeMs(), fetch.ipAddress(), fetch.type(),
                 fetch.protocol());
         dao.addResource(resource);
         return resource;

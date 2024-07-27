@@ -191,71 +191,21 @@ public class Webapp implements HttpHandler {
     public record Filter(String field, String type, String value) {
     }
 
-    abstract static class BaseQuery {
-        @Doc("Page number of results to return. Starting from 1.")
-        public long page = 1;
-        @Doc("How many results to return per page.")
-        public int size = 10;
-        @Doc("Fields to order the results by.")
-        public List<Sort> sort;
-        @Doc("Filter on the value of fields.")
-        public List<Filter> filter;
-
-        public Map<String,String> filterMap() {
-            if (filter == null || filter.isEmpty()) return Map.of();
-            return filter.stream().collect(Collectors.toMap(Filter::field, Filter::value));
+    static class FrontierQuery extends Query {
+        FrontierQuery() {
+            super(Candidate.class);
         }
     }
 
-    static class FrontierQuery extends BaseQuery {
-        public String orderBy() {
-            var columns = Map.of("id", "id",
-                    "date", "date",
-                    "url", "url",
-                    "title", "title",
-                    "visitTimeMs", "visit_time_ms",
-                    "resources", "resources",
-                    "size", "size");
-            if (sort == null) return "";
-            return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
+    static class PagesQuery extends Query {
+        PagesQuery() {
+            super(StorageDAO.PageExt.class);
         }
     }
 
-    static class PagesQuery extends BaseQuery {
-        public String orderBy() {
-            var columns = Map.of("id", "id",
-                    "date", "date",
-                    "url", "url",
-                    "title", "title",
-                    "visitTimeMs", "visit_time_ms",
-                    "resources", "resources",
-                    "size", "size");
-            if (sort == null) return "";
-            return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
-        }
-    }
-
-    static class ResourcesQuery extends BaseQuery {
-        public String orderBy() {
-            var columns = Map.ofEntries(Map.entry("id", "id"),
-                    Map.entry("pageId", "page_id"),
-                    Map.entry("date", "date"),
-                    Map.entry("url", "url"),
-                    Map.entry("filename", "filename"),
-                    Map.entry("responseOffset", "response_offset"),
-                    Map.entry("responseLength", "response_length"),
-                    Map.entry("requestLength", "request_length"),
-                    Map.entry("status", "status"),
-                    Map.entry("redirect", "redirect"),
-                    Map.entry("payloadType", "payload_type"),
-                    Map.entry("payloadSize", "payload_size"),
-                    Map.entry("payloadDigest", "payload_digest"),
-                    Map.entry("fetchTimeMs", "fetch_time_ms"),
-                    Map.entry("ipAddress", "ip_address"),
-                    Map.entry("type", "type"),
-                    Map.entry("protocol", "protocol"));
-            if (sort == null) return "";
-            return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
+    static class ResourcesQuery extends Query {
+        ResourcesQuery() {
+            super(Resource.class);
         }
     }
 
@@ -272,12 +222,6 @@ public class Webapp implements HttpHandler {
             last_row = lastRow;
             this.data = data;
         }
-    }
-
-    private void sendJson(HttpExchange exchange, Object object) throws IOException {
-        exchange.getResponseHeaders().set("Content-Type", "application/json");
-        exchange.sendResponseHeaders(200, 0);
-        JSON.writeValue(exchange.getResponseBody(), object);
     }
 
     private void notFound(HttpExchange exchange) throws IOException {
