@@ -50,6 +50,10 @@ public class Navigator implements AutoCloseable {
         networkManager.block(predicate);
     }
 
+    public byte[] screenshot() {
+        return page.captureScreenshot("webp");
+    }
+
     public record Navigation(
             Page.FrameId frameId,
             Network.LoaderId loaderId,

@@ -35,6 +35,7 @@ import static java.nio.file.StandardOpenOption.*;
  */
 public class ResourceRecorder {
     private final static Logger log = LoggerFactory.getLogger(ResourceRecorder.class);
+    private final boolean captureResponseBody;
     private final Path downloadPath;
     private final Consumer<ResourceFetched> resourceHandler;
     private final Network.RequestId networkId;
@@ -50,7 +51,8 @@ public class ResourceRecorder {
     CompletableFuture<Void> completionFuture = new CompletableFuture<>();
     private double requestTimestamp;
 
-    public ResourceRecorder(Network.RequestId networkId, Path downloadPath, Consumer<ResourceFetched> resourceHandler, Network network) {
+    public ResourceRecorder(Network.RequestId networkId, Path downloadPath, Consumer<ResourceFetched> resourceHandler, Network network, boolean captureResponseBody) {
+        this.captureResponseBody = captureResponseBody;
         this.networkId = networkId;
         this.downloadPath = downloadPath;
         this.resourceHandler = resourceHandler;
@@ -100,7 +102,9 @@ public class ResourceRecorder {
                 response = event.redirectResponse();
                 dispatchResource(event.timestamp(), event.redirectResponse().encodedDataLength());
             } else {
-                network.streamResourceContent(networkId).thenAccept(this::handleBufferedData);
+                if (captureResponseBody) {
+                    network.streamResourceContent(networkId).thenAccept(this::handleBufferedData);
+                }
             }
         }
 
@@ -156,7 +160,7 @@ public class ResourceRecorder {
     public void handleLoadingFinished(Network.LoadingFinished event) {
         wrap(log.atDebug()).log("Loading finished");
 
-        if (bytesWritten < bytesReceived && request != null && request.url().isHttp()) {
+        if (captureResponseBody && bytesWritten < bytesReceived && request != null && request.url().isHttp()) {
             // Sometimes the browser can finish the request before it processes our streamResourceContent() command.
             // Unfortunately this even happens if we issue it before resuming a paused request.
             log.trace("Received {} but only wrote {}", bytesReceived, bytesWritten);

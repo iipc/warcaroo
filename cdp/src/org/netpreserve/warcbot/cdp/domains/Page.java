@@ -31,6 +31,9 @@ public interface Page {
 
     void setLifecycleEventsEnabled(boolean enabled);
 
+    @Unwrap("data")
+    byte[] captureScreenshot(String format);
+
     record LifecycleEvent(FrameId frameId, Network.LoaderId loaderId, String name, Network.MonotonicTime timestamp) {
     }
 

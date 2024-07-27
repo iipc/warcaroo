@@ -29,6 +29,7 @@ public class NetworkManager {
     private final RequestHandler requestHandler;
     private final Path downloadPath;
     private Predicate<String> blocker = url -> false;
+    private volatile boolean captureResponseBodies = true;
 
     public NetworkManager(CDPSession cdpSession, IdleMonitor idleMonitor, Tracker tracker,
                           RequestHandler requestHandler, Consumer<ResourceFetched> resourceHandler,
@@ -175,7 +176,7 @@ public class NetworkManager {
 
     private ResourceRecorder getOrCreateRecorder(Network.RequestId requestId) {
         return recorders.computeIfAbsent(requestId, id -> {
-            var recorder = new ResourceRecorder(id, downloadPath, resourceHandler, network);
+            var recorder = new ResourceRecorder(id, downloadPath, resourceHandler, network, captureResponseBodies);
             recorder.completionFuture.whenComplete((v, t) -> {
                 recorders.remove(requestId);
                 idleMonitor.finished();
@@ -200,5 +201,9 @@ public class NetworkManager {
         } catch (ExecutionException | TimeoutException | InterruptedException e) {
             log.warn("waitForLoadingResources threw", e);
         }
+    }
+
+    public void captureResponseBodies(boolean captureResponseBodies) {
+        this.captureResponseBodies = captureResponseBodies;
     }
 }

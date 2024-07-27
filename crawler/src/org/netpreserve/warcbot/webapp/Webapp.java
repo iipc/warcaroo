@@ -12,6 +12,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.netpreserve.jwarc.WarcDigest;
 import org.netpreserve.warcbot.*;
+import org.netpreserve.warcbot.cdp.NavigationException;
 import org.netpreserve.warcbot.util.Url;
 import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
 import org.netpreserve.warcbot.webapp.Route.GET;
@@ -146,6 +147,18 @@ public class Webapp implements HttpHandler {
         long count = crawl.db.storage().countResources(query);
         var rows = crawl.db.storage().queryResources(query.orderBy(Resource.class), query);
         return new Page(count / query.limit + 1, count, rows);
+    }
+
+    public static class RenderQuery {
+        public Url url;
+    }
+
+    @GET("/api/render")
+    void render(HttpExchange exchange, RenderQuery query) throws NavigationException, InterruptedException, IOException {
+        var screenshot = Replay.render(crawl.db.storage(), crawl.browserProcess(), query.url);
+        exchange.getResponseHeaders().set("Content-Type", "image/webp");
+        exchange.sendResponseHeaders(200, screenshot.length);
+        exchange.getResponseBody().write(screenshot);
     }
 
     @GET("/")

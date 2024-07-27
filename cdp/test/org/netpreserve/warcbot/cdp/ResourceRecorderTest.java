@@ -52,7 +52,7 @@ class ResourceRecorderTest {
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
-        }, null);
+        }, null, true);
         recorder.handleBufferedData(data);
         recorder.handleRequestWillBeSentExtraInfo(requestWillBeSentExtraInfo);
         recorder.handleResponseReceivedExtraInfo(responseReceivedExtraInfo);

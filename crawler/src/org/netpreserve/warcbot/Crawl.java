@@ -122,6 +122,10 @@ public class Crawl implements AutoCloseable {
         }
     }
 
+    public BrowserProcess browserProcess() {
+        return browserProcess;
+    }
+
     public Config config() {
         return config;
     }
