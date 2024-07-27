@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.URLConnection;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.netpreserve.warcbot.webapp.Route.*;
@@ -75,16 +74,21 @@ public class Webapp implements HttpHandler {
         return openapi;
     }
 
-    static class FrontierQuery extends Query {
+    public static class FrontierQuery extends Query {
+        public Integer depth;
+        public String rhost;
+        public Candidate.State state;
+
+        void setHost(String host) {
+            this.rhost = Url.reverseHost(host);
+        }
     }
 
     @GET("/api/frontier")
-    FrontierPage frontier(FrontierQuery query) throws IOException {
-        long count = crawl.db.storage().countPages();
-        var candidates = crawl.db.frontier().queryFrontier(query.orderBy(Candidate.class), query.limit, (query.page - 1) * query.limit);
-        var queueNames = candidates.stream().map(Candidate::queue).collect(Collectors.toSet());
-        return new FrontierPage(count / query.limit + 1, count, candidates,
-                crawl.db.frontier().getQueueStateCounts(queueNames));
+    Page<Candidate> frontier(FrontierQuery query) throws IOException {
+        long count = crawl.db.frontier().countFrontier(query);
+        var rows = crawl.db.frontier().queryFrontier(query.orderBy(Candidate.class), query);
+        return new Page<>(count / query.limit + 1, count, rows);
     }
 
     public static class FrontierPage extends Page<Candidate> {

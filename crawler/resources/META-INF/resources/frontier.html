@@ -16,39 +16,9 @@
 <script type="module">
     import {WarcBotTabulator, formatSize} from "./tables.js";
 
-    /* queue -> State -> count */
-    /** @type{Object.<string, Object.<string, number>>} */
-    let queueStateCounts = {};
-
     const table = new WarcBotTabulator("#myTable", {
         ajaxURL: '/api/frontier',
-        ajaxResponse: function(url, params, response) {
-            queueStateCounts = response.queueStateCounts;
-            return response;
-        },
-        groupBy: 'queue',
-        groupHeader: function(queue, count, data, group) {
-            const qs = queueStateCounts[queue];
-            const total = Object.values(qs).reduce((a, b) => a + b, 0)
-            const done = total - (qs.PENDING || 0);
-
-            const header = document.createDocumentFragment();
-
-            const span = document.createElement('span');
-            span.innerText = queue;
-            span.style.minWidth = '200px';
-            span.style.display = 'inline-block';
-            header.append(span);
-
-            const progress = document.createElement('progress');
-            progress.value = done;
-            progress.max = total;
-            header.append(progress);
-
-            header.append(` finished ${done.toLocaleString()} of ${total.toLocaleString()} pages `)
-
-            return header;
-        },
+        filterMode: 'remote',
         height: '100%',
         layout: "dataFill",
         pagination: true,
@@ -61,8 +31,9 @@
         },
         columns: [
             {title: "Queue", field: "queue"},
-            {title: "Depth", field: "depth"},
-            {title: "State", field: "state"},
+            {title: "Depth", field: "depth", headerFilter: 'number', headerFilterParams: {min: 0}},
+            {title: "State", field: "state", headerFilter: 'list',
+                headerFilterParams: {values: [{label: '\xa0', value: ''}, 'PENDING', 'IN_PROGRESS', 'CRAWLED', 'FAILED', 'ROBOTS_EXCLUDED']}},
             {title: "URL",  field: "url"},
             {title: "Via",  field: "via"},
         ],

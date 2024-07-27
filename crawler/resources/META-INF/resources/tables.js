@@ -107,6 +107,8 @@ function fragmentWriter(id, type, data) {
         }
     }
     window.history.replaceState(undefined, undefined, "#" + new URLSearchParams(state).toString());
+    console.log('hashchange2 sent');
+    window.parent.postMessage("hashchange2");
 }
 
 function addFragmentListener(table) {

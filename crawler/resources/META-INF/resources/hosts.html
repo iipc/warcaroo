@@ -39,11 +39,41 @@
             {
                 title: "Frontier",
                 columns: [
-                    {title: "Seeds", field: "seeds", hozAlign: "right"},
-                    {title: "Pending", field: "pending", hozAlign: "right"},
-                    {title: "Failed", field: "failed", hozAlign: "right"},
-                    {title: "Robots", field: "robotsExcluded", hozAlign: "right"},
-                    {title: "Total", field: "total", hozAlign: "right"},
+                    {
+                        field: "seeds",
+                        formatter: 'link',
+                        formatterParams: {urlPrefix: 'frontier.html#depth=0&host=', urlField: 'host'},
+                        hozAlign: "right",
+                        title: "Seeds"
+                    },
+                    {
+                        field: "pending",
+                        formatter: 'link',
+                        formatterParams: {urlPrefix: 'frontier.html#state=PENDING&host=', urlField: 'host'},
+                        hozAlign: "right",
+                        title: "Pending"
+                    },
+                    {
+                        field: "failed",
+                        formatter: 'link',
+                        formatterParams: {urlPrefix: 'frontier.html#state=FAILED&host=', urlField: 'host'},
+                        hozAlign: "right",
+                        title: "Failed"
+                    },
+                    {
+                        field: "robotsExcluded",
+                        formatter: 'link',
+                        formatterParams: {urlPrefix: 'frontier.html#state=ROBOTS_EXCLUDED&host=', urlField: 'host'},
+                        hozAlign: "right",
+                        title: "Robots"
+                    },
+                    {
+                        field: "total",
+                        formatter: 'link',
+                        formatterParams: {urlPrefix: 'frontier.html#host=', urlField: 'host'},
+                        hozAlign: "right",
+                        title: "Total"
+                    },
                 ]
             },
             {

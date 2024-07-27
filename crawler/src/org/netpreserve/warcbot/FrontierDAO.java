@@ -1,10 +1,7 @@
 package org.netpreserve.warcbot;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
-import org.jdbi.v3.sqlobject.customizer.BindList;
-import org.jdbi.v3.sqlobject.customizer.BindMethods;
-import org.jdbi.v3.sqlobject.customizer.Define;
-import org.jdbi.v3.sqlobject.customizer.Timestamped;
+import org.jdbi.v3.sqlobject.customizer.*;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
@@ -12,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.netpreserve.warcbot.util.MustUpdate;
 import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcbot.webapp.Webapp;
 
 import java.time.Instant;
 import java.util.*;
@@ -78,17 +76,21 @@ public interface FrontierDAO {
     @SqlUpdate("INSERT INTO errors (page_id, url, date, stacktrace) VALUES (?, ?, ?, ?)")
     void addError(UUID pageId, Url url, Instant date, String stacktrace);
 
+
+    String FRONTIER_WHERE = """
+            WHERE (:depth IS NULL OR depth = :depth)
+              AND (:state IS NULL OR state = :state)
+            """;
+
+    @SqlQuery("SELECT COUNT(*) FROM frontier\n" + FRONTIER_WHERE)
+    long countFrontier(@BindFields Webapp.FrontierQuery query);
+
     @SqlQuery("""
-        WITH ranked_frontier AS (
-            SELECT *, ROW_NUMBER() OVER (PARTITION BY queue <orderBy>) AS row_num
-            FROM frontier)
-        SELECT *
-        FROM ranked_frontier
-        WHERE row_num <= 5
-        LIMIT :limit
-        OFFSET :offset;
+        SELECT * FROM frontier
+        """ + FRONTIER_WHERE + """ 
+        <orderBy> LIMIT :limit OFFSET (:page - 1) * :limit
         """)
-    List<Candidate> queryFrontier(@Define String orderBy, int limit, long offset);
+    List<Candidate> queryFrontier(@Define String orderBy, @BindFields Webapp.FrontierQuery query);
 
     @SqlQuery("""
     SELECT * FROM queue_state_counts WHERE queue IN (<queues>)

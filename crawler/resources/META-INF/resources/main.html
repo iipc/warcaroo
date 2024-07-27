@@ -265,6 +265,11 @@
             }
         });
     });
+    window.addEventListener('message', event => {
+        console.log('recved', event);
+        const fragment = contentFrame.contentWindow.location.pathname + contentFrame.contentWindow.location.hash;
+        window.history.replaceState(undefined, undefined, "#" + fragment);
+    });
 </script>
 
 </body>
