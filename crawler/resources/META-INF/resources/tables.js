@@ -11,9 +11,46 @@ for (const cssFile of ["/webjars/tabulator-tables/6.2.1/dist/css/tabulator.min.c
     document.head.appendChild(link);
 }
 
+/**
+ * @typedef {import("tabulator-tables").TabulatorFull} TabulatorFull
+ */
 export class WarcBotTabulator extends TabulatorFull {
+    /**
+     * @param {string | HTMLElement} element
+     * @param {import("tabulator-tables").Options} options
+     */
     constructor(element, options) {
+        /** @type {import("tabulator-tables").Options} */
         const defaultOptions = {
+
+            /**
+             * @typedef {object} AjaxParams
+             * @property {import("tabulator-tables").Filter[]} filter
+             * @property {number} page
+             * @property {number} size
+             * @property {import("tabulator-tables").Sorter[]} sort
+             */
+
+            /**
+             * @param url
+             * @param config
+             * @param {AjaxParams} params
+             * @returns {string}
+             */
+            ajaxURLGenerator: function (url, config, params) {
+                console.log(params);
+                window.params = params;
+                const query =  new URLSearchParams();
+                for (const filter of params.filter ?? []) {
+                    query.set(filter.field, filter.value);
+                }
+                if (params && params.sort.length > 0) {
+                    query.set('sort', params.sort.map(sort => (sort.dir === 'desc' ? '-' : '') + sort.field).join(","));
+                }
+                query.set('limit', params.size);
+                query.set('page', params.page);
+                return url + "?" + query;
+            },
             persistenceReaderFunc: fragmentReader,
             persistenceWriterFunc: fragmentWriter,
         };
@@ -29,6 +66,12 @@ export class WarcBotTabulator extends TabulatorFull {
     }
 }
 
+/**
+ * Format a number as a human-readable byte size like "24 KB".
+ *
+ * @param n {number}
+ * @returns {string}
+ */
 export function formatSize(n) {
     const units = ['B', 'KB', 'MB', 'GB', 'TB'];
     let i = 0;

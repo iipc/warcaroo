@@ -1,0 +1,73 @@
+<!doctype html>
+<title>Hosts - WarcBot</title>
+<div id="myTable">
+</div>
+
+<style>
+    html, body {
+        height: 100%;
+        padding: 0;
+        margin: 0;
+    }
+
+    body {
+        font-family: sans-serif;
+    }
+</style>
+<script type="module">
+    import {WarcBotTabulator, formatSize} from "./tables.js";
+
+    const table = new WarcBotTabulator("#myTable", {
+        ajaxURL: '/api/hosts',
+        height: '100%',
+        layout: "fitColumns",
+        pagination: true,
+        paginationMode: "remote",
+        paginationCounter: "rows",
+        paginationSize: 100,
+        sortMode: "remote",
+        persistence: {
+            sort: true
+        },
+        columns: [
+            {title: "Host", field: "host"},
+            {
+                field: "pages",
+                formatter: 'link',
+                formatterParams: {
+                    urlPrefix: 'pages.html#host=',
+                    urlField: 'host'
+                },
+                hozAlign: "right",
+                title: "Pages",
+                width: "70"
+            },
+            {
+                field: "resources",
+                formatter: 'link',
+                formatterParams: {
+                    urlPrefix: 'resources.html#host=',
+                    urlField: 'host'
+                },
+                hozAlign: "right",
+                title: "Resource",
+                width: "70"
+            },
+            {
+                title: "Size",
+                field: "payloadSize",
+                width: "70",
+                hozAlign: 'right',
+                formatter: cell => formatSize(cell.getValue())
+            },
+            {
+                title: "Transferred",
+                field: "transferred",
+                width: "70",
+                hozAlign: 'right',
+                formatter: cell => formatSize(cell.getValue())
+            },
+        ],
+    });
+
+</script>

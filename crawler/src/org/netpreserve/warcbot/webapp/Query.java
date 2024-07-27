@@ -8,31 +8,30 @@ import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-abstract class Query {
-    private final Class<? extends Record> recordClass;
-
+public abstract class Query {
     @OpenAPI.Doc("Page number of results to return. Starting from 1.")
     public long page = 1;
     @OpenAPI.Doc("How many results to return per page.")
-    public int size = 10;
+    public int limit = 10;
     @OpenAPI.Doc("Fields to order the results by.")
-    public List<Webapp.Sort> sort;
+    public String sort;
     @OpenAPI.Doc("Filter on the value of fields.")
     public List<Webapp.Filter> filter;
 
-    Query(Class<? extends Record> recordClass) {
-        this.recordClass = recordClass;
-    }
-
-    public Map<String, String> filterMap() {
-        if (filter == null || filter.isEmpty()) return Map.of();
-        return filter.stream().collect(Collectors.toMap(Webapp.Filter::field, Webapp.Filter::value));
-    }
-
-    public String orderBy() {
-        if (sort == null) return "";
+    public String orderBy(Class<? extends Record> recordClass) {
+        if (sort == null || sort.isEmpty()) return "";
         var columns = getColumnNames(recordClass);
-        return "ORDER BY " + sort.stream().map(s -> s.sql(columns)).collect(Collectors.joining(", "));
+
+        StringBuilder builder = new StringBuilder();
+        for (var field : sort.split(",")) {
+            if (!builder.isEmpty()) builder.append(", ");
+            if (field.startsWith("-")) {
+                builder.append(columns.get(field.substring(1))).append(" DESC");
+            } else {
+                builder.append(columns.get(field));
+            }
+        }
+        return "ORDER BY " + builder;
     }
 
     private final static Pattern CAMEL_HUMP = Pattern.compile("([a-z])([A-Z])");

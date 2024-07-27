@@ -12,6 +12,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.netpreserve.jwarc.WarcDigest;
 import org.netpreserve.warcbot.*;
+import org.netpreserve.warcbot.util.Url;
 import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
 import org.netpreserve.warcbot.webapp.Route.GET;
 import org.slf4j.Logger;
@@ -74,12 +75,15 @@ public class Webapp implements HttpHandler {
         return openapi;
     }
 
+    static class FrontierQuery extends Query {
+    }
+
     @GET("/api/frontier")
     FrontierPage frontier(FrontierQuery query) throws IOException {
         long count = crawl.db.storage().countPages();
-        var candidates = crawl.db.frontier().queryFrontier(query.orderBy(), query.size, (query.page - 1) * query.size);
+        var candidates = crawl.db.frontier().queryFrontier(query.orderBy(Candidate.class), query.limit, (query.page - 1) * query.limit);
         var queueNames = candidates.stream().map(Candidate::queue).collect(Collectors.toSet());
-        return new FrontierPage(count / query.size + 1, count, candidates,
+        return new FrontierPage(count / query.limit + 1, count, candidates,
                 crawl.db.frontier().getQueueStateCounts(queueNames));
     }
 
@@ -98,21 +102,41 @@ public class Webapp implements HttpHandler {
         return crawl.config();
     }
 
+    static class HostsQuery extends Query {
+    }
+
+    @GET("/api/hosts")
+    Page<StorageDAO.HostExt> hosts(HostsQuery query) {
+        long count = crawl.db.storage().countHosts();
+        var rows = crawl.db.storage().queryHosts(query.orderBy(StorageDAO.HostExt.class), query.limit, (query.page - 1) * query.limit);
+        return new Page(count / query.limit + 1, count, rows);
+    }
+
+    public static class PagesQuery extends Query {
+    }
+
     @GET("/api/pages")
     Page<StorageDAO.PageExt> pages(PagesQuery query) throws IOException {
         long count = crawl.db.storage().countPages();
-        return new Page(count / query.size + 1, count,
-                crawl.db.storage().queryPages(query.orderBy(), query.size, (query.page - 1) * query.size));
+        var rows = crawl.db.storage().queryPages(query.orderBy(StorageDAO.PageExt.class), query.limit, (query.page - 1) * query.limit);
+        return new Page(count / query.limit + 1, count, rows);
+    }
+
+    public static class ResourcesQuery extends Query {
+        public String rhost;
+        public String url;
+        public String pageId;
+
+        public void setHost(String host) {
+            rhost = Url.reverseHost(host);
+        }
     }
 
     @GET("/api/resources")
     Page<Resource> resources(ResourcesQuery query) throws IOException {
-        var fmap = query.filterMap();
-        long count = crawl.db.storage().countResources(fmap.get("url"), fmap.get("pageId"));
-        var rows = crawl.db.storage().queryResources(query.orderBy(), fmap.get("url"), fmap.get("pageId"),
-                query.size, (query.page - 1) * query.size);
-        return new Page(count / query.size + 1, count,
-                rows);
+        long count = crawl.db.storage().countResources(query);
+        var rows = crawl.db.storage().queryResources(query.orderBy(Resource.class), query);
+        return new Page(count / query.limit + 1, count, rows);
     }
 
     @GET("/")
@@ -191,23 +215,6 @@ public class Webapp implements HttpHandler {
     public record Filter(String field, String type, String value) {
     }
 
-    static class FrontierQuery extends Query {
-        FrontierQuery() {
-            super(Candidate.class);
-        }
-    }
-
-    static class PagesQuery extends Query {
-        PagesQuery() {
-            super(StorageDAO.PageExt.class);
-        }
-    }
-
-    static class ResourcesQuery extends Query {
-        ResourcesQuery() {
-            super(Resource.class);
-        }
-    }
 
     public static class Page<T> {
         @JsonPropertyDescription("Index of the last page of results.")

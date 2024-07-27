@@ -1,5 +1,6 @@
 package org.netpreserve.warcbot.webapp;
 
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.slf4j.Logger;
@@ -60,7 +61,14 @@ public class Route implements HttpHandler {
             if (type == HttpExchange.class) {
                 args.add(exchange);
             } else {
-                args.add(QueryMapper.parse(exchange.getRequestURI().getQuery(), type));
+                try {
+                    args.add(QueryMapper.parse(exchange.getRequestURI().getQuery(), type));
+                } catch (UnrecognizedPropertyException e) {
+                    exchange.sendResponseHeaders(400, 0);
+                    exchange.getResponseBody().write(("Unknown query parameter: " + e.getPropertyName() + "\n" +
+                                                      "Known query parameters: " + e.getKnownPropertyIds()).getBytes(UTF_8));
+                    return;
+                }
             }
         }
         Object result;

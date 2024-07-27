@@ -1,17 +1,19 @@
 package org.netpreserve.warcbot;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.jdbi.v3.core.mapper.Nested;
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
-import org.jdbi.v3.sqlobject.customizer.BindMethods;
-import org.jdbi.v3.sqlobject.customizer.Define;
-import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
+import org.jdbi.v3.sqlobject.customizer.*;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jetbrains.annotations.NotNull;
 import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcbot.webapp.Webapp;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -44,21 +46,22 @@ public interface StorageDAO {
             GROUP BY pages.id <orderBy> LIMIT :limit OFFSET :offset""")
     List<PageExt> queryPages(@Define String orderBy, int limit, long offset);
 
-    @SqlQuery("""
-         SELECT COUNT(*) FROM resources
-         WHERE (:url IS NULL OR url GLOB :url)
-           AND (:pageId IS NULL OR page_id GLOB :pageId)
-         """)
-    long countResources(String url, String pageId);
+    String RESOURCES_WHERE = """
+          WHERE (:rhost IS NULL OR rhost GLOB :rhost)
+            AND (:url IS NULL OR url GLOB :url)
+            AND (:pageId IS NULL OR page_id GLOB :pageId)
+          """;
+
+    @SqlQuery("SELECT COUNT(*) FROM resources\n" + RESOURCES_WHERE)
+    long countResources(@BindFields Webapp.ResourcesQuery query);
 
     @SqlQuery("""
             SELECT *
             FROM resources
-            WHERE (:url IS NULL OR url GLOB :url)
-              AND (:pageId IS NULL OR page_id GLOB :pageId)
-            <orderBy> LIMIT :limit OFFSET :offset""")
+            """ + RESOURCES_WHERE + """
+            <orderBy> LIMIT :limit OFFSET (:page - 1) * :limit""")
     @DefineNamedBindings
-    List<Resource> queryResources(@Define String orderBy, String url, String pageId, int limit, long offset);
+    List<Resource> queryResources(@Define String orderBy, @BindFields Webapp.ResourcesQuery query);
 
     record ResourceFilters(String url, String pageId) {
     }
@@ -84,5 +87,35 @@ public interface StorageDAO {
             ORDER BY date DESC
             LIMIT 1""")
     Resource findResourceByUrl(Url uri);
+
+    record HostExt(String rhost, long pages, long resources, long payloadSize, long transferred) {
+        @JsonProperty
+        public String host() {
+            if (rhost.contains(",")) {
+                var segments = Arrays.asList(rhost.split(","));
+                Collections.reverse(segments);
+                return String.join(".", segments);
+            } else {
+                return rhost;
+            }
+        }
+    }
+
+    @SqlQuery("SELECT COUNT(*) FROM resources GROUP BY rhost")
+    long countHosts();
+
+    @SqlQuery("""
+            SELECT rhost,
+              (SELECT COUNT(*) FROM pages p WHERE p.rhost = r.rhost) AS pages,
+              COUNT(*) AS resources,
+              SUM(payload_size) AS payloadSize,
+              SUM(transferred) AS transferred
+            FROM resources r
+            GROUP BY rhost
+            <orderBy> LIMIT :limit OFFSET :offset""")
+    @DefineNamedBindings
+    @RegisterConstructorMapper(StorageDAO.HostExt.class)
+    List<HostExt> queryHosts(@Define String orderBy, int limit, long offset);
+
 
 }

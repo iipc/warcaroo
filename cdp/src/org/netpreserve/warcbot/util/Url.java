@@ -2,6 +2,7 @@ package org.netpreserve.warcbot.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import org.jetbrains.annotations.NotNull;
 import org.netpreserve.urlcanon.Canonicalizer;
 import org.netpreserve.urlcanon.ParsedUrl;
 
@@ -42,7 +43,11 @@ public class Url {
     }
 
     public String rhost() {
-        var host = host();
+        return reverseHost(host());
+    }
+
+    public static String reverseHost(String host) {
+        if (host == null) return null;
         if (host.startsWith("[")) return host;
         if (parseIpv4(host) != -1) return host;
         var builder = new StringBuilder();
