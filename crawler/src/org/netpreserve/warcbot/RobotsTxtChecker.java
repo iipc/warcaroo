@@ -4,6 +4,8 @@ import org.netpreserve.warcbot.util.Url;
 
 import javax.net.ssl.SSLSession;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -53,7 +55,7 @@ public class RobotsTxtChecker {
             long fetchTimeMs = System.currentTimeMillis() - fetchStart;
             status = response.statusCode();
             body = response.body();
-            String ipAddress = response.sslSession().map(SSLSession::getPeerHost).orElse(null);
+            String ipAddress = InetAddress.getByName(robotsUri.getHost()).getHostAddress();
             storage.save(new Resource.Metadata(pageId, fetchTimeMs, ipAddress), response);
         } catch (InterruptedException e) {
             throw new IOException(e);
