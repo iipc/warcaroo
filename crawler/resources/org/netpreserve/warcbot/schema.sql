@@ -4,7 +4,7 @@ create table if not exists queues
     last_visited INTEGER,
     worker_id    INTEGER,
     next_visit   INTEGER                   DEFAULT 0
-) STRICT;
+);
 
 create table if not exists frontier
 (
@@ -16,7 +16,7 @@ create table if not exists frontier
     via        TEXT,
     time_added INTEGER,
     FOREIGN KEY (queue) references queues (name)
-) STRICT;
+);
 
 CREATE TABLE IF NOT EXISTS queue_state_counts
 (
@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS queue_state_counts
     state TEXT,
     count INTEGER NOT NULL,
     PRIMARY KEY (queue, state)
-) STRICT;
+);
 
 --region Triggers
 
@@ -89,7 +89,7 @@ create table if not exists resources
     protocol        TEXT,
     rhost           TEXT             NOT NULL,
     transferred     INTEGER          NOT NULL
-) STRICT;
+);
 
 CREATE INDEX IF NOT EXISTS resources_url_date ON resources (url, date);
 CREATE INDEX IF NOT EXISTS resources_page_id ON resources (page_id);
@@ -102,7 +102,7 @@ create table if not exists pages
     title         TEXT,
     visit_time_ms INTEGER          NOT NULL,
     rhost         TEXT             NOT NULL
-) STRICT;
+);
 
 create table if not exists robotstxt
 (
@@ -110,7 +110,7 @@ create table if not exists robotstxt
     date         INTEGER          NOT NULL,
     last_checked INTEGER          NOT NULL,
     body         BLOB             NOT NULL
-) STRICT;
+);
 
 CREATE TABLE IF NOT EXISTS errors
 (
@@ -118,4 +118,4 @@ CREATE TABLE IF NOT EXISTS errors
     url        TEXT    NOT NULL,
     date       INTEGER NOT NULL,
     stacktrace TEXT    NOT NULL
-) STRICT;
+);
