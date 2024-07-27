@@ -20,10 +20,10 @@ public interface StorageDAO {
     @SqlUpdate("""
             INSERT INTO resources (id, page_id, method, url, rhost, date, filename, response_offset, response_length, request_length,
                status, redirect, payload_type, payload_size, payload_digest, fetch_time_ms, ip_address, type,
-               protocol)
+               protocol, transferred)
             VALUES (:id, :pageId, :method, :url, :rhost, :date, :filename, :responseOffset, :responseLength, :requestLength,
                     :status, :redirect, :payloadType, :payloadSize, :payloadDigest, :fetchTimeMs, :ipAddress, :type,
-                    :protocol)""")
+                    :protocol, :transferred)""")
     void addResource(@BindMethods Resource resource);
 
     @SqlUpdate("INSERT INTO pages (id, url, date, title, visit_time_ms, rhost) " +

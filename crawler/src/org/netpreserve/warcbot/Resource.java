@@ -31,7 +31,8 @@ public record Resource(
         long fetchTimeMs,
         String ipAddress,
         Network.ResourceType type,
-        String protocol) {
+        String protocol,
+        long transferred) {
     public Resource {
     }
 

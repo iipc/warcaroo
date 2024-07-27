@@ -231,7 +231,8 @@ public class Storage implements Closeable {
                 responseBodyLength,
                 responseDigest,
                 fetch.fetchTimeMs(), fetch.ipAddress(), fetch.type(),
-                fetch.protocol());
+                fetch.protocol(),
+                fetch.transferred());
         dao.addResource(resource);
         return resource;
     }
