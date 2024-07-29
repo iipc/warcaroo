@@ -2,10 +2,8 @@ package org.netpreserve.warcbot;
 
 import org.netpreserve.warcbot.util.Url;
 
-import javax.net.ssl.SSLSession;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -22,15 +20,15 @@ public class RobotsTxtChecker {
     private final HttpClient httpClient;
     private final Storage storage;
     private final List<String> userAgents;
-    private final String userAgent;
+    private final Config config;
 
     public RobotsTxtChecker(RobotsTxtDAO dao, HttpClient httpClient, Storage storage, List<String> userAgents,
-                            String userAgent) {
+                            Config config) {
         this.dao = dao;
         this.httpClient = httpClient;
         this.storage = storage;
         this.userAgents = userAgents;
-        this.userAgent = userAgent;
+        this.config = config;
     }
 
     boolean checkAllowed(UUID pageId, Url url) throws SQLException, IOException {
@@ -50,7 +48,7 @@ public class RobotsTxtChecker {
             long fetchStart = System.currentTimeMillis();
             var response = httpClient.send(HttpRequest.newBuilder(robotsUri)
                     .timeout(Duration.ofSeconds(30))
-                    .header("User-Agent", userAgent)
+                    .header("User-Agent", config.getCrawlSettings().userAgent())
                     .build(), BodyHandlers.ofByteArray());
             long fetchTimeMs = System.currentTimeMillis() - fetchStart;
             status = response.statusCode();

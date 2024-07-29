@@ -43,9 +43,9 @@ public class Crawl implements AutoCloseable {
         this.frontier = new Frontier(db.frontier(), config.getScope(), config);
         this.storage = new Storage(dataPath, db.storage());
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage,
-                List.of("nla.gov.au_bot", "warcbot"), config.getUserAgent());
+                List.of("nla.gov.au_bot", "warcbot"), config);
         this.browserProcess = BrowserProcess.start(config.getBrowserBinary(), dataPath.resolve("profile"),
-                config.isHeadless());
+                config.getCrawlSettings().headless());
         this.tracker = new Tracker();
     }
 
@@ -92,7 +92,7 @@ public class Crawl implements AutoCloseable {
             if (state != State.STOPPED) throw new BadStateException("Can only start a STOPPED crawl");
             state = State.STARTING;
             frontier.addUrls(config.getSeeds(), 0, null);
-            for (int i = 0; i < config.getWorkers(); i++) {
+            for (int i = 0; i < config.getCrawlSettings().workers(); i++) {
                 workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker, tracker, config));
             }
             for (Worker worker : workers) {

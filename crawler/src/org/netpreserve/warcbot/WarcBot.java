@@ -18,6 +18,10 @@ public class WarcBot {
         Integer port = null;
         int verbosity = 0;
 
+        boolean headless = CrawlSettings.DEFAULTS.headless();
+        String userAgent = CrawlSettings.DEFAULTS.userAgent();
+        int workers = CrawlSettings.DEFAULTS.workers();
+
         for (int i = 0; i < args.length; i++) {
             try {
                 switch (args[i]) {
@@ -40,20 +44,20 @@ public class WarcBot {
                                 
                                 Examples:
                                   warcbot --include "https?://([^/]+\\.)example\\.com/.*" -A "MyCrawler/1.0" -w 5
-                                """, config.getWorkers());
+                                """, workers);
                         return;
                     }
                     case "--block" -> config.addBlock(args[++i]);
                     case "--browser" -> config.setBrowserBinary(args[++i]);
                     case "--crawl-delay" -> config.setCrawlDelay(Integer.parseInt(args[++i]));
                     case "--include" -> config.addInclude(args[++i]);
-                    case "--headless" -> config.setHeadless(true);
+                    case "--headless" -> headless = true;
                     case "--host" -> host = args[++i];
                     case "--port" -> port = Integer.parseInt(args[++i]);
                     case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));
                     case "--trace-cdp" -> ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot.cdp.protocol.CDPBase")).setLevel(Level.TRACE);
-                    case "-A", "--user-agent", "--userAgent" -> config.setUserAgent(args[++i]);
-                    case "-w", "--workers" -> config.setWorkers(Integer.parseInt(args[++i]));
+                    case "-A", "--user-agent", "--userAgent" -> userAgent = args[++i];
+                    case "-w", "--workers" -> workers = Integer.parseInt(args[++i]);
                     case "-v", "--verbose" -> verbosity++;
                     default -> {
                         if (args[i].startsWith("-")) {
@@ -81,6 +85,9 @@ public class WarcBot {
             ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot")).setLevel(Level.DEBUG);
         }
 
+        config.setCrawlSettings(new CrawlSettings(workers, userAgent, headless, null, null,
+                null, null, null, null, null,
+                null));
         Crawl crawl = new Crawl(Path.of("data"), config);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {

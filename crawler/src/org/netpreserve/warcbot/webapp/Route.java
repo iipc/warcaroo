@@ -1,5 +1,6 @@
 package org.netpreserve.warcbot.webapp;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -37,6 +38,7 @@ public class Route implements HttpHandler {
                 String path = switch (annotation) {
                     case GET get -> get.value();
                     case POST post -> post.value();
+                    case PUT put -> put.value();
                     default -> null;
                 };
                 if (path == null) continue;
@@ -62,11 +64,23 @@ public class Route implements HttpHandler {
                 args.add(exchange);
             } else {
                 try {
-                    args.add(QueryMapper.parse(exchange.getRequestURI().getQuery(), type));
+                    if (exchange.getRequestMethod().equals("PUT")) {
+                        String contentType = exchange.getRequestHeaders().getFirst("Content-Type");
+                        if (contentType == null || contentType.replaceFirst("\\s*;.*","")
+                                .equals("application/json")) {
+                            args.add(Webapp.JSON.reader().readValue(exchange.getRequestBody(), type));
+                        } else {
+                            exchange.getResponseHeaders().set("Accept", "application/json");
+                            exchange.sendResponseHeaders(415, -1);
+                            return;
+                        }
+                    } else {
+                        args.add(QueryMapper.parse(exchange.getRequestURI().getQuery(), type));
+                    }
                 } catch (UnrecognizedPropertyException e) {
                     exchange.sendResponseHeaders(400, 0);
-                    exchange.getResponseBody().write(("Unknown query parameter: " + e.getPropertyName() + "\n" +
-                                                      "Known query parameters: " + e.getKnownPropertyIds()).getBytes(UTF_8));
+                    exchange.getResponseBody().write(("Unknown parameter: " + e.getPropertyName() + "\n" +
+                                                      "Known parameters: " + e.getKnownPropertyIds()).getBytes(UTF_8));
                     return;
                 }
             }
@@ -77,25 +91,10 @@ public class Route implements HttpHandler {
         } catch (InvocationTargetException e) {
             var cause = e.getCause();
             if (cause instanceof IOException && "Broken pipe".equals(cause.getMessage())) {
-                // client hung up
-                return;
+                return; // client closed the connection
             }
             log.error("Error invoking " + method, e.getCause());
-            int status = 500;
-            var errorAnnotation = cause.getClass().getAnnotation(HttpError.class);
-            if (errorAnnotation != null) {
-                status = errorAnnotation.value();
-            }
-            StringWriter writer = new StringWriter();
-            cause.printStackTrace(new PrintWriter(writer));
-            var body = writer.toString()
-                    .replaceFirst("(?s)\n\tat org\\.netpreserve\\.warcbot\\.webapp\\.Webapp\\.handle.*", "\n")
-                    .replaceAll("\n\tat java\\.base/jdk\\.internal\\.reflect\\..*", "")
-                    .replaceAll("\n\tat java\\.base/java\\.lang\\.reflect\\.Method\\.invoke.*", "")
-                    .getBytes(UTF_8);
-            exchange.getResponseHeaders().add("Content-Type", "text/plain");
-            exchange.sendResponseHeaders(status, body.length);
-            exchange.getResponseBody().write(body);
+            sendError(exchange, cause);
             return;
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
@@ -116,10 +115,28 @@ public class Route implements HttpHandler {
         }
     }
 
+    private static void sendError(HttpExchange exchange, Throwable cause) throws IOException {
+        int status = 500;
+        var errorAnnotation = cause.getClass().getAnnotation(HttpError.class);
+        if (errorAnnotation != null) {
+            status = errorAnnotation.value();
+        }
+        StringWriter writer = new StringWriter();
+        cause.printStackTrace(new PrintWriter(writer));
+        var body = writer.toString()
+                .replaceFirst("(?s)\n\tat org\\.netpreserve\\.warcbot\\.webapp\\.Webapp\\.handle.*", "\n")
+                .replaceAll("\n\tat java\\.base/jdk\\.internal\\.reflect\\..*", "")
+                .replaceAll("\n\tat java\\.base/java\\.lang\\.reflect\\.Method\\.invoke.*", "")
+                .getBytes(UTF_8);
+        exchange.getResponseHeaders().add("Content-Type", "text/plain");
+        exchange.sendResponseHeaders(status, body.length);
+        exchange.getResponseBody().write(body);
+    }
+
     public static OutputStream encodeResponse(HttpExchange exchange, int status, long length) throws IOException {
         String contentType = exchange.getResponseHeaders().getFirst("Content-Type");
         if (length != -1 && getAcceptedEncodings(exchange).contains("gzip")
-            && contentType != null && !contentType.startsWith("image/")) {
+            && contentType != null && (!contentType.startsWith("image/") || contentType.endsWith("+xml"))) {
             exchange.getResponseHeaders().add("Content-Encoding", "gzip");
             exchange.sendResponseHeaders(status, 0);
             return new GZIPOutputStream(exchange.getResponseBody());
@@ -144,6 +161,12 @@ public class Route implements HttpHandler {
     @Target(METHOD)
     @Retention(RUNTIME)
     public @interface POST {
+        String value();
+    }
+
+    @Target(METHOD)
+    @Retention(RUNTIME)
+    public @interface PUT {
         String value();
     }
 

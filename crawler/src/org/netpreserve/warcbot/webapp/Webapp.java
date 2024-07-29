@@ -115,6 +115,16 @@ public class Webapp implements HttpHandler {
         }
     }
 
+    @GET("/api/crawlsettings")
+    CrawlSettings getCrawlSettings() {
+        return crawl.config().getCrawlSettings();
+    }
+
+    @PUT("/api/crawlsettings")
+    void putCrawlSettings(CrawlSettings crawlSettings) {
+        crawl.config().setCrawlSettings(crawlSettings);
+    }
+
     @GET("/api/hosts")
     Page<StorageDAO.HostExt> hosts(HostsQuery query) {
         long count = crawl.db.storage().countHosts(query);
@@ -256,6 +266,7 @@ public class Webapp implements HttpHandler {
     private void notFound(HttpExchange exchange) throws IOException {
         String path = exchange.getRequestURI().getPath();
         if (path.contains("..")) throw new IllegalArgumentException();
+        if (!path.contains(".")) path = path + ".html";
 
         var resource = getClass().getResource("/META-INF/resources" + path);
         if (resource != null) {

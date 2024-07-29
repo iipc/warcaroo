@@ -2,7 +2,6 @@ package org.netpreserve.warcbot;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.jetbrains.annotations.NotNull;
 import org.netpreserve.warcbot.util.Url;
 
 import java.io.IOException;
@@ -18,29 +17,9 @@ public class Config {
     private final List<Url> seeds = new ArrayList<>();
     private final List<Pattern> includes = new ArrayList<>();
     private final List<Pattern> blocks = new ArrayList<>();
-    private String userAgent = "warcbot";
-    private int workers = 1;
     private int crawlDelay = 2000;
     private String browserBinary;
-    private boolean headless;
-
-    public int getWorkers() {
-        return workers;
-    }
-
-    public void setWorkers(int workers) {
-        if (workers <= 0) throw new IllegalArgumentException("Need at least one worker");
-        this.workers = workers;
-    }
-
-    public String getUserAgent() {
-        return userAgent;
-    }
-
-    public void setUserAgent(String userAgent) {
-        Objects.requireNonNull(userAgent, "User-agent can't be null");
-        this.userAgent = userAgent;
-    }
+    private volatile CrawlSettings crawlSettings = CrawlSettings.DEFAULTS;
 
     public void addInclude(String regex) {
         includes.add(Pattern.compile(regex));
@@ -117,11 +96,11 @@ public class Config {
         this.browserBinary = browserBinary;
     }
 
-    public void setHeadless(boolean headless) {
-        this.headless = headless;
+    public CrawlSettings getCrawlSettings() {
+        return crawlSettings;
     }
 
-    public boolean isHeadless() {
-        return headless;
+    public void setCrawlSettings(CrawlSettings crawlSettings) {
+        this.crawlSettings = crawlSettings;
     }
 }

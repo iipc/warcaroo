@@ -33,6 +33,13 @@
                         <configuration>
                             <filters>
                                 <filter>
+                                    <artifact>org.webjars.npm:feather-icons</artifact>
+                                    <includes>
+                                        <include>META-INF/resources/webjars/feather-icons/*/LICENSE</include>
+                                        <include>META-INF/resources/webjars/feather-icons/*/dist/feather-sprite.svg</include>
+                                    </includes>
+                                </filter>
+                                <filter>
                                     <artifact>org.webjars.npm:luxon</artifact>
                                     <includes>
                                         <include>META-INF/resources/webjars/luxon/*/LICENSE.md</include>
@@ -104,6 +111,11 @@
             <groupId>org.webjars.npm</groupId>
             <artifactId>luxon</artifactId>
             <version>3.4.4</version>
+        </dependency>
+        <dependency>
+            <groupId>org.webjars.npm</groupId>
+            <artifactId>feather-icons</artifactId>
+            <version>4.29.1</version>
         </dependency>
         <dependency>
             <groupId>org.jdbi</groupId>

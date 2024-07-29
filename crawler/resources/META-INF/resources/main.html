@@ -4,16 +4,20 @@
     <meta charset="UTF-8">
     <title>WarcBot</title>
 
+    <link rel="stylesheet" href="warcbot.css">
     <style>
-
-        * {
-            box-sizing: border-box;
-        }
         html, body {
             height: 100%;
             padding: 0;
             margin: 0;
         }
+
+        button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         body {
             font-family: monospace;
             display: flex;
@@ -146,8 +150,15 @@
         <div class="logo">
             WarcBot
         </div>
-        <button id=startButton title="Start" onclick="fetch('api/start', {method: 'POST'})">&#9654;</button>
-        <button id=stopButton title="Stop" onclick="fetch('api/stop', {method: 'POST'})">&#10074;&#10074;</button>
+        <button id=startButton title="Start" onclick="fetch('api/start', {method: 'POST'})">
+            <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#play" /></svg>
+        </button>
+        <button id=stopButton title="Stop" onclick="fetch('api/stop', {method: 'POST'})">
+            <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#pause" /></svg>
+        </button>
+        <button id=crawlSettingsButton title="Crawl Settings" onclick="window.open('settings', null, 'popup=true,width=420,height=400,left=' + (screen.width / 2 - 210) + ',top=' + (screenTop + 100))">
+            <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#settings" /></svg>
+        </button>
     </nav>
     <nav class="tabs">
         <a class="tab" target="contentFrame" href="frontier.html">Frontier</a>

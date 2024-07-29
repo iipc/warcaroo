@@ -106,7 +106,7 @@ public class Worker {
                 if (navigator == null) {
                     navigator = browserProcess.newWindow(this::handleResource, null, tracker);
                 }
-                navigator.setUserAgent(config.getUserAgent());
+                navigator.setUserAgent(config.getCrawlSettings().userAgent());
                 navigator.block(config.getBlockPredicate());
 
                 log.info("Nav to {}", candidate.url());

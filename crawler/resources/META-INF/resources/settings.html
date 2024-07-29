@@ -1,0 +1,288 @@
+<!doctype html>
+<head>
+<title>Crawl Settings</title>
+
+<link rel="stylesheet" href="warcbot.css">
+<style>
+
+    body {
+        background: #f0f0f0;
+        font-family: sans-serif;
+    }
+
+    input[type=number] {
+        width: 5em;
+    }
+
+    label {
+        user-select: none;
+    }
+
+    fieldset {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border: none;
+        border-top: 1px solid #ddd;
+
+        > div {
+            width: 350px;
+        }
+    }
+
+    nav.buttons {
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 10px;
+        justify-content: end;
+
+        padding: 16px 12px;
+
+        & button {
+            min-width: 64px;
+        }
+    }
+
+    .tabs {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 8px;
+        padding-bottom: 8px;
+
+        & > button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            gap: 4px;
+            width: 64px;
+            border: none;
+            background: #eee;
+            border-radius: 8px;
+            color: #777;
+
+            .feather {
+                width: 24px;
+                height: 24px;
+            }
+        }
+
+        & > button.active {
+            background-color: #ddd;
+            color: #444;
+
+        }
+
+        & > button:hover {
+            background-color: #ddd;
+            color: #111;
+        }
+    }
+</style>
+</head>
+<body>
+<form id="settingsForm">
+    <div class="tabs">
+        <button type="button" data-tab="limitsTab">
+            <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#sliders" /></svg>
+            Limits
+        </button>
+        <button type="button" data-tab="browserTab">
+            <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#globe" /></svg>
+            Browser
+        </button>
+    </div>
+
+    <section class="tab" id="limitsTab">
+        <fieldset>
+            <div>
+                <label><input type="checkbox" id="pageLimitCheckbox"> Stop crawl after</label>
+                <input name="pageLimit" type="number" min="0" data-enabledby="pageLimitCheckbox">
+                <label for="pageLimitCheckbox"> pages</label>
+            </div>
+            <div>
+                <label><input type="checkbox" id="sizeLimitCheckbox"> Stop crawl after </label>
+                <input name="sizeLimit" type="number" step="any" min="0" data-default="100" data-multiplier="1073741824" data-enabledby="sizeLimitCheckbox">
+                <label for="sizeLimitCheckbox"> GiB of data</label>
+            </div>
+            <div>
+                <label><input type="checkbox" id="timeLimitCheckbox"> Stop crawl after </label>
+                <input name="timeLimit" type="number" min="0" step="any" data-default="24" data-multiplier="3600" data-enabledby="timeLimitCheckbox">
+                <label for="timeLimitCheckbox"> hours</label>
+            </div>
+        </fieldset>
+        <fieldset>
+            <div>
+                <label><input type="checkbox" id="depthCheckbox"> Crawl up to </label>
+                <input name="depth" type="number" min="1" data-default="10" data-enabledby="depthCheckbox">
+                <label for="depthCheckbox"> links deep</label>
+            </div>
+        </fieldset>
+        <fieldset>
+            <div>
+                <label><input type="checkbox" id="domainPageLimitCheckbox"> Limit to</label>
+                <input name="domainPageLimit" type="number" min="1" size="4" data-enabledby="domainPageLimitCheckbox">
+                <label for="domainPageLimitCheckbox"> pages per domain</label>
+            </div>
+            <div>
+                <label><input type="checkbox" id="domainSizeLimitCheckbox"> Limit to</label>
+                <input name="domainSizeLimit" type="number" step="any" min="0" size="4" data-multiplier="1073741824" data-enabledby="domainSizeLimitCheckbox">
+                <label for="domainSizeLimitCheckbox"> GiB of data per domain</label>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <div>
+                <label><input id="hostPageLimitCheckbox" type="checkbox"> Limit to</label>
+                <input name="hostPageLimit" type="number" min="1" data-default="500" data-enabledby="hostPageLimitCheckbox">
+                <label for="hostPageLimitCheckbox"> pages per host</label>
+            </div>
+            <div>
+                <label><input id="hostSizeLimitCheckbox" type="checkbox"> Limit to</label>
+                <input name="hostSizeLimit" type="number" min="0" step="any" data-default="2" data-multiplier="1073741824" data-enabledby="hostSizeLimitCheckbox">
+                <label for="hostSizeLimitCheckbox">GiB of data per host</label>
+            </div>
+        </fieldset>
+    </section>
+
+    <section class="tab" id="browserTab">
+        <fieldset>
+            <div><label>Crawl up to <input name="workers" type="number" min="1" max="1000"> pages at once</label></div>
+
+            <div>
+                <label>Identify as user-agent</label>
+                <input name="userAgent" type="text" id="user-agent" name="user-agent" style="width: 100%" list="woot">
+                <datalist id="woot">
+                    <option>warcbot/0.1</option>
+                    <option>Chrome</option>
+                </datalist>
+            </div>
+
+            <div>
+                <label><input name="headless" type="checkbox"> Hide browser window (headless mode)</label>
+            </div>
+        </fieldset>
+    </section>
+
+    <nav class="buttons">
+        <button type="submit">OK</button>
+        <button type="button" onclick="window.close()">Cancel</button>
+    </nav>
+</form>
+<script>
+    // Escape key closes the window
+    document.addEventListener('keydown', event => {
+        if (event.key === "Escape") {
+            window.close();
+        }
+    })
+
+    /**
+     * Populates a form with data from a JSON object.
+     * @param {HTMLFormElement} form
+     * @param {object} jsonData
+     */
+    function populateFormWithJson(form, jsonData) {
+        for (let [key, value] of Object.entries(jsonData)) {
+            const element = form.elements[key];
+            if (element instanceof HTMLInputElement) {
+                if (element.type === 'checkbox') {
+                    element.checked = Boolean(value);
+                } else {
+                    if (value !== null && element.dataset.multiplier) {
+                        value = (value / Number(element.dataset.multiplier)).toPrecision(8) / 1;
+                    }
+                    if (element.dataset.enabledby) {
+                        document.getElementById(element.dataset.enabledby).checked = value != null;
+                        element.disabled = value == null;
+                        if (value !== null) {
+                            element.value = value;
+                        }
+                    } else {
+                        element.value = value;
+                    }
+                }
+            }
+        }
+    }
+
+    function showTab(tabId) {
+        document.querySelectorAll('.tabs button').forEach(button => {
+            if (button.dataset.tab === tabId) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active')
+            }
+        });
+        document.querySelectorAll('section.tab').forEach(s => s.hidden = true);
+        document.getElementById(tabId).hidden = false;
+        window.resizeTo(500, outerHeight - window.innerHeight + document.documentElement.offsetHeight);
+    }
+
+    // Tab click events
+    document.querySelectorAll('button[data-tab]').forEach(button => {
+        button.addEventListener('click', e => {
+            showTab(button.dataset.tab);
+        });
+    });
+
+    showTab('limitsTab')
+
+    fetch("/api/crawlsettings")
+        .then(response => response.json())
+        .then(crawlSettings => {
+            populateFormWithJson(document.getElementById("settingsForm"), crawlSettings);
+        });
+
+    document.querySelectorAll("input[data-enabledby]").forEach(/** @type {HTMLInputElement} */input => {
+        const checkbox = document.getElementById(input.dataset.enabledby);
+        if (!checkbox) console.error("Couldn't find checkbox: " + input.dataset.enabledby);
+        checkbox.addEventListener('change', () => {
+            input.disabled = !checkbox.checked;
+            if (checkbox.checked) {
+                if (!input.value) {
+                    input.value = input.dataset.default;
+                }
+                input.focus();
+                input.select();
+            }
+        });
+        input.disabled = !checkbox.checked;
+    });
+
+    document.getElementById('settingsForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        const form = this;
+        const formData = new FormData(form);
+        const formObject = {};
+        formData.forEach((value, key) => {
+            if (value === 'on') {
+                formObject[key] = true;
+            } else if (value !== '') {
+                const input = form.elements[key];
+                if (input.type === 'number') {
+                    value = Number(value);
+                    if (input.dataset.multiplier) {
+                        value *= Number(input.dataset.multiplier);
+                    }
+                }
+                formObject[key] = value;
+            }
+        });
+
+        const jsonData = JSON.stringify(formObject, null, 2);
+
+        fetch("api/crawlsettings", {method: "PUT", body: jsonData, headers: {"Content-Type": "application/json"}})
+            .then(response => { if (response.status === 200) {
+                window.close()
+            } else {
+                alert("Error saving settings: " + response.status + " " + response.statusText);
+            }});
+    });
+</script>
+</body>
