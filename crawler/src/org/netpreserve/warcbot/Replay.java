@@ -44,7 +44,7 @@ public class Replay {
                      log.error("Error replaying {}", request.url(), e);
                      return new RequestHandler.Response(500, "Error");
                  }
-             }, null)) {
+             })) {
             window.navigateTo(new Url(args[0]));
             Thread.sleep(50000);
         }
@@ -69,7 +69,7 @@ public class Replay {
                 log.error("Error replaying {}", request.url(), e);
                 return new RequestHandler.Response(500, "Error");
             }
-        }, null)) {
+        })) {
             window.networkManager().captureResponseBodies(false);
             window.navigateTo(url);
             window.waitForRequestInterceptorIdle();

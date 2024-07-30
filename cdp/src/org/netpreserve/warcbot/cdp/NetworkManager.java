@@ -24,14 +24,13 @@ public class NetworkManager {
     private final Network network;
     private final Map<Network.RequestId, ResourceRecorder> recorders = new ConcurrentHashMap<>();
     private final IdleMonitor idleMonitor;
-    private final Tracker tracker;
     private final Consumer<ResourceFetched> resourceHandler;
     private final RequestHandler requestHandler;
     private final Path downloadPath;
     private Predicate<String> blocker = url -> false;
     private volatile boolean captureResponseBodies = true;
 
-    public NetworkManager(CDPSession cdpSession, IdleMonitor idleMonitor, Tracker tracker,
+    public NetworkManager(CDPSession cdpSession, IdleMonitor idleMonitor,
                           RequestHandler requestHandler, Consumer<ResourceFetched> resourceHandler,
                           Path downloadPath) {
         this.requestHandler = requestHandler;
@@ -39,7 +38,6 @@ public class NetworkManager {
         this.fetch = cdpSession.domain(Fetch.class);
         this.network = cdpSession.domain(Network.class);
         this.idleMonitor = idleMonitor;
-        this.tracker = tracker;
         this.resourceHandler = resourceHandler;
         this.downloadPath = downloadPath;
         init();
@@ -98,11 +96,6 @@ public class NetworkManager {
     }
 
     private void handleDataReceived(Network.DataReceived event) {
-        if (tracker != null) {
-            tracker.updateDownloadedBytes(event.encodedDataLength() > 0 ?
-                    event.encodedDataLength() : event.dataLength());
-        }
-
         var recorder = recorders.get(event.requestId());
         if (recorder != null) {
             recorder.handleDataReceived(event);

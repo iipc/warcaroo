@@ -25,20 +25,18 @@ public class Worker {
     private final Database database;
     private final NoArgGenerator pageIdGenerator = Generators.timeBasedEpochGenerator();
     private final RobotsTxtChecker robotsTxtChecker;
-    private final Tracker tracker;
     private final Config config;
     private Thread thread;
     private volatile boolean closed = false;
     private volatile UUID pageId;
 
-    public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker, Tracker tracker, Config config) {
+    public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker, Config config) {
         this.id = id;
         this.browserProcess = browserProcess;
         this.frontier = frontier;
         this.storage = storage;
         this.database = database;
         this.robotsTxtChecker = robotsTxtChecker;
-        this.tracker = tracker;
         this.config = config;
     }
 
@@ -104,7 +102,7 @@ public class Worker {
                 }
 
                 if (navigator == null) {
-                    navigator = browserProcess.newWindow(this::handleResource, null, tracker);
+                    navigator = browserProcess.newWindow(this::handleResource, null);
                 }
                 navigator.setUserAgent(config.getCrawlSettings().userAgent());
                 navigator.block(config.getBlockPredicate());

@@ -191,7 +191,7 @@ public class Webapp implements HttpHandler {
         double smoothingFactor = 0.05;
         double averageDownloadSpeed = 0;
         long lastTime = System.nanoTime();
-        long lastBytes = crawl.tracker.downloadedBytes();
+        long lastBytes = 1; // FIXME
         while (true) {
             try {
                 Thread.sleep(1000);
@@ -199,7 +199,7 @@ public class Webapp implements HttpHandler {
                 throw new RuntimeException(e);
             }
             long time = System.nanoTime();
-            long bytes = crawl.tracker.downloadedBytes();
+            long bytes = 1; // FIXME
 
             long elapsed = time - lastTime;
             long bytesDelta = bytes - lastBytes;

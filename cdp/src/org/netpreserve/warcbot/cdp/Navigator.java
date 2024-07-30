@@ -75,13 +75,12 @@ public class Navigator implements AutoCloseable {
 
     public Navigator(CDPSession cdpSession,
                      Consumer<ResourceFetched> resourceHandler,
-                     RequestHandler requestHandler,
-                     Tracker tracker) {
+                     RequestHandler requestHandler) {
         this.cdpSession = cdpSession;
         this.emulation = cdpSession.domain(Emulation.class);
         this.page = cdpSession.domain(Page.class);
         this.runtime = cdpSession.domain(Runtime.class);
-        this.networkManager = new NetworkManager(cdpSession, idleMonitor, tracker, requestHandler,
+        this.networkManager = new NetworkManager(cdpSession, idleMonitor, requestHandler,
                 resourceHandler, Path.of("data", "downloads"));
 
         page.onLifecycleEvent(this::handleLifecycleEvent);
@@ -105,7 +104,7 @@ public class Navigator implements AutoCloseable {
         try (var browserProcess = BrowserProcess.start(null, Path.of("data", "profile"));
              var visitor = browserProcess.newWindow(resourceFetched -> {
                  System.out.println("Resource: " + resourceFetched);
-             }, null, null)) {
+             }, null)) {
             //browser.webDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
             visitor.navigateTo(new Url(args[0]));
             visitor.forceLoadLazyImages();

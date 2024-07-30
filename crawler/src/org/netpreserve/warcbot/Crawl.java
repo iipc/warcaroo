@@ -1,8 +1,6 @@
 package org.netpreserve.warcbot;
 
 import org.netpreserve.warcbot.cdp.BrowserProcess;
-import org.netpreserve.warcbot.cdp.Tracker;
-import org.netpreserve.warcbot.util.Url;
 import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
 import org.netpreserve.warcbot.webapp.Route.HttpError;
 import org.slf4j.LoggerFactory;
@@ -27,7 +25,6 @@ public class Crawl implements AutoCloseable {
     private final RobotsTxtChecker robotsTxtChecker;
     private final List<Worker> workers = new ArrayList<>();
     private final BrowserProcess browserProcess;
-    public final Tracker tracker;
     private final Config config;
     private volatile State state = State.STOPPED;
     private final Lock startStopLock = new ReentrantLock();
@@ -46,7 +43,6 @@ public class Crawl implements AutoCloseable {
                 List.of("nla.gov.au_bot", "warcbot"), config);
         this.browserProcess = BrowserProcess.start(config.getBrowserBinary(), dataPath.resolve("profile"),
                 config.getCrawlSettings().headless());
-        this.tracker = new Tracker();
     }
 
     public void close() {
@@ -93,7 +89,7 @@ public class Crawl implements AutoCloseable {
             state = State.STARTING;
             frontier.addUrls(config.getSeeds(), 0, null);
             for (int i = 0; i < config.getCrawlSettings().workers(); i++) {
-                workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker, tracker, config));
+                workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker, config));
             }
             for (Worker worker : workers) {
                 worker.start();

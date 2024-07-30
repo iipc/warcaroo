@@ -11,7 +11,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -61,7 +60,7 @@ class NavigatorTest {
         });
         httpServer.start();
         var resources = new ArrayList<ResourceFetched>();
-        try (var navigator = browserProcess.newWindow(resources::add, null, null)){
+        try (var navigator = browserProcess.newWindow(resources::add, null)){
             navigator.navigateTo(new Url("http://127.0.0.1:" + httpServer.getAddress().getPort() + "/redirect1"));
             navigator.networkManager().waitForLoadingResources();
 
@@ -163,7 +162,7 @@ class NavigatorTest {
         try (var navigator = browserProcess.newWindow(recording -> {
             recordedPaths.add(recording.url().path());
             System.out.println("Got resource! " + recording);
-        }, null, null)) {
+        }, null)) {
 
             navigator.setUserAgent("test-agent");
 
