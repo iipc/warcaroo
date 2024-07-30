@@ -170,7 +170,7 @@
     </section>
 
     <nav class="buttons">
-        <button type="submit">OK</button>
+        <button id="okButton" type="submit" disabled>OK</button>
         <button type="button" onclick="window.close()">Cancel</button>
     </nav>
 </form>
@@ -237,6 +237,7 @@
         .then(response => response.json())
         .then(crawlSettings => {
             populateFormWithJson(document.getElementById("settingsForm"), crawlSettings);
+            document.getElementById("okButton").disabled = false;
         });
 
     document.querySelectorAll("input[data-enabledby]").forEach(/** @type {HTMLInputElement} */input => {
@@ -257,6 +258,7 @@
 
     document.getElementById('settingsForm').addEventListener('submit', function (event) {
         event.preventDefault();
+        document.getElementById("okButton").disabled = true;
         const form = this;
         const formData = new FormData(form);
         const formObject = {};
@@ -282,6 +284,7 @@
                 window.close()
             } else {
                 alert("Error saving settings: " + response.status + " " + response.statusText);
+                document.getElementById("okButton").disabled = false;
             }});
     });
 </script>
