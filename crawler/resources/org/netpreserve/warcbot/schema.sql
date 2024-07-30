@@ -1,3 +1,5 @@
+PRAGMA journal_mode = WAL;
+
 create table if not exists queues
 (
     name         TEXT PRIMARY KEY NOT NULL,

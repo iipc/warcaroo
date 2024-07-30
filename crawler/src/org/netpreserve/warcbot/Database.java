@@ -3,11 +3,8 @@ package org.netpreserve.warcbot;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.jdbi.v3.core.Jdbi;
-import org.jdbi.v3.core.argument.AbstractArgumentFactory;
-import org.jdbi.v3.core.argument.Argument;
 import org.jdbi.v3.core.argument.ArgumentFactory;
 import org.jdbi.v3.core.argument.NullArgument;
-import org.jdbi.v3.core.config.ConfigRegistry;
 import org.jdbi.v3.core.mapper.ColumnMapper;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.netpreserve.jwarc.WarcDigest;
@@ -45,6 +42,7 @@ public class Database implements AutoCloseable {
     public Database(String jdbcUrl) throws IOException {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);
+        config.setConnectionInitSql("PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;");
         this.dataSource = new HikariDataSource(config);
         this.jdbi = Jdbi.create(dataSource);
         jdbi.installPlugin(new SqlObjectPlugin());

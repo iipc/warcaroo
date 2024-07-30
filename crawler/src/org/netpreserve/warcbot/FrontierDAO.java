@@ -5,6 +5,7 @@ import org.jdbi.v3.sqlobject.customizer.*;
 import org.jdbi.v3.sqlobject.statement.SqlBatch;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+import org.jdbi.v3.sqlobject.transaction.Transaction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.netpreserve.warcbot.util.MustUpdate;
@@ -23,6 +24,7 @@ public interface FrontierDAO {
             INSERT INTO frontier (queue, depth, url, rhost, via, time_added, state)
             VALUES (:queue, :depth, :url, :url.rhost, :via, :timeAdded, :state)
             ON CONFLICT(url) DO NOTHING""")
+    @Transaction
     boolean[] addCandidates(@BindMethods Collection<Candidate> candidates);
 
     @SqlUpdate("UPDATE frontier SET state = :state WHERE url = :url")
