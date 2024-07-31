@@ -78,7 +78,7 @@ public class Webapp implements HttpHandler {
     public static class FrontierQuery extends Query {
         public Integer depth;
         public String rhost;
-        public Candidate.State state;
+        public FrontierUrl.State state;
 
         void setHost(String host) {
             this.rhost = Url.reverseHost(host);
@@ -86,17 +86,17 @@ public class Webapp implements HttpHandler {
     }
 
     @GET("/api/frontier")
-    Page<Candidate> frontier(FrontierQuery query) throws IOException {
+    Page<FrontierUrl> frontier(FrontierQuery query) throws IOException {
         long count = crawl.db.frontier().countFrontier(query);
-        var rows = crawl.db.frontier().queryFrontier(query.orderBy(Candidate.class), query);
+        var rows = crawl.db.frontier().queryFrontier(query.orderBy(FrontierUrl.class), query);
         return new Page<>(count / query.limit + 1, count, rows);
     }
 
-    public static class FrontierPage extends Page<Candidate> {
-        public final Map<String, Map<Candidate.State, Long>> queueStateCounts;
+    public static class FrontierPage extends Page<FrontierUrl> {
+        public final Map<String, Map<FrontierUrl.State, Long>> queueStateCounts;
 
-        public FrontierPage(long lastPage, long lastRow, List<Candidate> data,
-                            Map<String, Map<Candidate.State, Long>> queueStateCounts) {
+        public FrontierPage(long lastPage, long lastRow, List<FrontierUrl> data,
+                            Map<String, Map<FrontierUrl.State, Long>> queueStateCounts) {
             super(lastPage, lastRow, data);
             this.queueStateCounts = queueStateCounts;
         }
@@ -126,30 +126,27 @@ public class Webapp implements HttpHandler {
     }
 
     @GET("/api/hosts")
-    Page<StorageDAO.HostExt> hosts(HostsQuery query) {
+    Page<StorageDAO.Host> hosts(HostsQuery query) {
         long count = crawl.db.storage().countHosts(query);
-        var rows = crawl.db.storage().queryHosts(query.orderBy(StorageDAO.HostExt.class), query);
+        var rows = crawl.db.storage().queryHosts(query.orderBy(StorageDAO.Host.class), query);
         return new Page(count / query.limit + 1, count, rows);
     }
 
     public static class PagesQuery extends Query {
+        public Long hostId;
     }
 
     @GET("/api/pages")
-    Page<StorageDAO.PageExt> pages(PagesQuery query) throws IOException {
-        long count = crawl.db.storage().countPages();
-        var rows = crawl.db.storage().queryPages(query.orderBy(StorageDAO.PageExt.class), query.limit, (query.page - 1) * query.limit);
+    Page<StorageDAO.Page> pages(PagesQuery query) throws IOException {
+        long count = crawl.db.storage().countPages(query);
+        var rows = crawl.db.storage().queryPages(query, query.orderBy(StorageDAO.Page.class), query.limit, (query.page - 1) * query.limit);
         return new Page(count / query.limit + 1, count, rows);
     }
 
     public static class ResourcesQuery extends Query {
-        public String rhost;
+        public String hostId;
         public String url;
         public String pageId;
-
-        public void setHost(String host) {
-            rhost = Url.reverseHost(host);
-        }
     }
 
     @GET("/api/resources")

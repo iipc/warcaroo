@@ -17,7 +17,8 @@ public record Resource(
         @NotNull UUID pageId,
         @NotNull String method,
         @NotNull Url url,
-        @NotNull String rhost,
+        long hostId,
+        long domainId,
         @NotNull Instant date,
         String filename,
         long responseOffset,
@@ -36,6 +37,9 @@ public record Resource(
     public Resource {
     }
 
+    public long storage() {
+        return responseLength + requestLength;
+    }
     public record Metadata(UUID pageId, long fetchTimeMs, String ipAddress) {
     }
 }

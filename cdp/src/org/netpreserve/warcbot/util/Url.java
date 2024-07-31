@@ -2,6 +2,8 @@ package org.netpreserve.warcbot.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
+import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixList;
+import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixListFactory;
 import org.jetbrains.annotations.NotNull;
 import org.netpreserve.urlcanon.Canonicalizer;
 import org.netpreserve.urlcanon.ParsedUrl;
@@ -12,6 +14,7 @@ import java.net.URI;
  * URL type which caches parsing.
  */
 public class Url {
+    private static final PublicSuffixList publicSuffixList = new PublicSuffixListFactory().build();
     private final String url;
     private URI uri;
     private ParsedUrl parsedUrl;
@@ -44,6 +47,14 @@ public class Url {
 
     public String rhost() {
         return reverseHost(host());
+    }
+
+    public String domain() {
+        return publicSuffixList.getRegistrableDomain(host());
+    }
+
+    public String rdomain() {
+        return reverseHost(domain());
     }
 
     public static String reverseHost(String host) {

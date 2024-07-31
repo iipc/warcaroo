@@ -29,7 +29,7 @@ public class Replay {
     }
 
     public static void main(String[] args) throws IOException, InterruptedException, SQLException, TimeoutException, NavigationException {
-        try (var database = new Database(Path.of("data", "db.sqlite3"));
+        try (var database = Database.open(Path.of("data", "db.sqlite3"));
              var browserProcess = BrowserProcess.start();
              var window = browserProcess.newWindow(null, request -> {
                  var resource = database.storage().findResourceByUrl(request.url());

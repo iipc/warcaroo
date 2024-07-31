@@ -220,10 +220,13 @@ public class Storage implements Closeable {
             requestLength = warcWriter.position() - responseOffset - responseLength;
         }
 
+        long hostId = dao.insertOrGetHostId(fetch.url().rhost());
+        long domainId = dao.insertOrGetDomainId(fetch.url().rdomain());
         Resource resource = new Resource(responseUuid, pageId,
                 fetch.method(),
                 fetch.url(),
-                fetch.url().rhost(),
+                hostId,
+                domainId,
                 warcResponse.date(),
                 filename,
                 responseOffset, responseLength, requestLength,

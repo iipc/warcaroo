@@ -79,7 +79,7 @@ public class Worker {
 
     void run() throws SQLException, IOException, InterruptedException, TimeoutException, NavigationException {
         while (!closed) {
-            var candidate = frontier.next(id);
+            var candidate = frontier.takeNext(id);
             if (candidate == null) {
                 log.info("No work available for worker {}", id);
                 try {
@@ -141,10 +141,8 @@ public class Worker {
                 }
 
                 var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
-                Url url = navigator.currentUrl();
-                storage.dao.addPage(new StorageDAO.Page(pageId, url, Instant.now(), navigator.title(),
-                        visitTimeMs, url.rhost()));
-
+                storage.dao.addPage(new StorageDAO.Page(pageId, candidate.url(), Instant.now(), navigator.title(),
+                        visitTimeMs, candidate.hostId(), candidate.domainId()));
                 frontier.markCrawled(candidate);
             } catch (NavigationException e) {
                 log.error("NavigationException {}", e.getMessage());

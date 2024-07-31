@@ -1,5 +1,7 @@
 package org.netpreserve.warcbot;
 
+import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixList;
+import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixListFactory;
 import org.jetbrains.annotations.Nullable;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
@@ -13,12 +15,14 @@ import java.util.function.Predicate;
 
 public class Frontier {
     private static final Logger log = LoggerFactory.getLogger(Frontier.class);
-    private final FrontierDAO dao;
+    private final Database db;
     private final Predicate<String> scope;
     private final Config config;
+    private final PublicSuffixList publicSuffixList = new PublicSuffixListFactory().build();
+    private final Set<Long> lockedHosts = new HashSet<>();
 
-    public Frontier(FrontierDAO dao, Predicate<String> scope, Config config) {
-        this.dao = dao;
+    public Frontier(Database db, Predicate<String> scope, Config config) {
+        this.db = db;
         this.scope = scope;
         this.config = config;
     }
@@ -28,69 +32,67 @@ public class Frontier {
     }
 
     public void addUrls(Collection<Url> urls, int depth, Url via) {
-        var queueNames = new HashSet<String>();
-        var candidates = new ArrayList<Candidate>();
+        int novel = 0;
         for (var url : urls) {
             if (!url.isHttp()) continue;
             url = url.withoutFragment();
             if (!scope.test(url.toString())) continue;
-            String queue = queueForUrl(url);
-            if (queue == null) {
-                log.warn("No queue for URL {}", url);
-                return;
-            }
-            queueNames.add(queue);
-            candidates.add(new Candidate(queue, url, depth, via, Instant.now(), Candidate.State.PENDING));
+
+            String domain = publicSuffixList.getRegistrableDomain(url.host());
+            String rhost = url.rhost();
+            String rdomain = Url.reverseHost(domain);
+            Instant now = Instant.now();
+
+            Long id = addUrl(url, depth, via, rhost, rdomain, now);
+            if (id != null) novel++;
         }
+        log.info("Added {} new URLs from {} extracted links", novel, urls.size());
+    }
 
-        dao.addQueues(queueNames);
-        boolean[] result = dao.addCandidates(candidates);
-        int novel = 0;
-        for (int i = 0; i < result.length; i++) {
-            if (result[i]) {
-                novel++;
-                log.debug("Added {}", candidates.get(i));
+    private Long addUrl(Url url, int depth, Url via, String rhost, String rdomain, Instant now) {
+        return db.inTransaction(dao -> {
+            if (dao.frontier().findUrl(url) != null) return null;
+            long hostId = dao.hosts().insertOrGetId(rhost);
+            long domainId = dao.domains().insertOrGetDomainId(rdomain);
+            Long id = dao.frontier().addUrl0(url, hostId, domainId, depth, via, now, FrontierUrl.State.PENDING);
+            if (id != null) {
+                dao.hosts().incrementPendingAndInitNextVisit(hostId);
+                dao.domains().incrementPending(domainId);
             }
-        }
-        log.info("Added {} new URLs from {} extracted links", novel, candidates.size());
+            return id;
+        });
     }
 
-    public @Nullable Candidate next(int workerId) {
-        String queue = dao.takeNextQueue(workerId);
-        if (queue == null) return null;
-        return dao.takeNextUrlFromQueue(queue);
+    public synchronized @Nullable FrontierUrl takeNext(int workerId) {
+        Long hostId = db.hosts().findNextToVisit(Instant.now(), lockedHosts);
+        if (hostId == null) return null;
+        lockedHosts.add(hostId);
+        return db.frontier().nextUrlForHost(hostId);
     }
 
-    private String queueForUrl(Url url) {
-        return url.host();
-    }
-
-    public void markFailed(Candidate candidate, UUID pageId, Throwable e) {
-        dao.setCandidateState(candidate.url(), Candidate.State.FAILED);
-        releaseQueueForCandidate(candidate);
+    public synchronized void markFailed(FrontierUrl frontierUrl, UUID pageId, Throwable e) {
+        release(frontierUrl, FrontierUrl.State.FAILED);
         Instant now = Instant.now();
         var stringWriter = new StringWriter();
         e.printStackTrace(new PrintWriter(stringWriter));
-        dao.addError(pageId, candidate.url(), now, stringWriter.toString());
+        db.frontier().addError(pageId, frontierUrl.url(), now, stringWriter.toString());
     }
 
-    public void markCrawled(Candidate candidate) {
-        dao.setCandidateState(candidate.url(), Candidate.State.CRAWLED);
-        releaseQueueForCandidate(candidate);
+    public void markCrawled(FrontierUrl frontierUrl) {
+        release(frontierUrl, FrontierUrl.State.CRAWLED);
     }
 
-    public void markPending(Candidate candidate) {
-        dao.setCandidateState(candidate.url(), Candidate.State.PENDING);
-        releaseQueueForCandidate(candidate);
+    public void markRobotsExcluded(FrontierUrl frontierUrl) {
+        release(frontierUrl, FrontierUrl.State.ROBOTS_EXCLUDED);
     }
 
-    public void markRobotsExcluded(Candidate candidate) {
-        dao.setCandidateState(candidate.url(), Candidate.State.ROBOTS_EXCLUDED);
-        releaseQueueForCandidate(candidate);
-    }
-
-    private void releaseQueueForCandidate(Candidate candidate) {
+    private synchronized void release(FrontierUrl frontierUrl, FrontierUrl.State newState) {
         Instant now = Instant.now();
-        dao.releaseQueue(candidate.queue(), now, now.plusMillis(config.getCrawlDelay()));
+        db.useTransaction(db -> {
+            db.frontier().updateState(frontierUrl.id(), newState);
+            db.hosts().updateOnFrontierUrlStateChange(frontierUrl.hostId(), frontierUrl.state(), newState, now, now.plusMillis(config.getCrawlDelay()));
+            db.domains().updateMetricsOnFrontierUrlStateChange(frontierUrl.domainId(), frontierUrl.state(), newState);
+        });
+        lockedHosts.remove(frontierUrl.hostId());
     }
 }

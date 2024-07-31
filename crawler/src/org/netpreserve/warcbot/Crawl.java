@@ -35,9 +35,9 @@ public class Crawl implements AutoCloseable {
 
     public Crawl(Path dataPath, Config config) throws SQLException, IOException {
         this.config = config;
-        this.db = new Database(dataPath.resolve("db.sqlite3"));
+        this.db = Database.open(dataPath.resolve("db.sqlite3"));
         this.httpClient = HttpClient.newHttpClient();
-        this.frontier = new Frontier(db.frontier(), config.getScope(), config);
+        this.frontier = new Frontier(db, config.getScope(), config);
         this.storage = new Storage(dataPath, db.storage());
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage,
                 List.of("nla.gov.au_bot", "warcbot"), config);
