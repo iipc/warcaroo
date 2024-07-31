@@ -12,7 +12,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeoutException;
 
 public class Worker {
@@ -22,20 +21,20 @@ public class Worker {
     private final BrowserProcess browserProcess;
     private final Frontier frontier;
     private final Storage storage;
-    private final Database database;
+    private final Database db;
     private final NoArgGenerator pageIdGenerator = Generators.timeBasedEpochGenerator();
     private final RobotsTxtChecker robotsTxtChecker;
     private final Config config;
     private Thread thread;
     private volatile boolean closed = false;
-    private volatile UUID pageId;
+    private volatile Long pageId;
 
-    public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database database, RobotsTxtChecker robotsTxtChecker, Config config) {
+    public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
         this.id = id;
         this.browserProcess = browserProcess;
         this.frontier = frontier;
         this.storage = storage;
-        this.database = database;
+        this.db = db;
         this.robotsTxtChecker = robotsTxtChecker;
         this.config = config;
     }
@@ -90,14 +89,15 @@ public class Worker {
                 continue;
             }
 
-            pageId = pageIdGenerator.generate();
+            pageId = db.pages().create(candidate.url(), candidate.hostId(), candidate.domainId(), Instant.now());
+
             var startTime = System.nanoTime();
 
-            log.info("Running worker for {} [{}]", candidate, pageId);
+            log.atInfo().addKeyValue("pageId", pageId).addKeyValue("url", candidate.url()).log("Considering page");
 
             try {
                 if (!robotsTxtChecker.checkAllowed(pageId, candidate.url())) {
-                    frontier.markRobotsExcluded(candidate);
+                    frontier.release(candidate, FrontierUrl.State.ROBOTS_EXCLUDED);
                     continue;
                 }
 
@@ -141,15 +141,21 @@ public class Worker {
                 }
 
                 var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
-                storage.dao.addPage(new StorageDAO.Page(pageId, candidate.url(), Instant.now(), navigator.title(),
-                        visitTimeMs, candidate.hostId(), candidate.domainId()));
-                frontier.markCrawled(candidate);
+
+                db.pages().finish(pageId, navigator.title(), visitTimeMs);
+                frontier.release(candidate, FrontierUrl.State.CRAWLED);
             } catch (NavigationException e) {
                 log.error("NavigationException {}", e.getMessage());
-                frontier.markFailed(candidate, pageId, e);
+                db.pages().error(pageId, e);
+                synchronized (frontier) {
+                    frontier.release(candidate, FrontierUrl.State.FAILED);
+                }
             } catch (Throwable e) {
+                db.pages().error(pageId, e);
                 if (closed) return;
-                frontier.markFailed(candidate, pageId, e);
+                synchronized (frontier) {
+                    frontier.release(candidate, FrontierUrl.State.FAILED);
+                }
                 throw e;
             } finally {
                 log.info("Finished worker {} for {} [{}]", id, candidate.url(), pageId);

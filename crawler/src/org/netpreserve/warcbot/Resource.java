@@ -14,7 +14,7 @@ import static java.util.Objects.requireNonNull;
 
 public record Resource(
         @NotNull UUID id,
-        @NotNull UUID pageId,
+        @NotNull long pageId,
         @NotNull String method,
         @NotNull Url url,
         long hostId,
@@ -40,6 +40,6 @@ public record Resource(
     public long storage() {
         return responseLength + requestLength;
     }
-    public record Metadata(UUID pageId, long fetchTimeMs, String ipAddress) {
+    public record Metadata(long pageId, long fetchTimeMs, String ipAddress) {
     }
 }

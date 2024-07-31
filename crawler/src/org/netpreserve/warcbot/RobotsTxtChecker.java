@@ -31,7 +31,7 @@ public class RobotsTxtChecker {
         this.config = config;
     }
 
-    boolean checkAllowed(UUID pageId, Url url) throws SQLException, IOException {
+    boolean checkAllowed(long pageId, Url url) throws SQLException, IOException {
         Url robotsUrl = url.withPath("/robots.txt");
         var robots = dao.getRobotsTxt(robotsUrl.toString());
         if (robots == null || robots.lastChecked().isBefore(Instant.now().minus(Duration.ofDays(1)))) {
@@ -40,7 +40,7 @@ public class RobotsTxtChecker {
         return robots.allows(url, userAgents);
     }
 
-    private RobotsTxt fetch(UUID pageId, URI robotsUri, RobotsTxt prev) throws IOException {
+    private RobotsTxt fetch(long pageId, URI robotsUri, RobotsTxt prev) throws IOException {
         var now = Instant.now();
         int status;
         byte[] body;

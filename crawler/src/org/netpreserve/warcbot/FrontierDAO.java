@@ -25,23 +25,20 @@ public interface FrontierDAO extends Transactional<FrontierDAO> {
     @SqlQuery("SELECT * FROM frontier WHERE host_id = :hostId AND state = 'PENDING'")
     FrontierUrl nextUrlForHost(long hostId);
 
-    @SqlUpdate("INSERT INTO errors (page_id, url, date, stacktrace) VALUES (?, ?, ?, ?)")
-    void addError(UUID pageId, Url url, Instant date, String stacktrace);
-
     String FRONTIER_WHERE = """
             WHERE (:depth IS NULL OR depth = :depth)
               AND (:state IS NULL OR state = :state)
             """;
 
     @SqlQuery("SELECT COUNT(*) FROM frontier\n" + FRONTIER_WHERE)
-    long countFrontier(@BindFields Webapp.FrontierQuery query);
+    long count(@BindFields Webapp.FrontierQuery query);
 
     @SqlQuery("""
         SELECT * FROM frontier
         """ + FRONTIER_WHERE + """ 
         <orderBy> LIMIT :limit OFFSET (:page - 1) * :limit
         """)
-    List<FrontierUrl> queryFrontier(@Define String orderBy, @BindFields Webapp.FrontierQuery query);
+    List<FrontierUrl> query(@Define String orderBy, @BindFields Webapp.FrontierQuery query);
 
 
     @SqlQuery("SELECT id FROM frontier WHERE url = ?")

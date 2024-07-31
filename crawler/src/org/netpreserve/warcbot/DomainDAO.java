@@ -5,7 +5,7 @@ import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 
 public interface DomainDAO {
     @SqlQuery("INSERT INTO domains (rhost) VALUES (:rhost) ON CONFLICT (rhost) DO UPDATE SET rhost = excluded.rhost RETURNING id")
-    long insertOrGetDomainId(String rhost);
+    long insertOrGetId(String rhost);
 
     @SqlUpdate("UPDATE domains SET pending = pending + 1 WHERE id = ?")
     void incrementPending(long hostId);

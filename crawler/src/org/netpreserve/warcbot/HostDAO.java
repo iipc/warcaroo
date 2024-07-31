@@ -1,11 +1,17 @@
 package org.netpreserve.warcbot;
 
+import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
+import org.jdbi.v3.sqlobject.customizer.BindFields;
 import org.jdbi.v3.sqlobject.customizer.BindList;
+import org.jdbi.v3.sqlobject.customizer.Define;
+import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+import org.netpreserve.warcbot.webapp.Webapp;
 
 import java.time.Instant;
 import java.util.Collection;
+import java.util.List;
 
 public interface HostDAO {
     @SqlQuery("INSERT INTO hosts (rhost) VALUES (:rhost) ON CONFLICT (rhost) DO UPDATE SET rhost = excluded.rhost RETURNING id")
@@ -31,4 +37,19 @@ public interface HostDAO {
 
     @SqlUpdate("UPDATE hosts SET last_visit = :now, next_visit = :nextVisit WHERE id = :id")
     void updateNextVisit(long id, Instant now, Instant nextVisit);
+
+    @SqlQuery("SELECT COUNT(*) FROM hosts " + HOSTS_WHERE)
+    long countHosts(@BindFields Webapp.HostsQuery query);
+
+    @SqlQuery("""
+            SELECT * FROM hosts
+            """ + HOSTS_WHERE + """
+            <orderBy> LIMIT :limit OFFSET (:page - 1) * :limit""")
+    @DefineNamedBindings
+    @RegisterConstructorMapper(Host.class)
+    List<Host> queryHosts(@Define String orderBy, @BindFields Webapp.HostsQuery query);
+
+    String HOSTS_WHERE = """
+            WHERE (:rhost IS NULL OR rhost GLOB :rhost)
+            """;
 }

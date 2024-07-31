@@ -94,7 +94,10 @@ public interface Database extends AutoCloseable, Transactional<Database> {
     HostDAO hosts();
 
     @CreateSqlObject
-    StorageDAO storage();
+    PageDAO pages();
+
+    @CreateSqlObject
+    ResourceDAO resources();
 
     @CreateSqlObject
     RobotsTxtDAO robotsTxt();

@@ -7,8 +7,6 @@ import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
@@ -53,7 +51,7 @@ public class Frontier {
         return db.inTransaction(dao -> {
             if (dao.frontier().findUrl(url) != null) return null;
             long hostId = dao.hosts().insertOrGetId(rhost);
-            long domainId = dao.domains().insertOrGetDomainId(rdomain);
+            long domainId = dao.domains().insertOrGetId(rdomain);
             Long id = dao.frontier().addUrl0(url, hostId, domainId, depth, via, now, FrontierUrl.State.PENDING);
             if (id != null) {
                 dao.hosts().incrementPendingAndInitNextVisit(hostId);
@@ -70,23 +68,7 @@ public class Frontier {
         return db.frontier().nextUrlForHost(hostId);
     }
 
-    public synchronized void markFailed(FrontierUrl frontierUrl, UUID pageId, Throwable e) {
-        release(frontierUrl, FrontierUrl.State.FAILED);
-        Instant now = Instant.now();
-        var stringWriter = new StringWriter();
-        e.printStackTrace(new PrintWriter(stringWriter));
-        db.frontier().addError(pageId, frontierUrl.url(), now, stringWriter.toString());
-    }
-
-    public void markCrawled(FrontierUrl frontierUrl) {
-        release(frontierUrl, FrontierUrl.State.CRAWLED);
-    }
-
-    public void markRobotsExcluded(FrontierUrl frontierUrl) {
-        release(frontierUrl, FrontierUrl.State.ROBOTS_EXCLUDED);
-    }
-
-    private synchronized void release(FrontierUrl frontierUrl, FrontierUrl.State newState) {
+    public synchronized void release(FrontierUrl frontierUrl, FrontierUrl.State newState) {
         Instant now = Instant.now();
         db.useTransaction(db -> {
             db.frontier().updateState(frontierUrl.id(), newState);

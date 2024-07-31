@@ -86,17 +86,17 @@ public class Webapp implements HttpHandler {
     }
 
     @GET("/api/frontier")
-    Page<FrontierUrl> frontier(FrontierQuery query) throws IOException {
-        long count = crawl.db.frontier().countFrontier(query);
-        var rows = crawl.db.frontier().queryFrontier(query.orderBy(FrontierUrl.class), query);
-        return new Page<>(count / query.limit + 1, count, rows);
+    Paginated<FrontierUrl> frontier(FrontierQuery query) throws IOException {
+        long count = crawl.db.frontier().count(query);
+        var rows = crawl.db.frontier().query(query.orderBy(FrontierUrl.class), query);
+        return new Paginated<>(count / query.limit + 1, count, rows);
     }
 
-    public static class FrontierPage extends Page<FrontierUrl> {
+    public static class FrontierPaginated extends Paginated<FrontierUrl> {
         public final Map<String, Map<FrontierUrl.State, Long>> queueStateCounts;
 
-        public FrontierPage(long lastPage, long lastRow, List<FrontierUrl> data,
-                            Map<String, Map<FrontierUrl.State, Long>> queueStateCounts) {
+        public FrontierPaginated(long lastPage, long lastRow, List<FrontierUrl> data,
+                                 Map<String, Map<FrontierUrl.State, Long>> queueStateCounts) {
             super(lastPage, lastRow, data);
             this.queueStateCounts = queueStateCounts;
         }
@@ -126,10 +126,10 @@ public class Webapp implements HttpHandler {
     }
 
     @GET("/api/hosts")
-    Page<StorageDAO.Host> hosts(HostsQuery query) {
-        long count = crawl.db.storage().countHosts(query);
-        var rows = crawl.db.storage().queryHosts(query.orderBy(StorageDAO.Host.class), query);
-        return new Page(count / query.limit + 1, count, rows);
+    Paginated<Host> hosts(HostsQuery query) {
+        long count = crawl.db.hosts().countHosts(query);
+        var rows = crawl.db.hosts().queryHosts(query.orderBy(Host.class), query);
+        return new Paginated(count / query.limit + 1, count, rows);
     }
 
     public static class PagesQuery extends Query {
@@ -137,10 +137,10 @@ public class Webapp implements HttpHandler {
     }
 
     @GET("/api/pages")
-    Page<StorageDAO.Page> pages(PagesQuery query) throws IOException {
-        long count = crawl.db.storage().countPages(query);
-        var rows = crawl.db.storage().queryPages(query, query.orderBy(StorageDAO.Page.class), query.limit, (query.page - 1) * query.limit);
-        return new Page(count / query.limit + 1, count, rows);
+    Paginated<Page> pages(PagesQuery query) throws IOException {
+        long count = crawl.db.pages().count(query);
+        var rows = crawl.db.pages().query(query, query.orderBy(Page.class), query.limit, (query.page - 1) * query.limit);
+        return new Paginated(count / query.limit + 1, count, rows);
     }
 
     public static class ResourcesQuery extends Query {
@@ -150,10 +150,10 @@ public class Webapp implements HttpHandler {
     }
 
     @GET("/api/resources")
-    Page<Resource> resources(ResourcesQuery query) throws IOException {
-        long count = crawl.db.storage().countResources(query);
-        var rows = crawl.db.storage().queryResources(query.orderBy(Resource.class), query);
-        return new Page(count / query.limit + 1, count, rows);
+    Paginated<Resource> resources(ResourcesQuery query) throws IOException {
+        long count = crawl.db.resources().count(query);
+        var rows = crawl.db.resources().query(query.orderBy(Resource.class), query);
+        return new Paginated(count / query.limit + 1, count, rows);
     }
 
     public static class RenderQuery {
@@ -162,7 +162,7 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/render")
     void render(HttpExchange exchange, RenderQuery query) throws NavigationException, InterruptedException, IOException {
-        var screenshot = Replay.render(crawl.db.storage(), crawl.browserProcess(), query.url);
+        var screenshot = Replay.render(crawl.db, crawl.browserProcess(), query.url);
         exchange.getResponseHeaders().set("Content-Type", "image/webp");
         exchange.sendResponseHeaders(200, screenshot.length);
         exchange.getResponseBody().write(screenshot);
@@ -245,7 +245,7 @@ public class Webapp implements HttpHandler {
     }
 
 
-    public static class Page<T> {
+    public static class Paginated<T> {
         @JsonPropertyDescription("Index of the last page of results.")
         @Doc(example = "5")
         public final long last_page;
@@ -253,7 +253,7 @@ public class Webapp implements HttpHandler {
         public final long last_row;
         public final List<T> data;
 
-        public Page(long lastPage, long lastRow, List<T> data) {
+        public Paginated(long lastPage, long lastRow, List<T> data) {
             last_page = lastPage;
             last_row = lastRow;
             this.data = data;

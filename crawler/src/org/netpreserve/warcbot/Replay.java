@@ -32,7 +32,7 @@ public class Replay {
         try (var database = Database.open(Path.of("data", "db.sqlite3"));
              var browserProcess = BrowserProcess.start();
              var window = browserProcess.newWindow(null, request -> {
-                 var resource = database.storage().findResourceByUrl(request.url());
+                 var resource = database.resources().findByUrl(request.url());
                  if (resource == null) {
                      return new RequestHandler.Response(404, "Not found");
                  }
@@ -50,14 +50,14 @@ public class Replay {
         }
     }
 
-    public static byte[] render(StorageDAO storage, BrowserProcess browserProcess, Url url) throws NavigationException, InterruptedException {
+    public static byte[] render(Database db, BrowserProcess browserProcess, Url url) throws NavigationException, InterruptedException {
         try (var window = browserProcess.newWindow(new Consumer<ResourceFetched>() {
             @Override
             public void accept(ResourceFetched resourceFetched) {
                 log.info("Fetched {}", resourceFetched);
             }
         }, request -> {
-            var resource = storage.findResourceByUrl(request.url());
+            var resource = db.resources().findByUrl(request.url());
             if (resource == null) {
                 return new RequestHandler.Response(404, "Not found");
             }

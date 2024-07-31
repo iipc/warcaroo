@@ -84,13 +84,16 @@ CREATE INDEX IF NOT EXISTS resources_page_id ON resources (page_id);
 
 create table if not exists pages
 (
-    id            TEXT PRIMARY KEY NOT NULL,
+    id            INTEGER PRIMARY KEY NOT NULL,
     host_id       INTEGER          NOT NULL,
     domain_id     INTEGER          NOT NULL,
     url           TEXT             NOT NULL,
     date          INTEGER          NOT NULL,
     title         TEXT,
-    visit_time_ms INTEGER          NOT NULL,
+    error         TEXT,
+    visit_time_ms INTEGER,
+    resources     INTEGER NOT NULL DEFAULT 0,
+    size          INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (host_id) REFERENCES hosts (id),
     FOREIGN KEY (domain_id) REFERENCES domains (id)
 );
@@ -101,12 +104,4 @@ create table if not exists robotstxt
     date         INTEGER          NOT NULL,
     last_checked INTEGER          NOT NULL,
     body         BLOB             NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS errors
-(
-    page_id    TEXT    NOT NULL,
-    url        TEXT    NOT NULL,
-    date       INTEGER NOT NULL,
-    stacktrace TEXT    NOT NULL
 );

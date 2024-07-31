@@ -23,6 +23,8 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static java.nio.file.StandardOpenOption.*;
 import static org.netpreserve.jwarc.MediaType.HTTP_REQUEST;
@@ -30,14 +32,25 @@ import static org.netpreserve.jwarc.MediaType.HTTP_RESPONSE;
 
 public class Storage implements Closeable {
     private final Logger log = LoggerFactory.getLogger(Storage.class);
-    private final WarcWriter warcWriter;
-    final StorageDAO dao;
+    private WarcWriter warcWriter;
+    final Database db;
     private final TimeBasedEpochGenerator uuidGenerator;
     private final static DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC);
     private final SecureRandom random = new SecureRandom();
-    private final String filename;
+    private String filename;
+    private final Path directory;
+    private final Lock lock = new ReentrantLock();
 
-    public Storage(Path directory, StorageDAO dao) throws IOException {
+    public Storage(Path directory, Database db) throws IOException {
+        this.directory = directory;
+        this.db = db;
+        this.uuidGenerator = Generators.timeBasedEpochGenerator();
+    }
+
+    private void openWriter() throws IOException {
+        if (warcWriter != null) {
+            warcWriter.close();
+        }
         filename = "warcbot-" + DATE_FORMAT.format(Instant.now()) + "-" + randomId() + ".warc.gz";
         warcWriter = new WarcWriter(FileChannel.open(directory.resolve(filename),
                 WRITE, CREATE, TRUNCATE_EXISTING), WarcCompression.GZIP);
@@ -48,8 +61,6 @@ public class Storage implements Closeable {
                         "conformsTo", List.of("https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.0/")))
                 .build();
         warcWriter.write(warcinfo);
-        this.dao = dao;
-        this.uuidGenerator = Generators.timeBasedEpochGenerator();
     }
 
     private String randomId() {
@@ -63,7 +74,12 @@ public class Storage implements Closeable {
 
     @Override
     public void close() throws IOException {
-        warcWriter.close();
+        lock.lock();
+        try {
+            if (warcWriter != null) warcWriter.close();
+        } finally {
+            lock.unlock();
+        }
     }
 
     private WarcDigest sha1(byte[] data) {
@@ -161,7 +177,7 @@ public class Storage implements Closeable {
         }
     }
 
-    public Resource save(UUID pageId, ResourceFetched fetch) throws IOException {
+    public Resource save(long pageId, ResourceFetched fetch) throws IOException {
         long responseBodyLength;
         WarcDigest responseDigest;
         if (fetch.responseBodyChannel() != null) {
@@ -176,7 +192,7 @@ public class Storage implements Closeable {
             responseDigest = null;
             responseBodyLength = 0;
         }
-        var existingDuplicate = dao.findResourceByUrlAndPayload(fetch.url().toString(),
+        var existingDuplicate = db.resources().findByUrlAndPayload(fetch.url().toString(),
                 responseBodyLength,
                 responseDigest == null ? null : responseDigest.prefixedBase32());
         if (existingDuplicate != null) {
@@ -212,32 +228,41 @@ public class Storage implements Closeable {
         long responseLength;
         long requestLength;
 
-        synchronized (warcWriter) {
+        lock.lock();
+        try {
+            if (warcWriter == null || warcWriter.position() > 1024 * 1024 * 1024) {
+                openWriter();
+            }
             responseOffset = warcWriter.position();
             warcWriter.write(warcResponse);
             responseLength = warcWriter.position() - responseOffset;
             warcWriter.write(warcRequest);
             requestLength = warcWriter.position() - responseOffset - responseLength;
+        } finally {
+            lock.unlock();
         }
 
-        long hostId = dao.insertOrGetHostId(fetch.url().rhost());
-        long domainId = dao.insertOrGetDomainId(fetch.url().rdomain());
-        Resource resource = new Resource(responseUuid, pageId,
-                fetch.method(),
-                fetch.url(),
-                hostId,
-                domainId,
-                warcResponse.date(),
-                filename,
-                responseOffset, responseLength, requestLength,
-                fetch.status(), fetch.redirect(),
-                fetch.responseType(),
-                responseBodyLength,
-                responseDigest,
-                fetch.fetchTimeMs(), fetch.ipAddress(), fetch.type(),
-                fetch.protocol(),
-                fetch.transferred());
-        dao.addResource(resource);
-        return resource;
+        return db.inTransaction(db -> {
+            long hostId = db.hosts().insertOrGetId(fetch.url().rhost());
+            long domainId = db.domains().insertOrGetId(fetch.url().rdomain());
+            Resource resource = new Resource(responseUuid, pageId,
+                    fetch.method(),
+                    fetch.url(),
+                    hostId,
+                    domainId,
+                    warcResponse.date(),
+                    filename,
+                    responseOffset, responseLength, requestLength,
+                    fetch.status(), fetch.redirect(),
+                    fetch.responseType(),
+                    responseBodyLength,
+                    responseDigest,
+                    fetch.fetchTimeMs(), fetch.ipAddress(), fetch.type(),
+                    fetch.protocol(),
+                    fetch.transferred());
+            db.resources().add(resource);
+            db.pages().addResourceToPage(pageId, resource.payloadSize());
+            return resource;
+        });
     }
 }

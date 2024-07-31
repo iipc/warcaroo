@@ -39,7 +39,23 @@
                 tooltip: true
             },
             {title: "Title", field: "title", headerFilter: 'input', headerFilterPlaceholder: "Search", tooltip: true},
-            {title: "Host ID", field: "hostId", visible: false, headerFilter: "input"}
+            {title: "Host ID", field: "hostId", visible: false, headerFilter: "input"},
+            {
+                field: "resources",
+                formatter: 'link',
+                formatterParams: {
+                    urlPrefix: 'resources#pageId=',
+                    urlField: 'id'
+                },
+                hozAlign: "right",
+                title: "Resources",
+            },
+            {
+                title: "Size",
+                field: "size",
+                hozAlign: 'right',
+                formatter: cell => formatSize(cell.getValue())
+            },
         ],
     });
 </script>
