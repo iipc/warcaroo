@@ -8,7 +8,6 @@ import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
-import org.netpreserve.warcbot.cdp.NavigationException;
 import org.netpreserve.warcbot.util.MustUpdate;
 import org.netpreserve.warcbot.util.Url;
 import org.netpreserve.warcbot.webapp.Webapp;
@@ -18,6 +17,8 @@ import java.io.StringWriter;
 import java.time.Instant;
 import java.util.List;
 
+@RegisterConstructorMapper(Page.class)
+@RegisterConstructorMapper(Page.Ext.class)
 public interface PageDAO {
     @Transaction
     default void add(@BindMethods Page page) {
@@ -30,9 +31,14 @@ public interface PageDAO {
     @GetGeneratedKeys
     long create(Url url, long hostId, long domainId, Instant date);
 
-    @SqlUpdate("UPDATE pages SET title = :title, visit_time_ms = :visitTimeMs WHERE id = :pageId")
+    @SqlUpdate("""
+               UPDATE pages
+               SET title = :title,
+                   visit_time_ms = :visitTimeMs,
+                   main_resource_id = :mainResourceId
+               WHERE id = :pageId""")
     @MustUpdate
-    void finish(long pageId, String title, long visitTimeMs);
+    void finish(long pageId, String title, long visitTimeMs, Long mainResourceId);
 
     @SqlUpdate("INSERT INTO pages (id, url, date, title, visit_time_ms, host_id, domain_id) " +
                "VALUES (:id, :url, :date, :title, :visitTimeMs, :hostId, :domainId)")
@@ -46,28 +52,28 @@ public interface PageDAO {
     @MustUpdate
     void _addPageToDomain(@BindMethods Page page);
 
-    String PAGES_WHERE = " WHERE (:hostId IS NULL OR host_id = :hostId) ";
+    String PAGES_WHERE = " WHERE (:hostId IS NULL OR pages.host_id = :hostId) ";
 
     @SqlQuery("SELECT COUNT(*) FROM pages " + PAGES_WHERE)
     long count(@BindFields Webapp.PagesQuery query);
 
-    @RegisterConstructorMapper(Page.class)
     @SqlQuery("""
-            SELECT *
+            SELECT pages.*, r.status
             FROM pages
+            LEFT JOIN resources r ON r.id = pages.main_resource_id
             """ + PAGES_WHERE + """
             <orderBy> LIMIT :limit OFFSET :offset""")
-    List<Page> query(@BindFields Webapp.PagesQuery query, @Define String orderBy, int limit, long offset);
+    List<Page.Ext> query(@BindFields Webapp.PagesQuery query, @Define String orderBy, int limit, long offset);
 
-    default void error(Long pageId, Throwable e) {
+    default void error(long pageId, Throwable e) {
         var buffer = new StringWriter();
         e.printStackTrace(new PrintWriter(buffer));
         error(pageId, buffer.toString());
     }
 
-    @SqlUpdate("UPDATE pages SET error = :error WHERE id = :id")
+    @SqlUpdate("UPDATE pages SET error = :error WHERE id = :pageId")
     @MustUpdate
-    void error(Long pageId, String error);
+    void error(long pageId, String error);
 
     @SqlUpdate("UPDATE pages SET resources = resources + 1, size = size + :size WHERE id = :pageId")
     @MustUpdate

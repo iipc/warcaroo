@@ -7,6 +7,7 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -14,6 +15,8 @@ import java.time.Instant;
 import java.time.Period;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class RobotsTxtChecker {
     private final RobotsTxtDAO dao;
@@ -45,16 +48,20 @@ public class RobotsTxtChecker {
         int status;
         byte[] body;
         try {
+            var responseTimeRef = new AtomicReference<Instant>();
             long fetchStart = System.currentTimeMillis();
             var response = httpClient.send(HttpRequest.newBuilder(robotsUri)
                     .timeout(Duration.ofSeconds(30))
                     .header("User-Agent", config.getCrawlSettings().userAgent())
-                    .build(), BodyHandlers.ofByteArray());
+                    .build(), responseInfo -> {
+                responseTimeRef.set(Instant.now());
+                return HttpResponse.BodySubscribers.ofByteArray();
+            });
             long fetchTimeMs = System.currentTimeMillis() - fetchStart;
             status = response.statusCode();
             body = response.body();
             String ipAddress = InetAddress.getByName(robotsUri.getHost()).getHostAddress();
-            storage.save(new Resource.Metadata(pageId, fetchTimeMs, ipAddress), response);
+            storage.save(new Resource.Metadata(pageId, fetchTimeMs, ipAddress), response, responseTimeRef.get());
         } catch (InterruptedException e) {
             throw new IOException(e);
         } catch (IOException e) {

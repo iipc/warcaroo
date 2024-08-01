@@ -19,7 +19,7 @@
     const table = new WarcBotTabulator("#myTable", {
         ajaxURL: '/api/pages',
         height: '100%',
-        layout: "fitColumns",
+        layout: "fitDataFill",
         pagination: true,
         paginationMode: "remote",
         paginationCounter: "rows",
@@ -38,6 +38,7 @@
                 headerFilterPlaceholder: "Search",
                 tooltip: true
             },
+            {title: "Status", field: "status"},
             {title: "Title", field: "title", headerFilter: 'input', headerFilterPlaceholder: "Search", tooltip: true},
             {title: "Host ID", field: "hostId", visible: false, headerFilter: "input"},
             {

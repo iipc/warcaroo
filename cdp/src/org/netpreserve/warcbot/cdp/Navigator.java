@@ -25,9 +25,10 @@ public class Navigator implements AutoCloseable {
     private final Runtime runtime;
     private final AtomicReference<Navigation> currentNavigation = new AtomicReference<>();
     private final IdleMonitor idleMonitor = new IdleMonitor();
-    private final CDPSession cdpSession;
+    final CDPSession cdpSession;
     private final NetworkManager networkManager;
     private final Page.FrameTree frameTree;
+    private final Consumer<ResourceFetched> subresourceHandler;
     private volatile Runtime.ExecutionContextUniqueId isolatedContext;
     Duration pageLoadTimeout = Duration.ofSeconds(120);
 
@@ -54,16 +55,26 @@ public class Navigator implements AutoCloseable {
         return page.captureScreenshot("webp");
     }
 
+    public Page.FrameId mainFrameId() {
+        return frameTree.frame().id();
+    }
+
     public record Navigation(
             Page.FrameId frameId,
             Network.LoaderId loaderId,
-            CompletableFuture<Network.MonotonicTime> loadEvent) {
+            CompletableFuture<Network.MonotonicTime> loadEvent,
+            CompletableFuture<ResourceFetched> mainResource) {
         Navigation(Page.FrameId frameId, Network.LoaderId loaderId) {
-            this(frameId, loaderId, new CompletableFuture<>());
+            this(frameId, loaderId, new CompletableFuture<>(), new CompletableFuture<>());
         }
 
         void completeExceptionally(Throwable t) {
             loadEvent.completeExceptionally(t);
+            if (!mainResource.completeExceptionally(t)) {
+                if (!mainResource.isCompletedExceptionally()) {
+                    mainResource.resultNow().close();
+                }
+            }
         }
 
         void handleLifecycleEvent(Page.LifecycleEvent event) {
@@ -74,14 +85,15 @@ public class Navigator implements AutoCloseable {
     }
 
     public Navigator(CDPSession cdpSession,
-                     Consumer<ResourceFetched> resourceHandler,
+                     Consumer<ResourceFetched> subresourceHandler,
                      RequestHandler requestHandler) {
         this.cdpSession = cdpSession;
         this.emulation = cdpSession.domain(Emulation.class);
         this.page = cdpSession.domain(Page.class);
         this.runtime = cdpSession.domain(Runtime.class);
+        this.subresourceHandler = subresourceHandler;
         this.networkManager = new NetworkManager(cdpSession, idleMonitor, requestHandler,
-                resourceHandler, Path.of("data", "downloads"));
+                this::handleResource, Path.of("data", "downloads"));
 
         page.onLifecycleEvent(this::handleLifecycleEvent);
         page.enable();
@@ -98,6 +110,23 @@ public class Navigator implements AutoCloseable {
         page.addScriptToEvaluateOnNewDocument("// warcbot", "warcbot");
 
         runtime.onConsoleAPICalled(event -> log.debug("Console: {} {}", event.type(), event.args()));
+    }
+
+    private void handleResource(ResourceFetched resource) {
+        var navigation = currentNavigation.get();
+        if (navigation != null && resource.requestId().value().equals(navigation.loaderId().value())) {
+            if (!navigation.mainResource().complete(resource)) {
+                resource.close();
+            }
+        } else {
+            try {
+                if (subresourceHandler != null) {
+                    subresourceHandler.accept(resource);
+                }
+            } finally {
+                resource.close();
+            }
+        }
     }
 
     public static void main(String[] args) throws Exception {
@@ -159,6 +188,10 @@ public class Navigator implements AutoCloseable {
             // ignore
         }
         cdpSession.close();
+        var navigation = currentNavigation.getAndSet(null);
+        if (navigation != null) {
+            navigation.completeExceptionally(new RuntimeException("Navigator closed"));
+        }
     }
 
     @SuppressWarnings("unchecked")

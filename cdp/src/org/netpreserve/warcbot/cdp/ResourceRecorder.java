@@ -2,6 +2,7 @@ package org.netpreserve.warcbot.cdp;
 
 import org.netpreserve.warcbot.cdp.domains.Fetch;
 import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcbot.cdp.domains.Page;
 import org.netpreserve.warcbot.util.BareMediaType;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
@@ -50,6 +51,8 @@ public class ResourceRecorder {
     private long bytesReceived = 0;
     CompletableFuture<Void> completionFuture = new CompletableFuture<>();
     private double requestTimestamp;
+    private Page.FrameId frameId;
+    private Network.LoaderId loaderId;
 
     public ResourceRecorder(Network.RequestId networkId, Path downloadPath, Consumer<ResourceFetched> resourceHandler, Network network, boolean captureResponseBody) {
         this.captureResponseBody = captureResponseBody;
@@ -111,6 +114,8 @@ public class ResourceRecorder {
         this.request = event.request();
         this.resourceType = event.type();
         this.requestTimestamp = event.timestamp();
+        this.frameId = event.frameId();
+        this.loaderId = event.loaderId();
     }
 
     public void handleRequestWillBeSentExtraInfo(Network.RequestWillBeSentExtraInfo event) {
@@ -174,7 +179,6 @@ public class ResourceRecorder {
                                 log.atError().addKeyValue("networkId", network).log("Error getting response body", ex);
                             }
                         } finally {
-                            closeChannel();
                             completionFuture.complete(null);
                         }
                     });
@@ -184,7 +188,6 @@ public class ResourceRecorder {
         try {
             dispatchResource(event.timestamp(), event.encodedDataLength());
         } finally {
-            closeChannel();
             completionFuture.complete(null);
         }
     }
@@ -212,7 +215,8 @@ public class ResourceRecorder {
         rewindChannel();
         resourceHandler.accept(new ResourceFetched(request.method(), response.url(), requestHeader, request.body(), responseHeader,
                 null, channel, response.remoteIPAddress(), fetchTimeMs, response.status(),
-                redirect, responseType, resourceType, response.protocol(), encodedDataLength));
+                redirect, responseType, resourceType, response.protocol(), encodedDataLength, frameId,
+                loaderId, networkId, response.responseTime().toInstant()));
     }
 
     public void handleLoadingFailed(Network.LoadingFailed event) {

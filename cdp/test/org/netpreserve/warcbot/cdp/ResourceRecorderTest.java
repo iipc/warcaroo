@@ -34,7 +34,7 @@ class ResourceRecorderTest {
         var response = new Network.Response(request.url(), 200, "OK", responseHeaders, "text/html",
                 null, request.headers(), false, 1, "1.2.3.4", 1234,
                 false, false, false, false, 8, timing,
-                10000, "h2");
+                new Network.MillisSinceEpoch(System.currentTimeMillis()), "h2");
         var requestWillBeSentExtraInfo = new Network.RequestWillBeSentExtraInfo(networkId, List.of(), Map.of("User-Agent", "bob"));
         var responseReceivedExtraInfo = new Network.ResponseReceivedExtraInfo(networkId, Map.of(), 200, null);
         var requestPaused = new Fetch.RequestPaused(fetchId, request, null, null, null, 200,

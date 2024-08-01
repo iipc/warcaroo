@@ -5,12 +5,15 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.netpreserve.warcbot.cdp.domains.IO;
+import org.netpreserve.warcbot.cdp.domains.Network;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.nio.channels.Channels;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -59,26 +62,27 @@ class NavigatorTest {
             exchange.close();
         });
         httpServer.start();
-        var resources = new ArrayList<ResourceFetched>();
-        try (var navigator = browserProcess.newWindow(resources::add, null)){
-            navigator.navigateTo(new Url("http://127.0.0.1:" + httpServer.getAddress().getPort() + "/redirect1"));
+        var subresources = new ArrayList<ResourceFetched>();
+        try (var navigator = browserProcess.newWindow(subresources::add, null)){
+            var navigation = navigator.navigateTo(new Url("http://127.0.0.1:" + httpServer.getAddress().getPort() + "/redirect1"));
             navigator.networkManager().waitForLoadingResources();
 
-            assertEquals(3, resources.size());
+            assertEquals(2, subresources.size());
             {
-                var resource = resources.get(0);
+                var resource = subresources.get(0);
                 assertEquals("/redirect1", resource.url().path());
                 assertEquals("/redirect2", resource.redirect());
             }
             {
-                var resource = resources.get(1);
+                var resource = subresources.get(1);
                 assertEquals("/redirect2", resource.url().path());
                 assertEquals("/end", resource.redirect());
             }
             {
-                var resource = resources.get(2);
+                var resource = navigation.mainResource().get(5, TimeUnit.SECONDS);
                 assertEquals("/end", resource.url().path());
                 assertNull(resource.redirect());
+                assertEquals("Arrived", new String(Channels.newInputStream(resource.responseBodyChannel()).readAllBytes()));
             }
         } finally {
             httpServer.stop(0);
@@ -197,11 +201,10 @@ class NavigatorTest {
                 assertEquals("net::ERR_ABORTED", e.errorText(),
                         "Download should abort the page load");
             }
-            Thread.sleep(10000);
+            Thread.sleep(1000);
         } finally {
             httpServer.stop(0);
         }
-        assertTrue(recordedPaths.contains("/"));
         assertTrue(recordedPaths.contains("/lazy.jpg"));
         assertTrue(recordedPaths.contains("/post"));
 

@@ -53,7 +53,7 @@ create table if not exists frontier
 
 create table if not exists resources
 (
-    id              TEXT PRIMARY KEY NOT NULL,
+    id              INTEGER PRIMARY KEY,
     host_id         INTEGER NOT NULL,
     domain_id       INTEGER NOT NULL,
     method          TEXT             NOT NULL,
@@ -61,9 +61,11 @@ create table if not exists resources
     date            INTEGER          NOT NULL,
     page_id         TEXT             NOT NULL,
     filename        TEXT             NOT NULL,
+    response_uuid   TEXT,
     response_offset INTEGER          NOT NULL,
     response_length INTEGER          NOT NULL,
     request_length  INTEGER          NOT NULL,
+    metadata_length INTEGER          NOT NULL,
     status          INTEGER          NOT NULL,
     redirect        TEXT,
     payload_type    TEXT,
@@ -84,18 +86,20 @@ CREATE INDEX IF NOT EXISTS resources_page_id ON resources (page_id);
 
 create table if not exists pages
 (
-    id            INTEGER PRIMARY KEY NOT NULL,
-    host_id       INTEGER          NOT NULL,
-    domain_id     INTEGER          NOT NULL,
-    url           TEXT             NOT NULL,
-    date          INTEGER          NOT NULL,
-    title         TEXT,
-    error         TEXT,
-    visit_time_ms INTEGER,
-    resources     INTEGER NOT NULL DEFAULT 0,
-    size          INTEGER NOT NULL DEFAULT 0,
+    id               INTEGER PRIMARY KEY NOT NULL,
+    host_id          INTEGER             NOT NULL,
+    domain_id        INTEGER             NOT NULL,
+    url              TEXT                NOT NULL,
+    date             INTEGER             NOT NULL,
+    title            TEXT,
+    error            TEXT,
+    visit_time_ms    INTEGER,
+    main_resource_id INTEGER,
+    resources        INTEGER             NOT NULL DEFAULT 0,
+    size             INTEGER             NOT NULL DEFAULT 0,
     FOREIGN KEY (host_id) REFERENCES hosts (id),
-    FOREIGN KEY (domain_id) REFERENCES domains (id)
+    FOREIGN KEY (domain_id) REFERENCES domains (id),
+    FOREIGN KEY (main_resource_id) REFERENCES resources (id) ON DELETE SET NULL
 );
 
 create table if not exists robotstxt

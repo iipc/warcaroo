@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import org.netpreserve.warcbot.cdp.protocol.Unwrap;
 import org.netpreserve.warcbot.util.Url;
 
+import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -43,6 +44,15 @@ public interface Network {
     void onRequestIntercepted(Consumer<RequestIntercepted> handler);
 
     void continueInterceptedRequest(InterceptionId interceptionId);
+
+    @Unwrap("resource")
+    LoadNetworkResourcePageResult loadNetworkResource(String url, Page.FrameId frameId, LoadNetworkResourceOptions options);
+
+    record LoadNetworkResourceOptions(boolean disableCache, boolean includeCredentials) {
+    }
+
+    record LoadNetworkResourcePageResult(boolean success, Integer netError, String netErrorName, Integer httpStatusCode,
+                                         IO.StreamHandle stream, Headers headers) {}
 
 
     record RequestIntercepted(InterceptionId interceptionId, RequestId requestId) {
@@ -99,10 +109,24 @@ public interface Network {
         }
     }
 
+    record MillisSinceEpoch(@JsonValue double value) {
+        @JsonCreator
+        public MillisSinceEpoch {
+        }
+
+        public Instant toInstant() {
+            return Instant.ofEpochSecond((long)(value / 1000.0), (long)((value % 1000) * 1_000_000));
+        }
+    }
+
     record ResourceType(@JsonValue String value) {
         @JsonCreator
         public ResourceType {
             Objects.requireNonNull(value);
+        }
+
+        public boolean isDocument() {
+            return value.equals("Document");
         }
     }
 
@@ -181,7 +205,7 @@ public interface Network {
             boolean fromEarlyHints,
             long encodedDataLength,
             ResourceTiming timing,
-            long responseTime,
+            MillisSinceEpoch responseTime,
             String protocol) {
     }
 

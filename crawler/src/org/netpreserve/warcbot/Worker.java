@@ -9,10 +9,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.sql.SQLException;
 import java.time.Instant;
-import java.util.List;
-import java.util.concurrent.TimeoutException;
+import java.util.*;
+import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.TimeUnit;
 
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
@@ -28,6 +28,7 @@ public class Worker {
     private Thread thread;
     private volatile boolean closed = false;
     private volatile Long pageId;
+    private Set<String> outlinks = Collections.newSetFromMap(new ConcurrentSkipListMap<>());
 
     public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
         this.id = id;
@@ -39,15 +40,25 @@ public class Worker {
         this.config = config;
     }
 
-    private void handleResource(ResourceFetched resource) {
+    private void handleSubresource(ResourceFetched resource) {
         if (pageId == null) return;
+        String hopType;
+        if (resource.method().equals("GET")) {
+            if (resource.type().value().equals("Manifest")) {
+                hopType = "M";
+            } else {
+                hopType = "E";
+            }
+        } else {
+            hopType = "S";
+        }
+        outlinks.add(resource.url() + " " + hopType + " =" + resource.type().value());
         try {
-            storage.save(pageId, resource);
+            storage.save(pageId, resource, null);
         } catch (IOException e) {
             log.error("Failed to save resource", e);
         }
     }
-
 
     public void closeAsyncGraceful() {
         closed = true;
@@ -76,7 +87,7 @@ public class Worker {
         }
     }
 
-    void run() throws SQLException, IOException, InterruptedException, TimeoutException, NavigationException {
+    void run() throws Exception {
         while (!closed) {
             var candidate = frontier.takeNext(id);
             if (candidate == null) {
@@ -102,14 +113,14 @@ public class Worker {
                 }
 
                 if (navigator == null) {
-                    navigator = browserProcess.newWindow(this::handleResource, null);
+                    navigator = browserProcess.newWindow(this::handleSubresource, null);
                 }
                 navigator.setUserAgent(config.getCrawlSettings().userAgent());
                 navigator.block(config.getBlockPredicate());
 
                 log.info("Nav to {}", candidate.url());
-                navigator.navigateTo(candidate.url());
-                navigator.waitForLoadEvent();
+                var navigation = navigator.navigateTo(candidate.url());
+                navigation.loadEvent().get(120, TimeUnit.SECONDS);
                 log.info("Load event");
 
                 Thread.sleep(200);
@@ -134,15 +145,28 @@ public class Worker {
                         }
                     }
                     frontier.addUrls(links, candidate.depth() + 1, candidate.url());
+                    for (Url link : links) {
+                        outlinks.add(link.toString() + " L a/@href");
+                    }
                 } catch (CDPException e) {
                     if (!e.getMessage().contains("uniqueContextId not found")) {
                         throw e;
                     }
                 }
 
+                // Prepare WARC metadata record
                 var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
+                var metadata = new TreeMap<String, List<String>>();
+                metadata.put("outlink", new ArrayList<>(outlinks));
+                if (candidate.via() != null) metadata.put("via", List.of(candidate.via().toString()));
+                metadata.put("visitTimeMs", List.of(String.valueOf(visitTimeMs)));
 
-                db.pages().finish(pageId, navigator.title(), visitTimeMs);
+                // Save the main resource
+                var mainResource = navigation.mainResource().get(120, TimeUnit.SECONDS);
+                Long mainResourceId = storage.save(pageId, mainResource, metadata);
+
+                // Update the database
+                db.pages().finish(pageId, navigator.title(), visitTimeMs, mainResourceId);
                 frontier.release(candidate, FrontierUrl.State.CRAWLED);
             } catch (NavigationException e) {
                 log.error("NavigationException {}", e.getMessage());
@@ -162,6 +186,7 @@ public class Worker {
             }
 
             navigator.navigateToBlank();
+            outlinks.clear();
         }
     }
 

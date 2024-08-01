@@ -115,8 +115,9 @@ public class Storage implements Closeable {
      * to the previous response in the chain) and saves each response along with its associated request.
      * </p>
      */
-    public List<Resource> save(Resource.Metadata metadata,
-                               java.net.http.HttpResponse<byte[]> responseChain) throws IOException {
+    public void save(Resource.Metadata metadata,
+                     java.net.http.HttpResponse<byte[]> responseChain,
+                     Instant responseTime) throws IOException {
         // walk the response chain backwards and then reverse it so the responses are in order they were made
         var responses = new ArrayList<java.net.http.HttpResponse<byte[]>>();
         for (var response = responseChain; response != null; response = response.previousResponse().orElse(null)) {
@@ -124,7 +125,6 @@ public class Storage implements Closeable {
         }
         Collections.reverse(responses);
 
-        List<Resource> resources = new ArrayList<>();
         for (var response : responses) {
             var request = response.request();
             var httpResponse = new org.netpreserve.jwarc.HttpResponse.Builder(response.statusCode(), "")
@@ -151,11 +151,10 @@ public class Storage implements Closeable {
                     new BareMediaType(httpResponse.contentType().base().toString()),
                     new Network.ResourceType("Robots"),
                     response.version() == HttpClient.Version.HTTP_2 ? "h2" : null,
-                    responseHeader.length + response.body().length);
-            Resource resource = save(metadata.pageId(), fetch);
-            if (resource != null) resources.add(resource);
+                    responseHeader.length + response.body().length, null, null, null,
+                    responseTime);
+            save(metadata.pageId(), fetch, null);
         }
-        return resources;
     }
 
     private Map<String, List<String>> stripHttp2Headers(HttpHeaders headers) {
@@ -177,7 +176,7 @@ public class Storage implements Closeable {
         }
     }
 
-    public Resource save(long pageId, ResourceFetched fetch) throws IOException {
+    public Long save(long pageId, ResourceFetched fetch, Map<String, List<String>> metadata) throws IOException {
         long responseBodyLength;
         WarcDigest responseDigest;
         if (fetch.responseBodyChannel() != null) {
@@ -196,14 +195,14 @@ public class Storage implements Closeable {
                 responseBodyLength,
                 responseDigest == null ? null : responseDigest.prefixedBase32());
         if (existingDuplicate != null) {
-            log.debug("Not saving duplicate of resource {}: {}", existingDuplicate.id(), fetch.url());
+            log.debug("Not saving duplicate of resource {}: {}", existingDuplicate.responseUuid(), fetch.url());
             return null;
         }
 
-        Instant now = Instant.now();
-        UUID responseUuid = uuidGenerator.construct(now.toEpochMilli());
+        Instant responseTime = fetch.responseTime();
+        UUID responseUuid = uuidGenerator.construct(responseTime.toEpochMilli());
         var warcResponseBuilder = new WarcResponse.Builder(fetch.url().toString())
-                .date(now)
+                .date(responseTime)
                 .recordId(responseUuid);
         if (fetch.responseBodyChannel() != null) {
             var headerPlusBody = new SequenceInputStream(new ByteArrayInputStream(fetch.responseHeader()),
@@ -218,15 +217,29 @@ public class Storage implements Closeable {
         WarcResponse warcResponse = warcResponseBuilder.build();
 
         var warcRequestBuilder = new WarcRequest.Builder(fetch.url().toString())
-                .date(now)
-                .recordId(uuidGenerator.construct(now.toEpochMilli()))
+                .date(responseTime)
+                .recordId(uuidGenerator.construct(responseTime.toEpochMilli()))
                 .concurrentTo(warcResponse.id());
         setBody(warcRequestBuilder, HTTP_REQUEST, fetch.requestHeader(), fetch.requestBody());
         WarcRequest warcRequest = warcRequestBuilder.build();
 
+        WarcMetadata warcMetadata;
+        if (metadata != null) {
+            warcMetadata = new WarcMetadata.Builder()
+                    .recordId(uuidGenerator.construct(responseTime.toEpochMilli()))
+                    .targetURI(fetch.url().toString())
+                    .date(responseTime)
+                    .concurrentTo(warcResponse.id())
+                    .fields(metadata)
+                    .build();
+        } else {
+            warcMetadata = null;
+        }
+
         long responseOffset;
         long responseLength;
         long requestLength;
+        long metadataLength;
 
         lock.lock();
         try {
@@ -238,6 +251,12 @@ public class Storage implements Closeable {
             responseLength = warcWriter.position() - responseOffset;
             warcWriter.write(warcRequest);
             requestLength = warcWriter.position() - responseOffset - responseLength;
+            if (warcMetadata != null) {
+                warcWriter.write(warcMetadata);
+                metadataLength = warcWriter.position() - responseOffset - responseLength - requestLength;
+            } else {
+                metadataLength = 0;
+            }
         } finally {
             lock.unlock();
         }
@@ -245,24 +264,32 @@ public class Storage implements Closeable {
         return db.inTransaction(db -> {
             long hostId = db.hosts().insertOrGetId(fetch.url().rhost());
             long domainId = db.domains().insertOrGetId(fetch.url().rdomain());
-            Resource resource = new Resource(responseUuid, pageId,
+            Resource resource = new Resource(
+                    responseUuid,
+                    pageId,
                     fetch.method(),
                     fetch.url(),
                     hostId,
                     domainId,
-                    warcResponse.date(),
+                    responseTime,
                     filename,
-                    responseOffset, responseLength, requestLength,
-                    fetch.status(), fetch.redirect(),
+                    responseOffset,
+                    responseLength,
+                    requestLength,
+                    metadataLength,
+                    fetch.status(),
+                    fetch.redirect(),
                     fetch.responseType(),
                     responseBodyLength,
                     responseDigest,
-                    fetch.fetchTimeMs(), fetch.ipAddress(), fetch.type(),
+                    fetch.fetchTimeMs(),
+                    fetch.ipAddress(),
+                    fetch.type(),
                     fetch.protocol(),
                     fetch.transferred());
-            db.resources().add(resource);
+            long id = db.resources().add(resource);
             db.pages().addResourceToPage(pageId, resource.payloadSize());
-            return resource;
+            return id;
         });
     }
 }
