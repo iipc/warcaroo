@@ -1,5 +1,7 @@
 package org.netpreserve.warcbot.cdp.domains;
 
+import org.netpreserve.warcbot.util.Url;
+
 import java.util.function.Consumer;
 
 public interface Browser {
@@ -11,10 +13,17 @@ public interface Browser {
 
     void onDownloadProgress(Consumer<DownloadProgress> event);
 
+    void onDownloadWillBegin(Consumer<DownloadWillBegin> event);
+
+    void cancelDownload(String guid);
+
     record Version(String protocolVersion, String product, String revision, String userAgent,
                    String jsVersion) {
     }
 
     record DownloadProgress(String guid, long totalBytes, long receivedBytes, String state) {
+    }
+
+    record DownloadWillBegin(Page.FrameId frameId, String guid, Url url, String suggestedFilename) {
     }
 }

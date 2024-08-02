@@ -128,6 +128,10 @@ public interface Network {
         public boolean isDocument() {
             return value.equals("Document");
         }
+
+        public boolean isDownload() {
+            return value.equals("Download");
+        }
     }
 
     record RequestWillBeSent(

@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 public class NetworkManager {
     private static final Logger log = LoggerFactory.getLogger(NetworkManager.class);
@@ -23,12 +24,14 @@ public class NetworkManager {
     private final Fetch fetch;
     private final Network network;
     private final Map<Network.RequestId, ResourceRecorder> recorders = new ConcurrentHashMap<>();
+    private final Map<String, ResourceRecorder> downloadRecorders = new ConcurrentHashMap<>();
     private final IdleMonitor idleMonitor;
     private final Consumer<ResourceFetched> resourceHandler;
     private final RequestHandler requestHandler;
     private final Path downloadPath;
     private Predicate<String> blocker = url -> false;
     private volatile boolean captureResponseBodies = true;
+    private volatile ResourceRecorder possibleDownloadRecorder = null;
 
     public NetworkManager(CDPSession cdpSession, IdleMonitor idleMonitor,
                           RequestHandler requestHandler, Consumer<ResourceFetched> resourceHandler,
@@ -60,22 +63,48 @@ public class NetworkManager {
 
         fetch.onRequestPaused(this::handleRequestOrResponsePaused);
 
-        browser.setDownloadBehavior("allowAndName", downloadPath.toString(), true);
         browser.onDownloadProgress(this::handleDownloadProgress);
-        browser.setDownloadBehavior("deny", null, false);
+        browser.onDownloadWillBegin(this::handleDownloadWillBegin);
+        browser.setDownloadBehavior("allowAndName", downloadPath.toString(), true);
 
         network.enable(10*1024*1024, 10*1024*1024, 10*1024*1024);
         fetch.enable(List.of(new Fetch.RequestPattern(null, null, "Request")));
     }
 
+    private void handleDownloadWillBegin(Browser.DownloadWillBegin downloadWillBegin) {
+        if (possibleDownloadRecorder != null
+            && possibleDownloadRecorder.frameId.equals(downloadWillBegin.frameId())
+            && possibleDownloadRecorder.request.url().equals(downloadWillBegin.url())) {
+            downloadRecorders.put(downloadWillBegin.guid(), possibleDownloadRecorder);
+            possibleDownloadRecorder = null;
+        } else {
+            log.atWarn().addKeyValue("url", downloadWillBegin.url())
+                    .addKeyValue("frameId", downloadWillBegin.frameId())
+                    .addKeyValue("guid", downloadWillBegin.guid())
+                    .log("Canceling unexpected download");
+            browser.cancelDownload(downloadWillBegin.guid());
+        }
+    }
+
     private void handleDownloadProgress(Browser.DownloadProgress event) {
-        if ("completed".equals(event.state())) {
-            // For now just delete the completed file, since the resourceHandler has already seen the response body.
-            try {
-                Files.deleteIfExists(downloadPath.resolve(event.guid()));
-            } catch (IOException e) {
-                log.warn("Error deleting downloaded file", e);
+        switch (event.state()) {
+            case "completed" -> {
+                var recorder = downloadRecorders.remove(event.guid());
+                if (recorder != null) {
+                    recorder.handleDownloadCompleted(event);
+                }
+                try {
+                    Files.deleteIfExists(downloadPath.resolve(event.guid()));
+                } catch (IOException e) {
+                    log.warn("Error deleting downloaded file", e);
+                }
             }
+            case "canceled" -> {
+                downloadRecorders.remove(event.guid());
+            }
+            case "inProgress" -> {
+            }
+            default -> log.warn("Unexpected Network.downloadProgress state: {}", event.state());
         }
     }
 
@@ -113,6 +142,11 @@ public class NetworkManager {
         var recorder = recorders.get(event.requestId());
         if (recorder != null) {
             recorder.handleLoadingFailed(event);
+            if (event.canceled() && event.errorText().equals("net::ERR_ABORTED")
+                && recorder.resourceType.isDocument()) {
+                // this might be the frame load being cancelled to start a download
+                possibleDownloadRecorder = recorder;
+            }
         }
     }
 
@@ -187,10 +221,10 @@ public class NetworkManager {
 
     public void waitForLoadingResources() {
         try {
-            CompletableFuture.allOf(recorders.values()
-                            .stream().map(recorder -> recorder.completionFuture)
-                            .toArray(CompletableFuture[]::new))
-                    .get(120, TimeUnit.SECONDS);
+            var futures = Stream.concat(recorders.values().stream(), downloadRecorders.values().stream())
+                    .map(recorder -> recorder.completionFuture)
+                    .toArray(CompletableFuture[]::new);
+            CompletableFuture.allOf(futures).get(120, TimeUnit.SECONDS);
         } catch (ExecutionException | TimeoutException | InterruptedException e) {
             log.warn("waitForLoadingResources threw", e);
         }

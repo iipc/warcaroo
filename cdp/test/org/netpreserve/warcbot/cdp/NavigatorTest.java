@@ -201,13 +201,45 @@ class NavigatorTest {
                 assertEquals("net::ERR_ABORTED", e.errorText(),
                         "Download should abort the page load");
             }
-            Thread.sleep(1000);
+            navigator.waitForRequestInterceptorIdle();
         } finally {
             httpServer.stop(0);
         }
         assertTrue(recordedPaths.contains("/lazy.jpg"));
         assertTrue(recordedPaths.contains("/post"));
+        assertTrue(recordedPaths.contains("/download"));
+    }
 
+    @Test
+    public void testPDF() throws Exception {
+        var httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0, "/", exchange -> {
+            if (exchange.getRequestURI().toString().equals("/test.pdf")) {
+                exchange.getResponseHeaders().add("Content-Type", "application/pdf");
+                exchange.sendResponseHeaders(200, 0);
+                String pdf = """
+                        %PDF-1.0
+                        1 0 obj<</Pages 2 0 R>>endobj 2 0 obj<</Kids[3 0 R]/Count 1>>endobj 3 0 obj<</MediaBox[0 0 3 3]>>endobj
+                        trailer<</Root 1 0 R>>""";
+                exchange.getResponseBody().write(pdf.getBytes());
+            }
+            exchange.close();
+        });
+        httpServer.start();
+        var subresources = new ArrayList<ResourceFetched>();
+        try (var navigator = browserProcess.newWindow(subresources::add, null)){
+
+            try {
+                navigator.navigateTo(new Url("http://127.0.0.1:" + httpServer.getAddress().getPort() + "/test.pdf"));
+            } catch (NavigationFailedException ignored) {
+                // navigation should be aborted as we transition to download
+            }
+            navigator.waitForRequestInterceptorIdle();
+            navigator.networkManager().waitForLoadingResources();
+
+            assertEquals(1, subresources.size());
+        } finally {
+            httpServer.stop(0);
+        }
     }
 
 }

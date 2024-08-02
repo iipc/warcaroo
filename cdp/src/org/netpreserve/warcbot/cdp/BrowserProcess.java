@@ -49,6 +49,10 @@ public class BrowserProcess implements AutoCloseable {
     }
 
     public static BrowserProcess start(String executable, Path profileDir, boolean headless) throws IOException {
+        Path preferencesFile = profileDir.resolve("Default").resolve("Preferences");
+        Files.createDirectories(preferencesFile.getParent());
+        Files.writeString(preferencesFile, "{\"plugins\":{\"always_open_pdf_externally\": true}}");
+
         boolean usePipe = Files.isExecutable(Path.of("/bin/sh"));
         Process process;
         if (executable == null) {

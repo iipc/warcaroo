@@ -1,5 +1,6 @@
 package org.netpreserve.warcbot.cdp;
 
+import org.netpreserve.warcbot.cdp.domains.Browser;
 import org.netpreserve.warcbot.cdp.domains.Fetch;
 import org.netpreserve.warcbot.cdp.domains.Network;
 import org.netpreserve.warcbot.cdp.domains.Page;
@@ -43,15 +44,15 @@ public class ResourceRecorder {
     private final Network network;
     private FileChannel channel;
     private Network.Response response;
-    private Network.Request request;
+    Network.Request request;
     private Map<String, String> fullRequestHeaders;
     private String rawResponseHeader;
-    private Network.ResourceType resourceType;
+    Network.ResourceType resourceType;
     private long bytesWritten = 0;
     private long bytesReceived = 0;
     CompletableFuture<Void> completionFuture = new CompletableFuture<>();
     private double requestTimestamp;
-    private Page.FrameId frameId;
+    Page.FrameId frameId;
     private Network.LoaderId loaderId;
 
     public ResourceRecorder(Network.RequestId networkId, Path downloadPath, Consumer<ResourceFetched> resourceHandler, Network network, boolean captureResponseBody) {
@@ -273,5 +274,20 @@ public class ResourceRecorder {
         });
         builder.append("\r\n");
         return builder.toString().getBytes(US_ASCII);
+    }
+
+    public void handleDownloadCompleted(Browser.DownloadProgress event) {
+        Path path = downloadPath.resolve(event.guid());
+        closeChannel();
+        try {
+            channel = FileChannel.open(path);
+        } catch (IOException e) {
+            log.atError().addKeyValue("url", request.url()).addKeyValue("guid", event.guid())
+                    .log("IO error reading download", e);
+            closeChannel();
+            return;
+        }
+        resourceType = new Network.ResourceType("Download");
+        dispatchResource(0, event.receivedBytes());
     }
 }

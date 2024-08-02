@@ -114,7 +114,8 @@ public class Navigator implements AutoCloseable {
 
     private void handleResource(ResourceFetched resource) {
         var navigation = currentNavigation.get();
-        if (navigation != null && resource.requestId().value().equals(navigation.loaderId().value())) {
+        if (!resource.type().isDownload() && navigation != null
+            && resource.requestId().value().equals(navigation.loaderId().value())) {
             if (!navigation.mainResource().complete(resource)) {
                 resource.close();
             }
