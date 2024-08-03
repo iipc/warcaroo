@@ -2,22 +2,15 @@ package org.netpreserve.warcbot.cdp;
 
 import org.netpreserve.warcbot.cdp.domains.*;
 import org.netpreserve.warcbot.cdp.protocol.CDPSession;
-import org.netpreserve.warcbot.util.BareMediaType;
-import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.io.UncheckedIOException;
-import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -29,7 +22,6 @@ public class NetworkManager {
     private static final Logger log = LoggerFactory.getLogger(NetworkManager.class);
     private final Browser browser;
     private final Fetch fetch;
-    private final IO io;
     private final Network network;
     private final Map<Network.RequestId, ResourceRecorder> recorders = new ConcurrentHashMap<>();
     private final Map<String, ResourceRecorder> downloadRecorders = new ConcurrentHashMap<>();
@@ -47,7 +39,6 @@ public class NetworkManager {
         this.requestHandler = requestHandler;
         this.browser = cdpSession.domain(Browser.class);
         this.fetch = cdpSession.domain(Fetch.class);
-        this.io = cdpSession.domain(IO.class);
         this.network = cdpSession.domain(Network.class);
         this.idleMonitor = idleMonitor;
         this.resourceHandler = resourceHandler;
