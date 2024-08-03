@@ -1,5 +1,6 @@
 package org.netpreserve.warcbot.cdp;
 
+import org.jetbrains.annotations.NotNull;
 import org.netpreserve.warcbot.cdp.domains.Browser;
 import org.netpreserve.warcbot.cdp.domains.Fetch;
 import org.netpreserve.warcbot.cdp.domains.Network;
@@ -27,12 +28,23 @@ import static java.nio.file.StandardOpenOption.*;
  * <p>
  * Normal order of events:
  * <ol>
- *   <li>Buffered data (returned by Network.streamResourceContent() in RequestPaused)
+ *   <li>RequestWillBeSent
  *   <li>RequestWillBeSentExtraInfo
  *   <li>ResponseReceivedExtraInfo
  *   <li>ResponseReceived
  *   <li>ReceivedData x N
  *   <li>LoadingFinished
+ * </ol>
+ * Order of events for a download:
+ * <ol>
+ *   <li>RequestWillBeSent
+ *   <li>RequestWillBeSentExtraInfo
+ *   <li>ResponseReceivedExtraInfo
+ *   <li>ResponseReceived
+ *   <li>LoadingFailed[canceled+err:NET_ABORT]
+ *   <li>DownloadWillBegin
+ *   <li>DownloadProgress[inProgress] x N
+ *   <li>DownloadProgress[completed]
  * </ol>
  */
 public class ResourceRecorder {
@@ -263,11 +275,14 @@ public class ResourceRecorder {
             rawResponseHeader = rawResponseHeader.replaceAll("(?mi)^(Content|Transfer)-Encoding:.*?\\r?\\n", "");
             return rawResponseHeader.getBytes(US_ASCII);
         }
-        var builder = new StringBuilder();
-        String reason = response.statusText();
+        return formatResponseHeader(response.status(), response.statusText(), response.headers());
+    }
+
+    static byte @NotNull [] formatResponseHeader(int status, String reason, Network.Headers headers) {
         if (reason == null) reason = "";
-        builder.append("HTTP/1.1 ").append(response.status()).append(" ").append(reason).append("\r\n");
-        response.headers().forEach((name, value) -> {
+        var builder = new StringBuilder();
+        builder.append("HTTP/1.1 ").append(status).append(" ").append(reason).append("\r\n");
+        headers.forEach((name, value) -> {
             if (name.equalsIgnoreCase("content-encoding")) return;
             if (name.equalsIgnoreCase("transfer-encoding")) return;
             builder.append(name).append(": ").append(value).append("\r\n");

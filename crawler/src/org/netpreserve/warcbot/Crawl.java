@@ -38,7 +38,7 @@ public class Crawl implements AutoCloseable {
         this.db = Database.open(dataPath.resolve("db.sqlite3"));
         this.httpClient = HttpClient.newHttpClient();
         this.frontier = new Frontier(db, config.getScope(), config);
-        this.storage = new Storage(dataPath, db);
+        this.storage = new Storage(dataPath, db, config);
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage,
                 List.of("nla.gov.au_bot", "warcbot"), config);
         this.browserProcess = BrowserProcess.start(config.getBrowserBinary(), dataPath.resolve("profile"),

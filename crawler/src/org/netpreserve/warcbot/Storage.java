@@ -32,6 +32,7 @@ import static org.netpreserve.jwarc.MediaType.HTTP_RESPONSE;
 
 public class Storage implements Closeable {
     private final Logger log = LoggerFactory.getLogger(Storage.class);
+    private final Config config;
     private WarcWriter warcWriter;
     final Database db;
     private final TimeBasedEpochGenerator uuidGenerator;
@@ -41,9 +42,10 @@ public class Storage implements Closeable {
     private final Path directory;
     private final Lock lock = new ReentrantLock();
 
-    public Storage(Path directory, Database db) throws IOException {
+    public Storage(Path directory, Database db, Config config) throws IOException {
         this.directory = directory;
         this.db = db;
+        this.config = config;
         this.uuidGenerator = Generators.timeBasedEpochGenerator();
     }
 
@@ -51,7 +53,9 @@ public class Storage implements Closeable {
         if (warcWriter != null) {
             warcWriter.close();
         }
-        filename = "warcbot-" + DATE_FORMAT.format(Instant.now()) + "-" + randomId() + ".warc.gz";
+        var warcPrefix = config.getCrawlSettings().warcPrefix();
+        if (warcPrefix == null) warcPrefix = "warcbot";
+        filename = warcPrefix + "-" + DATE_FORMAT.format(Instant.now()) + "-" + randomId() + ".warc.gz";
         warcWriter = new WarcWriter(FileChannel.open(directory.resolve(filename),
                 WRITE, CREATE, TRUNCATE_EXISTING), WarcCompression.GZIP);
         Warcinfo warcinfo = new Warcinfo.Builder()

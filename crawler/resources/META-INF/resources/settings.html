@@ -96,6 +96,10 @@
             <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#globe" /></svg>
             Browser
         </button>
+        <button type="button" data-tab="storageTab">
+            <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#archive" /></svg>
+            Storage
+        </button>
     </div>
 
     <section class="tab" id="limitsTab">
@@ -165,6 +169,17 @@
 
             <div>
                 <label><input name="headless" type="checkbox"> Hide browser window (headless mode)</label>
+            </div>
+        </fieldset>
+    </section>
+
+    <section class="tab" id="storageTab">
+        <fieldset>
+            <div>
+                <label>
+                    WARC filename prefix
+                    <input name="warcPrefix">
+                </label>
             </div>
         </fieldset>
     </section>

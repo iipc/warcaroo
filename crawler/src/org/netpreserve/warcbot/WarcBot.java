@@ -21,6 +21,7 @@ public class WarcBot {
         boolean headless = CrawlSettings.DEFAULTS.headless();
         String userAgent = CrawlSettings.DEFAULTS.userAgent();
         int workers = CrawlSettings.DEFAULTS.workers();
+        String warcPrefix = null;
 
         for (int i = 0; i < args.length; i++) {
             try {
@@ -57,6 +58,7 @@ public class WarcBot {
                     case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));
                     case "--trace-cdp" -> ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot.cdp.protocol.CDPBase")).setLevel(Level.TRACE);
                     case "-A", "--user-agent", "--userAgent" -> userAgent = args[++i];
+                    case "--warc-prefix" -> warcPrefix = args[++i];
                     case "-w", "--workers" -> workers = Integer.parseInt(args[++i]);
                     case "-v", "--verbose" -> verbosity++;
                     default -> {
@@ -87,7 +89,7 @@ public class WarcBot {
 
         config.setCrawlSettings(new CrawlSettings(workers, userAgent, headless, null, null,
                 null, null, null, null, null,
-                null));
+                null, warcPrefix));
         Crawl crawl = new Crawl(Path.of("data"), config);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {

@@ -14,7 +14,8 @@ public record CrawlSettings(
         Long domainPageLimit,
         Long domainSizeLimit,
         Long hostPageLimit,
-        Long hostSizeLimit
+        Long hostSizeLimit,
+        String warcPrefix
 ) {
     public CrawlSettings {
         validate("workers", workers, w -> w > 0);
@@ -27,6 +28,7 @@ public record CrawlSettings(
         validateIfNotNull("domainSizeLimit", domainSizeLimit, l -> l > 0);
         validateIfNotNull("hostPageLimit", hostPageLimit, l -> l > 0);
         validateIfNotNull("hostSizeLimit", hostSizeLimit, l -> l > 0);
+        validateIfNotNull("warcPrefix", warcPrefix, s -> !s.contains("/"));
     }
 
     private static <T> void validate(String name, T value, Predicate<T> validator) {
@@ -43,5 +45,5 @@ public record CrawlSettings(
 
     public static final CrawlSettings DEFAULTS = new CrawlSettings(1, "warcbot", true,
             null, null, null, null, null, null,
-            null, null);
+            null, null, null);
 }

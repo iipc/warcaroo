@@ -46,7 +46,7 @@ public interface Network {
     void continueInterceptedRequest(InterceptionId interceptionId);
 
     @Unwrap("resource")
-    LoadNetworkResourcePageResult loadNetworkResource(String url, Page.FrameId frameId, LoadNetworkResourceOptions options);
+    LoadNetworkResourcePageResult loadNetworkResource(Url url, Page.FrameId frameId, LoadNetworkResourceOptions options);
 
     record LoadNetworkResourceOptions(boolean disableCache, boolean includeCredentials) {
     }
