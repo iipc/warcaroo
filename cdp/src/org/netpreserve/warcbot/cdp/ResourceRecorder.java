@@ -63,9 +63,9 @@ public class ResourceRecorder {
     private long bytesWritten = 0;
     private long bytesReceived = 0;
     CompletableFuture<Void> completionFuture = new CompletableFuture<>();
-    private double requestTimestamp;
     Page.FrameId frameId;
     private Network.LoaderId loaderId;
+    private long startNanos = System.nanoTime();
 
     public ResourceRecorder(Network.RequestId networkId, Path downloadPath, Consumer<ResourceFetched> resourceHandler, Network network, boolean captureResponseBody) {
         this.captureResponseBody = captureResponseBody;
@@ -116,7 +116,8 @@ public class ResourceRecorder {
             // if we redirected, dispatch the redirect response.
             if (event.redirectResponse() != null) {
                 response = event.redirectResponse();
-                dispatchResource(event.timestamp(), event.redirectResponse().encodedDataLength());
+                dispatchResource(event.redirectResponse().encodedDataLength());
+                startNanos = System.nanoTime();
             } else {
                 if (captureResponseBody) {
                     network.streamResourceContent(networkId).thenAccept(this::handleBufferedData);
@@ -126,7 +127,6 @@ public class ResourceRecorder {
 
         this.request = event.request();
         this.resourceType = event.type();
-        this.requestTimestamp = event.timestamp();
         this.frameId = event.frameId();
         this.loaderId = event.loaderId();
     }
@@ -187,7 +187,7 @@ public class ResourceRecorder {
                         try {
                             if (ex == null) {
                                 write(responseBody.body());
-                                dispatchResource(event.timestamp(), event.encodedDataLength());
+                                dispatchResource(event.encodedDataLength());
                             } else {
                                 log.atError().addKeyValue("networkId", network).log("Error getting response body", ex);
                             }
@@ -199,13 +199,13 @@ public class ResourceRecorder {
         }
 
         try {
-            dispatchResource(event.timestamp(), event.encodedDataLength());
+            dispatchResource(event.encodedDataLength());
         } finally {
             completionFuture.complete(null);
         }
     }
 
-    private void dispatchResource(double timestamp, long encodedDataLength) {
+    private void dispatchResource(long encodedDataLength) {
         if (request == null) {
             wrap(log.atWarn()).log("never received request");
             return;
@@ -217,12 +217,7 @@ public class ResourceRecorder {
         if (!request.url().isHttp()) return;
         byte[] requestHeader = formatRequestHeader(request, fullRequestHeaders);
         byte[] responseHeader = formatResponseHeader(response, rawResponseHeader);
-        long fetchTimeMs;
-        if (response.timing() != null) {
-            fetchTimeMs = (long) ((timestamp - response.timing().requestTime()) * 1000);
-        } else {
-            fetchTimeMs = (long) ((timestamp - requestTimestamp) * 1000);
-        }
+        long fetchTimeMs = (System.nanoTime() - startNanos) / 1_000_000;
         String redirect = response.headers().get("location");
         var responseType = BareMediaType.of(response.headers().get("Content-Type"));
         rewindChannel();
@@ -303,6 +298,6 @@ public class ResourceRecorder {
             return;
         }
         resourceType = new Network.ResourceType("Download");
-        dispatchResource(0, event.receivedBytes());
+        dispatchResource(event.receivedBytes());
     }
 }

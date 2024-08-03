@@ -111,7 +111,8 @@ public interface Network {
 
     record MillisSinceEpoch(@JsonValue double value) {
         @JsonCreator
-        public MillisSinceEpoch {
+        public MillisSinceEpoch(Number value) {
+            this(value.doubleValue());
         }
 
         public Instant toInstant() {
