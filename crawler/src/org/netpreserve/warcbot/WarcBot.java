@@ -40,6 +40,7 @@ public class WarcBot {
                                   --port PORT               Set the port to bind the server.
                                   --seed-file FILE          Load seed URLs from the specified file.
                                   -A, --user-agent STR      Set the User-Agent string to identify the crawler to the server.
+                                  --warc-prefix STR         Prefix used when naming WARC files.
                                   -w, --workers INT         Specify the number of browser and worker threads to use (default is %d).
                                   -v, --verbose             Increase verbosity of the output.
                                 
@@ -58,7 +59,7 @@ public class WarcBot {
                     case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));
                     case "--trace-cdp" -> ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot.cdp.protocol.CDPBase")).setLevel(Level.TRACE);
                     case "-A", "--user-agent", "--userAgent" -> userAgent = args[++i];
-                    case "--warc-prefix" -> warcPrefix = args[++i];
+                    case "--warc-prefix", "--warcPrefix" -> warcPrefix = args[++i];
                     case "-w", "--workers" -> workers = Integer.parseInt(args[++i]);
                     case "-v", "--verbose" -> verbosity++;
                     default -> {
