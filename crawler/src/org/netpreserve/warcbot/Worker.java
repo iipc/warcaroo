@@ -22,13 +22,12 @@ public class Worker {
     private final Frontier frontier;
     private final Storage storage;
     private final Database db;
-    private final NoArgGenerator pageIdGenerator = Generators.timeBasedEpochGenerator();
     private final RobotsTxtChecker robotsTxtChecker;
     private final Config config;
     private Thread thread;
     private volatile boolean closed = false;
     private volatile Long pageId;
-    private Set<String> outlinks = Collections.newSetFromMap(new ConcurrentSkipListMap<>());
+    private final Set<String> outlinks = Collections.newSetFromMap(new ConcurrentSkipListMap<>());
 
     public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
         this.id = id;
@@ -126,7 +125,6 @@ public class Worker {
                 Thread.sleep(200);
 
                 try {
-                    navigator.forceLoadLazyImages();
                     navigator.scrollToBottom();
                 } catch (CDPException e) {
                     if (!e.getMessage().contains("uniqueContextId not found") &&

@@ -5,8 +5,6 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.netpreserve.warcbot.cdp.domains.IO;
-import org.netpreserve.warcbot.cdp.domains.Network;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,10 +129,12 @@ class NavigatorTest {
             exchange.getResponseBody().write("""
                 <!doctype html>
                 <title>Test page</title>
+                <style>.unused { background: url(bg.jpg) }</style>
                 <div style='height:4000px'></div>
                 <a href='link1'>Link1</a>
                 <img loading=lazy src=lazy.jpg id=lazy>
                 <img id=scrollImg data-src=scroll.jpg width=50 height=50>
+                <img src=srcset1.jpg srcset="srcset2.jpg 100w, srcset3.jpg 200w">
                 <script>
                     var observer = new IntersectionObserver(function(entries, observer) {
                         entries.forEach(function(entry) {
@@ -188,7 +188,6 @@ class NavigatorTest {
             assertEquals(List.of("/link1"), navigator.extractLinks().stream()
                     .map(link -> link.toURI().getPath()).toList());
 
-            navigator.forceLoadLazyImages();
             Thread.sleep(1000);
             assertTrue(requestedPaths.contains("/lazy.jpg"));
             navigator.scrollToBottom();
@@ -205,6 +204,10 @@ class NavigatorTest {
         } finally {
             httpServer.stop(0);
         }
+        assertTrue(recordedPaths.contains("/bg.jpg"));
+        assertTrue(recordedPaths.contains("/srcset1.jpg"));
+        assertTrue(recordedPaths.contains("/srcset2.jpg"));
+        assertTrue(recordedPaths.contains("/srcset3.jpg"));
         assertTrue(recordedPaths.contains("/lazy.jpg"));
         assertTrue(recordedPaths.contains("/post"));
         assertTrue(recordedPaths.contains("/download"));

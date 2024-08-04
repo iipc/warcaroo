@@ -10,16 +10,22 @@ import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 public class Navigator implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(Navigator.class);
+    private static final String forceLoadScript = loadResource("forceload.js");
     private final Emulation emulation;
     private final Page page;
     private final Runtime runtime;
@@ -107,7 +113,7 @@ public class Navigator implements AutoCloseable {
         runtime.enable();
         page.setLifecycleEventsEnabled(true);
         page.createIsolatedWorld(frameTree.frame().id(), "warcbot", false);
-        page.addScriptToEvaluateOnNewDocument("// warcbot", "warcbot");
+        page.addScriptToEvaluateOnNewDocument(forceLoadScript, "warcbot");
 
         runtime.onConsoleAPICalled(event -> log.debug("Console: {} {}", event.type(), event.args()));
     }
@@ -137,7 +143,6 @@ public class Navigator implements AutoCloseable {
              }, null)) {
             //browser.webDriver.manage().timeouts().implicitlyWait(Duration.ofSeconds(5));
             visitor.navigateTo(new Url(args[0]));
-            visitor.forceLoadLazyImages();
             System.err.println("Scrolling...");
             visitor.scrollToBottom();
             System.err.println("Done scrolling");
@@ -236,17 +241,6 @@ public class Navigator implements AutoCloseable {
         return urls.stream().map(Url::new).toList();
     }
 
-    public void forceLoadLazyImages() {
-        eval("""
-                    document.querySelectorAll('img[loading="lazy"]').forEach(img => {
-                        img.loading = 'eager';
-                        if (!img.complete) {
-                          img.src = img.src;
-                        }
-                      });
-                """);
-    }
-
     public void scrollToBottom() {
         try {
             evalPromise("""
@@ -319,5 +313,15 @@ public class Navigator implements AutoCloseable {
 
     public NetworkManager networkManager() {
         return networkManager;
+    }
+
+    private static String loadResource(String resource) {
+        try {
+            try (InputStream stream = Objects.requireNonNull(Navigator.class.getResourceAsStream(resource), resource)) {
+                return new String(stream.readAllBytes(), UTF_8);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }
