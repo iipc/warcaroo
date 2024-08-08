@@ -227,6 +227,7 @@ public class ResourceRecorder {
                 null, channel, response.remoteIPAddress(), fetchTimeMs, response.status(),
                 redirect, responseType, resourceType, response.protocol(), encodedDataLength, frameId,
                 loaderId, networkId, instant));
+        channel = null;
     }
 
     public void handleLoadingFailed(Network.LoadingFailed event) {
