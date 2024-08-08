@@ -107,6 +107,7 @@ public class WarcBot {
             var httpServer = HttpServer.create(new InetSocketAddress(host, port), 0);
             httpServer.createContext("/", new Webapp(crawl));
             httpServer.setExecutor(Executors.newCachedThreadPool());
+            System.out.println("Listening on http://" + host + ":" + httpServer.getAddress().getPort() + "/");
             httpServer.start();
         } else {
             crawl.start();
