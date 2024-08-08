@@ -15,7 +15,7 @@ public interface Fetch {
 
     void continueRequest(RequestId requestId, boolean interceptResponse);
     CompletionStage<Void> continueRequestAsync(RequestId requestId, boolean interceptResponse);
-    void continueResponse(RequestId requestId);
+    CompletionStage<Void> continueResponseAsync(RequestId requestId);
     Network.ResponseBody getResponseBody(RequestId requestId);
     @Unwrap("stream")
     IO.StreamHandle takeResponseBodyAsStream(RequestId requestId);

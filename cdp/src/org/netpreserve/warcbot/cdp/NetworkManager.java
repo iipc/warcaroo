@@ -155,10 +155,14 @@ public class NetworkManager {
      */
     private void handleRequestOrResponsePaused(Fetch.RequestPaused event) {
         if (event.isResponseStage()) {
-            //handleResponsePaused(event);
+            handleResponsePaused(event);
         } else {
             handleRequestPaused(event);
         }
+    }
+
+    private void handleResponsePaused(Fetch.RequestPaused event) {
+        fetch.continueResponseAsync(event.requestId());
     }
 
     private void handleRequestPaused(Fetch.RequestPaused event) {
@@ -198,7 +202,7 @@ public class NetworkManager {
             }
         }
 
-        fetch.continueRequestAsync(event.requestId(), false);
+        fetch.continueRequestAsync(event.requestId(), true);
     }
 
     private ResourceRecorder getOrCreateRecorder(Network.RequestId requestId) {
