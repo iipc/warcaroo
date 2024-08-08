@@ -73,7 +73,8 @@ public class BrowserProcess implements AutoCloseable {
                 "--disable-sync",
                 "--use-mock-keychain",
                 "--user-data-dir=" + profileDir.toString(),
-                "--disable-blink-features=AutomationControlled"));
+                "--disable-blink-features=AutomationControlled",
+                "--window-size=1920,1080"));
         if (headless) {
             command.add("--headless=new");
             command.add("--disable-gpu");
