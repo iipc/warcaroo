@@ -190,7 +190,9 @@ public class ResourceRecorder {
                                 write(responseBody.body());
                                 dispatchResource(event.encodedDataLength());
                             } else {
-                                log.atError().addKeyValue("networkId", network).log("Error getting response body", ex);
+                                log.atError().addKeyValue("networkId", network)
+                                        .addKeyValue("url", request.url())
+                                        .log("Error getting response body", ex);
                             }
                         } finally {
                             completionFuture.complete(null);
