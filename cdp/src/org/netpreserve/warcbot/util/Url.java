@@ -50,7 +50,9 @@ public class Url {
     }
 
     public String domain() {
-        return publicSuffixList.getRegistrableDomain(host());
+        String domain = publicSuffixList.getRegistrableDomain(host());
+        if (domain == null) return host();
+        return domain;
     }
 
     public String rdomain() {
