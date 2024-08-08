@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
@@ -221,10 +222,11 @@ public class ResourceRecorder {
         String redirect = response.headers().get("location");
         var responseType = BareMediaType.of(response.headers().get("Content-Type"));
         rewindChannel();
+        Instant instant = response.responseTime() == null ? Instant.now() : response.responseTime().toInstant();
         resourceHandler.accept(new ResourceFetched(request.method(), response.url(), requestHeader, request.body(), responseHeader,
                 null, channel, response.remoteIPAddress(), fetchTimeMs, response.status(),
                 redirect, responseType, resourceType, response.protocol(), encodedDataLength, frameId,
-                loaderId, networkId, response.responseTime().toInstant()));
+                loaderId, networkId, instant));
     }
 
     public void handleLoadingFailed(Network.LoadingFailed event) {
