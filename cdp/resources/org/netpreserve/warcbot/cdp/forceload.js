@@ -38,7 +38,7 @@ function processStylesheet(stylesheet) {
             }
         });
     } catch (e) {
-        console.warn('Cannot read cssRules from stylesheet', stylesheet, e);
+        // stylesheet probably had a different origin
     }
 }
 
