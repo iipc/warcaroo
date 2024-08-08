@@ -37,6 +37,10 @@ public class Frontier {
             if (!scope.test(url.toString())) continue;
 
             String domain = publicSuffixList.getRegistrableDomain(url.host());
+            if (domain == null) {
+                log.warn("Unable to get domain for {}", url);
+                domain = url.host();
+            }
             String rhost = url.rhost();
             String rdomain = Url.reverseHost(domain);
             Instant now = Instant.now();
