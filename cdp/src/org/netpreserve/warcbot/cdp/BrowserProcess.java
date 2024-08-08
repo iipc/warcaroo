@@ -177,7 +177,7 @@ public class BrowserProcess implements AutoCloseable {
 
     public Navigator newWindow(Consumer<ResourceFetched> resourceHandler,
                                RequestHandler requestHandler) {
-        String targetId = target.createTarget("about:blank", true).targetId();
+        String targetId = target.createTarget("about:blank", true, 1920, 1080).targetId();
         var sessionId = target.attachToTarget(targetId, true).sessionId();
         var session = new CDPSession(cdp, sessionId);
         return new Navigator(session, resourceHandler, requestHandler);

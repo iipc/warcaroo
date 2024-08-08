@@ -8,7 +8,7 @@ public interface Target {
 
     GetTargets getTargets();
 
-    CreateTarget createTarget(String url, boolean newWindow);
+    CreateTarget createTarget(String url, boolean newWindow, Integer width, Integer height);
 
     AttachToTarget attachToTarget(String targetId, boolean flatten);
 
