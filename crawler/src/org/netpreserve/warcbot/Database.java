@@ -40,6 +40,7 @@ public interface Database extends AutoCloseable, Transactional<Database> {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);
         config.setConnectionInitSql("PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;");
+        config.setMaximumPoolSize(1);
         var dataSource = new HikariDataSource(config);
         var jdbi = Jdbi.create(dataSource);
         jdbi.installPlugin(new SqlObjectPlugin());
