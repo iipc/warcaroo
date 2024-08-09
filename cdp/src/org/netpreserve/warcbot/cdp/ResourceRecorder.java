@@ -89,10 +89,16 @@ public class ResourceRecorder {
             extraInfoHeaders.forEach((name, value) -> {
                 if (name.equals(":authority")) name = "host";
                 if (name.startsWith(":")) return;
-                builder.append(name).append(": ").append(value).append("\r\n");
+                for (var line : value.split("\n")) {
+                    builder.append(name).append(": ").append(line).append("\r\n");
+                }
             });
         } else {
-            request.headers().forEach((name, value) -> builder.append(name).append(": ").append(value).append("\r\n"));
+            request.headers().forEach((name, value) -> {
+                for (var line : value.split("\n")) {
+                    builder.append(name).append(": ").append(line).append("\r\n");
+                }
+            });
             if (!request.headers().containsKey("Host")) {
                 builder.append("Host: ").append(url.hostAndPort()).append("\r\n");
             }
@@ -285,7 +291,9 @@ public class ResourceRecorder {
         headers.forEach((name, value) -> {
             if (name.equalsIgnoreCase("content-encoding")) return;
             if (name.equalsIgnoreCase("transfer-encoding")) return;
-            builder.append(name).append(": ").append(value).append("\r\n");
+            for (var line : value.split("\n")) {
+                builder.append(name).append(": ").append(line).append("\r\n");
+            }
         });
         builder.append("\r\n");
         return builder.toString().getBytes(US_ASCII);
