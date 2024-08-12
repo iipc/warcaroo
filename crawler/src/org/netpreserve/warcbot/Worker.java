@@ -25,6 +25,7 @@ public class Worker {
     private Thread thread;
     private volatile boolean closed = false;
     private volatile Long pageId;
+    private volatile FrontierUrl currentFrontierUrl;
     private final Set<String> outlinks = Collections.newSetFromMap(new ConcurrentSkipListMap<>());
 
     public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
@@ -86,8 +87,8 @@ public class Worker {
 
     void run() throws Exception {
         while (!closed) {
-            var candidate = frontier.takeNext(id);
-            if (candidate == null) {
+            var frontierUrl = frontier.takeNext(id);
+            if (frontierUrl == null) {
                 log.info("No work available for worker {}", id);
                 try {
                     Thread.sleep(1000);
@@ -97,15 +98,16 @@ public class Worker {
                 continue;
             }
 
-            pageId = db.pages().create(candidate.url(), candidate.hostId(), candidate.domainId(), Instant.now());
+            currentFrontierUrl = frontierUrl;
+            pageId = db.pages().create(frontierUrl.url(), frontierUrl.hostId(), frontierUrl.domainId(), Instant.now());
 
             var startTime = System.nanoTime();
 
-            log.atInfo().addKeyValue("pageId", pageId).addKeyValue("url", candidate.url()).log("Considering page");
+            log.atInfo().addKeyValue("pageId", pageId).addKeyValue("url", frontierUrl.url()).log("Considering page");
 
             try {
-                if (!robotsTxtChecker.checkAllowed(pageId, candidate.url())) {
-                    frontier.release(candidate, FrontierUrl.State.ROBOTS_EXCLUDED);
+                if (!robotsTxtChecker.checkAllowed(pageId, frontierUrl.url())) {
+                    frontier.release(frontierUrl, FrontierUrl.State.ROBOTS_EXCLUDED);
                     continue;
                 }
 
@@ -115,8 +117,8 @@ public class Worker {
                 navigator.setUserAgent(config.getCrawlSettings().userAgent());
                 navigator.block(config.getBlockPredicate());
 
-                log.info("Nav to {}", candidate.url());
-                var navigation = navigator.navigateTo(candidate.url());
+                log.info("Nav to {}", frontierUrl.url());
+                var navigation = navigator.navigateTo(frontierUrl.url());
                 navigation.loadEvent().get(120, TimeUnit.SECONDS);
                 log.info("Load event");
 
@@ -140,7 +142,7 @@ public class Worker {
                             log.trace("Link: {}", link);
                         }
                     }
-                    frontier.addUrls(links, candidate.depth() + 1, candidate.url());
+                    frontier.addUrls(links, frontierUrl.depth() + 1, frontierUrl.url());
                     for (Url link : links) {
                         outlinks.add(link.toString() + " L a/@href");
                     }
@@ -154,7 +156,7 @@ public class Worker {
                 var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
                 var metadata = new TreeMap<String, List<String>>();
                 metadata.put("outlink", new ArrayList<>(outlinks));
-                if (candidate.via() != null) metadata.put("via", List.of(candidate.via().toString()));
+                if (frontierUrl.via() != null) metadata.put("via", List.of(frontierUrl.via().toString()));
                 metadata.put("visitTimeMs", List.of(String.valueOf(visitTimeMs)));
 
                 // Save the main resource
@@ -163,22 +165,22 @@ public class Worker {
 
                 // Update the database
                 db.pages().finish(pageId, navigator.title(), visitTimeMs, mainResourceId);
-                frontier.release(candidate, FrontierUrl.State.CRAWLED);
+                frontier.release(frontierUrl, FrontierUrl.State.CRAWLED);
             } catch (NavigationException e) {
                 log.error("NavigationException {}", e.getMessage());
                 db.pages().error(pageId, e);
                 synchronized (frontier) {
-                    frontier.release(candidate, FrontierUrl.State.FAILED);
+                    frontier.release(frontierUrl, FrontierUrl.State.FAILED);
                 }
             } catch (Throwable e) {
                 db.pages().error(pageId, e);
                 if (closed) return;
                 synchronized (frontier) {
-                    frontier.release(candidate, FrontierUrl.State.FAILED);
+                    frontier.release(frontierUrl, FrontierUrl.State.FAILED);
                 }
                 throw e;
             } finally {
-                log.info("Finished worker {} for {} [{}]", id, candidate.url(), pageId);
+                log.info("Finished worker {} for {} [{}]", id, frontierUrl.url(), pageId);
             }
 
             navigator.close();
@@ -197,5 +199,15 @@ public class Worker {
             }
         }, "Worker-" + id);
         thread.start();
+    }
+
+    public record Info(
+            int id, Long pageId, Url url
+    ) {
+    }
+
+    public Info info() {
+        var frontierUrl = currentFrontierUrl;
+        return new Info(id, pageId, frontierUrl != null ? frontierUrl.url() : null);
     }
 }

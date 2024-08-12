@@ -130,6 +130,21 @@ public class Crawl implements AutoCloseable {
         return state;
     }
 
+    public List<Worker.Info> workerInfo() {
+        List<Worker> workers;
+        startStopLock.lock();
+        try {
+            workers = new ArrayList<>(this.workers);
+        } finally {
+            startStopLock.unlock();
+        }
+        List<Worker.Info> infoList = new ArrayList<>(workers.size());
+        for (var worker : workers) {
+            infoList.add(worker.info());
+        }
+        return infoList;
+    }
+
     @HttpError(409)
     @Doc("The crawl was not in an appropriate state for this action.")
     public static class BadStateException extends Exception {

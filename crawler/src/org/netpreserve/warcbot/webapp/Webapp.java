@@ -168,6 +168,11 @@ public class Webapp implements HttpHandler {
         exchange.getResponseBody().write(screenshot);
     }
 
+    @GET("/api/workers")
+    List<Worker.Info> render(HttpExchange exchange) {
+        return crawl.workerInfo();
+    }
+
     @GET("/")
     void home(HttpExchange exchange) throws IOException {
         var connection = Objects.requireNonNull(getClass().getResource("/META-INF/resources/main.html"), "Resource main.html")

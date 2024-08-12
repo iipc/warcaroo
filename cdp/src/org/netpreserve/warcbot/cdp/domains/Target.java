@@ -12,6 +12,8 @@ public interface Target {
 
     AttachToTarget attachToTarget(String targetId, boolean flatten);
 
+    void closeTarget(String targetId);
+
     record CreateTarget(String targetId) {
     }
 

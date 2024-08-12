@@ -184,15 +184,6 @@ public class Navigator implements AutoCloseable {
 
     @Override
     public void close() {
-        try {
-            page.close();
-        } catch (CDPException e) {
-            if (!e.getMessage().contains("Session with given id not found")) {
-                throw e;
-            }
-        } catch (Exception e) {
-            // ignore
-        }
         cdpSession.close();
         var navigation = currentNavigation.getAndSet(null);
         if (navigation != null) {

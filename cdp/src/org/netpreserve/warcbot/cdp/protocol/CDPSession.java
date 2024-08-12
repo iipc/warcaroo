@@ -1,16 +1,23 @@
 package org.netpreserve.warcbot.cdp.protocol;
 
+import org.netpreserve.warcbot.cdp.domains.Target;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Map;
 
 public class CDPSession extends CDPBase {
+    private static final Logger log = LoggerFactory.getLogger(CDPSession.class);
     private final String sessionId;
+    private final String targetId;
     private final CDPClient client;
 
-    public CDPSession(CDPClient client, String sessionId) {
+    public CDPSession(CDPClient client, String sessionId, String targetId) {
         super();
         this.client = client;
         this.sessionId = sessionId;
+        this.targetId = targetId;
         client.sessions.put(sessionId, this);
     }
 
@@ -26,6 +33,11 @@ public class CDPSession extends CDPBase {
 
     @Override
     public void close() {
+        try {
+            client.domain(Target.class).closeTarget(targetId);
+        } catch (Exception e) {
+            log.warn("Error closing session target", e);
+        }
         client.sessions.remove(sessionId);
         super.close();
     }

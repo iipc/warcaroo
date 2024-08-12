@@ -180,7 +180,7 @@ public class BrowserProcess implements AutoCloseable {
                                RequestHandler requestHandler) {
         String targetId = target.createTarget("about:blank", true, 1920, 1080).targetId();
         var sessionId = target.attachToTarget(targetId, true).sessionId();
-        var session = new CDPSession(cdp, sessionId);
+        var session = new CDPSession(cdp, sessionId, targetId);
         return new Navigator(session, resourceHandler, requestHandler);
     }
 }
