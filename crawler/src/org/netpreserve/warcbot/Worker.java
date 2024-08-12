@@ -102,7 +102,7 @@ public class Worker {
             pageId = db.pages().create(frontierUrl.url(), frontierUrl.hostId(), frontierUrl.domainId(), Instant.now());
             var startTime = System.nanoTime();
 
-            updateInfo(new Info(id, pageId, frontierUrl.url(), Instant.ofEpochMilli(startTime)));
+            updateInfo(new Info(id, pageId, frontierUrl.url(), Instant.now()));
 
             log.atInfo().addKeyValue("pageId", pageId).addKeyValue("url", frontierUrl.url()).log("Considering page");
 

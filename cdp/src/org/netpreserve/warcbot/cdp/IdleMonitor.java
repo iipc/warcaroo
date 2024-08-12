@@ -32,7 +32,7 @@ public class IdleMonitor {
             }
             long remaining = deadline - System.nanoTime();
             if (remaining <= 0) return;
-            waitNanos(Math.min(remaining, 500_000_000));
+            waitNanos(Math.min(remaining, 100_000_000));
         } while (inflight > 0);
     }
 
