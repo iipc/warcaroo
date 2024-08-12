@@ -17,7 +17,7 @@ public interface HostDAO {
     @SqlQuery("INSERT INTO hosts (rhost) VALUES (:rhost) ON CONFLICT (rhost) DO UPDATE SET rhost = excluded.rhost RETURNING id")
     long insertOrGetId(String rhost);
 
-    @SqlQuery("SELECT id FROM hosts WHERE next_visit < :now AND id NOT IN (<excluded>)")
+    @SqlQuery("SELECT id FROM hosts WHERE next_visit < :now AND id NOT IN (<excluded>) ORDER BY next_visit")
     Long findNextToVisit(Instant now, @BindList(value = "excluded", onEmpty = BindList.EmptyHandling.VOID) Collection<Long> excluded);
 
     @SqlUpdate("""
