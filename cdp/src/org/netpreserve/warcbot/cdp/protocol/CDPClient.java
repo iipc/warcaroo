@@ -39,7 +39,7 @@ public class CDPClient extends CDPBase implements AutoCloseable {
             if (session != null) {
                 session.handleMessage(message);
             } else {
-                log.warn("Ignoring CDP message for unknown session: {}", message);
+                log.debug("Ignoring CDP message for unknown session: {}", message);
             }
         }
     }
