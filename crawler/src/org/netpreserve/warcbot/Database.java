@@ -7,6 +7,9 @@ import org.jdbi.v3.core.argument.ArgumentFactory;
 import org.jdbi.v3.core.argument.NullArgument;
 import org.jdbi.v3.core.config.JdbiConfig;
 import org.jdbi.v3.core.mapper.ColumnMapper;
+import org.jdbi.v3.core.statement.ParsedSql;
+import org.jdbi.v3.core.statement.SqlLogger;
+import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.sqlobject.CreateSqlObject;
 import org.jdbi.v3.sqlobject.SqlObjectPlugin;
 import org.jdbi.v3.sqlobject.locator.UseClasspathSqlLocator;
@@ -16,11 +19,14 @@ import org.netpreserve.jwarc.WarcDigest;
 import org.netpreserve.warcbot.cdp.domains.Network;
 import org.netpreserve.warcbot.util.BareMediaType;
 import org.netpreserve.warcbot.util.Url;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.sql.*;
+import java.time.Duration;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
@@ -53,6 +59,21 @@ public interface Database extends AutoCloseable, Transactional<Database> {
         jdbi.registerArgument(stringArgument(Url.class, Url::toString));
         jdbi.registerArgument(stringArgument(WarcDigest.class, WarcDigest::prefixedBase32));
         jdbi.getConfig(DataSourceHolder.class).dataSource = dataSource;
+        jdbi.setSqlLogger(new SqlLogger() {
+            private static final Logger log = LoggerFactory.getLogger(Database.class);
+
+            @Override
+            public void logAfterExecution(StatementContext context) {
+                if (context.getExecutionMoment() == null) return;
+                var duration = Duration.between(context.getExecutionMoment(), context.getExecutionMoment());
+                var durationMillis = duration.toMillis();
+                if (durationMillis > 100) {
+                    ParsedSql parsedSql = context.getParsedSql();
+                    String sql = parsedSql != null ? parsedSql.getSql() : "<sql unavailable>";
+                    log.warn("[Slow SQL] {}ms {}", durationMillis, sql);
+                }
+            }
+        });
         Database db = jdbi.onDemand(Database.class);
         db.init();
         return db;
