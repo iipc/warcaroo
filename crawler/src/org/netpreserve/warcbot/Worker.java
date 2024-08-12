@@ -25,8 +25,8 @@ public class Worker {
     private Thread thread;
     private volatile boolean closed = false;
     private volatile Long pageId;
-    private volatile FrontierUrl currentFrontierUrl;
     private final Set<String> outlinks = Collections.newSetFromMap(new ConcurrentSkipListMap<>());
+    private volatile Info info;
 
     public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
         this.id = id;
@@ -36,6 +36,7 @@ public class Worker {
         this.db = db;
         this.robotsTxtChecker = robotsTxtChecker;
         this.config = config;
+        info = new Info(id, null, null, Instant.now());
     }
 
     private void handleSubresource(ResourceFetched resource) {
@@ -98,10 +99,10 @@ public class Worker {
                 continue;
             }
 
-            currentFrontierUrl = frontierUrl;
             pageId = db.pages().create(frontierUrl.url(), frontierUrl.hostId(), frontierUrl.domainId(), Instant.now());
-
             var startTime = System.nanoTime();
+
+            updateInfo(new Info(id, pageId, frontierUrl.url(), Instant.ofEpochMilli(startTime)));
 
             log.atInfo().addKeyValue("pageId", pageId).addKeyValue("url", frontierUrl.url()).log("Considering page");
 
@@ -181,12 +182,17 @@ public class Worker {
                 throw e;
             } finally {
                 log.info("Finished worker {} for {} [{}]", id, frontierUrl.url(), pageId);
+                updateInfo(new Info(id, null, null, Instant.now()));
             }
 
             navigator.close();
             navigator = null;
             outlinks.clear();
         }
+    }
+
+    private void updateInfo(Info info) {
+        this.info = info;
     }
 
     public synchronized void start() {
@@ -202,12 +208,13 @@ public class Worker {
     }
 
     public record Info(
-            int id, Long pageId, Url url
-    ) {
+            int id,
+            Long pageId,
+            Url url,
+            Instant updateTime) {
     }
 
     public Info info() {
-        var frontierUrl = currentFrontierUrl;
-        return new Info(id, pageId, frontierUrl != null ? frontierUrl.url() : null);
+        return info;
     }
 }
