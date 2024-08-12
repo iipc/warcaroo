@@ -181,7 +181,8 @@ public class Worker {
                 log.info("Finished worker {} for {} [{}]", id, candidate.url(), pageId);
             }
 
-            navigator.navigateToBlank();
+            navigator.close();
+            navigator = null;
             outlinks.clear();
         }
     }
