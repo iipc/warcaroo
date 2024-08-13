@@ -53,7 +53,7 @@ public interface HostDAO {
             WHERE (:rhost IS NULL OR rhost GLOB :rhost)
             """;
 
-    @SqlQuery("""
+    @SqlUpdate("""
             UPDATE hosts
             SET next_visit = NULL
             WHERE id = :hostId
