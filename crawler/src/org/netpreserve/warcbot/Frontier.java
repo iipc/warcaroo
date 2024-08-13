@@ -66,10 +66,17 @@ public class Frontier {
     }
 
     public synchronized @Nullable FrontierUrl takeNext(int workerId) {
-        Long hostId = db.hosts().findNextToVisit(Instant.now(), lockedHosts);
-        if (hostId == null) return null;
-        lockedHosts.add(hostId);
-        return db.frontier().nextUrlForHost(hostId);
+        while (true) {
+            Long hostId = db.hosts().findNextToVisit(Instant.now(), lockedHosts);
+            if (hostId == null) return null;
+            FrontierUrl frontierUrl = db.frontier().nextUrlForHost(hostId);
+            if (frontierUrl == null) {
+                db.hosts().clearNextVisitIfNoPendingUrls(hostId);
+                continue;
+            }
+            lockedHosts.add(hostId);
+            return frontierUrl;
+        }
     }
 
     public synchronized void release(FrontierUrl frontierUrl, FrontierUrl.State newState) {

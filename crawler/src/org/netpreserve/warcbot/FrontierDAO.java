@@ -22,7 +22,7 @@ public interface FrontierDAO extends Transactional<FrontierDAO> {
     @MustUpdate
     void updateState(long id, FrontierUrl.State state);
 
-    @SqlQuery("SELECT * FROM frontier WHERE host_id = :hostId AND state = 'PENDING'")
+    @SqlQuery("SELECT * FROM frontier WHERE host_id = :hostId AND state = 'PENDING' ORDER BY depth, id LIMIT 1")
     FrontierUrl nextUrlForHost(long hostId);
 
     String FRONTIER_WHERE = """
