@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
@@ -161,8 +162,15 @@ public class Worker {
                 metadata.put("visitTimeMs", List.of(String.valueOf(visitTimeMs)));
 
                 // Save the main resource
-                var mainResource = navigation.mainResource().get(120, TimeUnit.SECONDS);
-                Long mainResourceId = storage.save(pageId, mainResource, metadata);
+                Long mainResourceId = null;
+                try {
+                    var mainResource = navigation.mainResource().get(5, TimeUnit.SECONDS);
+                    mainResourceId = storage.save(pageId, mainResource, metadata);
+                } catch (TimeoutException ignored) {
+                    log.atWarn().addKeyValue("url", frontierUrl.url())
+                            .addKeyValue("paqgeId", pageId)
+                            .log("No main resource captured");
+                }
 
                 // Update the database
                 db.pages().finish(pageId, navigator.title(), visitTimeMs, mainResourceId);
