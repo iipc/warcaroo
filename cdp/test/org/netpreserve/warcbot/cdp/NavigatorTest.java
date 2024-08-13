@@ -132,6 +132,7 @@ class NavigatorTest {
                 <style>.unused { background: url(bg.jpg) }</style>
                 <div style='height:4000px'></div>
                 <a href='link1'>Link1</a>
+                <svg><a href='svglink'><text y='25'>Svglink</text></a></svg>
                 <img loading=lazy src=lazy.jpg id=lazy>
                 <img id=scrollImg data-src=scroll.jpg width=50 height=50>
                 <img src=srcset1.jpg srcset="srcset2.jpg 100w, srcset3.jpg 200w">
@@ -185,7 +186,7 @@ class NavigatorTest {
             assertEquals("Test page", navigator.title());
             assertTrue(requestedPaths.contains("/"));
 
-            assertEquals(List.of("/link1"), navigator.extractLinks().stream()
+            assertEquals(List.of("/link1", "/svglink"), navigator.extractLinks().stream()
                     .map(link -> link.toURI().getPath()).toList());
 
             Thread.sleep(1000);
