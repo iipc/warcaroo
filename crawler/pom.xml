@@ -116,6 +116,12 @@
             <groupId>org.webjars.npm</groupId>
             <artifactId>feather-icons</artifactId>
             <version>4.29.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>*</groupId>
+                    <artifactId>*</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.jdbi</groupId>
