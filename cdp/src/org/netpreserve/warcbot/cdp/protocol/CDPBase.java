@@ -72,13 +72,17 @@ public abstract class CDPBase {
     }
 
     protected void handleMessage(RPC.ServerMessage message) {
-        executor.submit(() -> {
-            switch (message) {
-                case RPC.Event event -> handleEvent(event);
-                case RPC.Response response -> handleResponse(response);
-                case null, default -> log.error("Unknown message type: {}", message);
-            }
-        });
+        try {
+            executor.submit(() -> {
+                switch (message) {
+                    case RPC.Event event -> handleEvent(event);
+                    case RPC.Response response -> handleResponse(response);
+                    case null, default -> log.error("Unknown message type: {}", message);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            log.debug("Caught rejected execution exception, session is probably closing", e);
+        }
     }
 
     private void handleResponse(RPC.Response response) {
