@@ -112,6 +112,10 @@ public class Webapp implements HttpHandler {
 
         public void setHost(String host) {
             rhost = Url.reverseHost(host);
+            // remove trailing "," if doing a glob
+            if (host.startsWith("*")) {
+                rhost = rhost.substring(0, rhost.length() - 1);
+            }
         }
     }
 
@@ -127,7 +131,7 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/hosts")
     Paginated<Host> hosts(HostsQuery query) {
-        long count = crawl.db.hosts().countHosts(query);
+        long count = crawl.db.hosts().count(query);
         var rows = crawl.db.hosts().queryHosts(query.orderBy(Host.class), query);
         return new Paginated(count / query.limit + 1, count, rows);
     }

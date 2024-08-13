@@ -13,7 +13,11 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
+@RegisterConstructorMapper(Host.class)
 public interface HostDAO {
+    @SqlQuery("SELECT * FROM hosts WHERE id = ?")
+    Host find(long id);
+
     @SqlQuery("INSERT INTO hosts (rhost) VALUES (:rhost) ON CONFLICT (rhost) DO UPDATE SET rhost = excluded.rhost RETURNING id")
     long insertOrGetId(String rhost);
 
@@ -39,14 +43,13 @@ public interface HostDAO {
     void updateNextVisit(long id, Instant now, Instant nextVisit);
 
     @SqlQuery("SELECT COUNT(*) FROM hosts " + HOSTS_WHERE)
-    long countHosts(@BindFields Webapp.HostsQuery query);
+    long count(@BindFields Webapp.HostsQuery query);
 
     @SqlQuery("""
             SELECT * FROM hosts
             """ + HOSTS_WHERE + """
             <orderBy> LIMIT :limit OFFSET (:page - 1) * :limit""")
     @DefineNamedBindings
-    @RegisterConstructorMapper(Host.class)
     List<Host> queryHosts(@Define String orderBy, @BindFields Webapp.HostsQuery query);
 
     String HOSTS_WHERE = """
@@ -58,8 +61,11 @@ public interface HostDAO {
             SET next_visit = NULL
             WHERE id = :hostId
             AND NOT EXISTS (SELECT 1 FROM frontier f
-                WHERE f.host_id = :hostid
+                WHERE f.host_id = :hostId
                   AND f.state = 'PENDING');
             """)
     void clearNextVisitIfNoPendingUrls(long hostId);
+
+    @SqlQuery("SELECT * FROM hosts WHERE rhost = ?")
+    Host findByRHost(String rhost);
 }

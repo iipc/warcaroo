@@ -40,6 +40,8 @@ public interface FrontierDAO extends Transactional<FrontierDAO> {
         """)
     List<FrontierUrl> query(@Define String orderBy, @BindFields Webapp.FrontierQuery query);
 
+    @SqlQuery("SELECT * FROM frontier WHERE url = ?")
+    FrontierUrl findByUrl(Url url);
 
     @SqlQuery("SELECT id FROM frontier WHERE url = ?")
     Long findUrl(Url url);

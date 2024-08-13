@@ -13,10 +13,10 @@ import java.util.function.Predicate;
 
 public class Frontier {
     private static final Logger log = LoggerFactory.getLogger(Frontier.class);
+    private static final PublicSuffixList publicSuffixList = new PublicSuffixListFactory().build();
     private final Database db;
     private final Predicate<String> scope;
     private final Config config;
-    private final PublicSuffixList publicSuffixList = new PublicSuffixListFactory().build();
     private final Set<Long> lockedHosts = new HashSet<>();
 
     public Frontier(Database db, Predicate<String> scope, Config config) {

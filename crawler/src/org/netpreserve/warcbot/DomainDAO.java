@@ -1,8 +1,12 @@
 package org.netpreserve.warcbot;
 
+import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
+import org.jdbi.v3.sqlobject.customizer.BindFields;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+import org.netpreserve.warcbot.webapp.Webapp;
 
+@RegisterConstructorMapper(Domain.class)
 public interface DomainDAO {
     @SqlQuery("INSERT INTO domains (rhost) VALUES (:rhost) ON CONFLICT (rhost) DO UPDATE SET rhost = excluded.rhost RETURNING id")
     long insertOrGetId(String rhost);
@@ -18,4 +22,14 @@ public interface DomainDAO {
             WHERE id = :domainId
             """)
     void updateMetricsOnFrontierUrlStateChange(long domainId, FrontierUrl.State oldState, FrontierUrl.State newState);
+
+    @SqlQuery("SELECT * FROM domains WHERE rhost = ?")
+    Domain findByRHost(String rhost);
+
+    String HOSTS_WHERE = """
+            WHERE (:rhost IS NULL OR rhost GLOB :rhost)
+            """;
+
+    @SqlQuery("SELECT COUNT(*) FROM domains " + HOSTS_WHERE)
+    long count(@BindFields Webapp.HostsQuery query);
 }
