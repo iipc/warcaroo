@@ -221,7 +221,10 @@ public class Navigator implements AutoCloseable {
                 (function() {
                     const links = new Set();
                     for (const el of document.querySelectorAll('a[href]')) {
-                        const href = el.href;
+                        let href = el.href;
+                        if (href instanceof SVGAnimatedString) {
+                            href = new URL(href.baseVal, el.ownerDocument.location.href).toString();
+                        }
                         if (href.startsWith('http://') || href.startsWith('https://')) {
                             links.add(href.replace(/#.*$/, ''));
                         }
