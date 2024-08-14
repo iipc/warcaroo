@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.http.HttpClient;
 import java.nio.file.Path;
-import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.locks.Lock;
@@ -24,16 +23,25 @@ public class Crawl implements AutoCloseable {
     private final HttpClient httpClient;
     private final RobotsTxtChecker robotsTxtChecker;
     private final List<Worker> workers = new ArrayList<>();
-    private final BrowserProcess browserProcess;
+    private final List<BrowserProcess> browserProcesses = new ArrayList<>();
     private final Config config;
     private volatile State state = State.STOPPED;
     private final Lock startStopLock = new ReentrantLock();
 
-    enum State {
+    public List<BrowserProcess> browserProcesses() {
+        startStopLock.lock();
+        try {
+            return new ArrayList<>(browserProcesses);
+        } finally {
+            startStopLock.unlock();
+        }
+    }
+
+    public enum State {
         STOPPED, STARTING, RUNNING, STOPPING
     }
 
-    public Crawl(Path dataPath, Config config) throws SQLException, IOException {
+    public Crawl(Path dataPath, Config config) throws IOException {
         this.config = config;
         this.db = Database.open(dataPath.resolve("db.sqlite3"));
         this.httpClient = HttpClient.newHttpClient();
@@ -41,26 +49,13 @@ public class Crawl implements AutoCloseable {
         this.storage = new Storage(dataPath, db, config);
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage,
                 List.of("nla.gov.au_bot", "warcbot"), config);
-        this.browserProcess = BrowserProcess.start(config.getBrowserBinary(), dataPath.resolve("profile"),
-                config.getCrawlSettings().headless());
     }
 
     public void close() {
         startStopLock.lock();
         try {
             state = State.STOPPING;
-            for (Worker worker : workers) {
-                try {
-                    worker.close();
-                } catch (Exception e) {
-                    log.error("Failed to close worker {}", worker.id, e);
-                }
-            }
-            try {
-                browserProcess.close();
-            } catch (Exception e) {
-                log.error("Failed to close browser process", e);
-            }
+            closeAllBrowsers();
             try {
                 db.close();
             } catch (Exception e) {
@@ -82,22 +77,51 @@ public class Crawl implements AutoCloseable {
         }
     }
 
-    public void start() throws BadStateException {
+    public void start() throws BadStateException, IOException {
         if (!startStopLock.tryLock()) throw new BadStateException("Crawl busy " + state);
         try {
             if (state != State.STOPPED) throw new BadStateException("Can only start a STOPPED crawl");
             state = State.STARTING;
             frontier.addUrls(config.getSeeds(), 0, null);
-            for (int i = 0; i < config.getCrawlSettings().workers(); i++) {
-                workers.add(new Worker(i, browserProcess, frontier, storage, db, robotsTxtChecker, config));
+            for (var browserSettings : config.getBrowsers()) {
+                var browserProcess = BrowserProcess.start(
+                        browserSettings.executable(),
+                        browserSettings.options(),
+                        null,
+                        browserSettings.headless(),
+                        browserSettings.shell());
+                browserProcesses.add(browserProcess);
+                for (int i = 0; i < browserSettings.workers(); i++) {
+                    workers.add(new Worker(browserSettings.id() + "-" + i, browserProcess, frontier, storage, db, robotsTxtChecker, config));
+                }
             }
             for (Worker worker : workers) {
                 worker.start();
             }
             state = State.RUNNING;
+        } catch (Throwable e) {
+            closeAllBrowsers();
+            throw e;
         } finally {
             startStopLock.unlock();
         }
+    }
+
+    private void closeAllBrowsers() {
+        for (var worker : workers) {
+            try {
+                worker.close();
+            } catch (Exception ignored) {
+            }
+        }
+        workers.clear();
+        for (var browserProcess : browserProcesses) {
+            try {
+                browserProcess.close();
+            } catch (Exception ignored) {
+            }
+        }
+        browserProcesses.clear();
     }
 
     public void stop() throws BadStateException {
@@ -108,10 +132,7 @@ public class Crawl implements AutoCloseable {
             for (Worker worker : workers) {
                 worker.closeAsyncGraceful();
             }
-            for (Worker worker : workers) {
-                worker.close();
-            }
-            workers.clear();
+            closeAllBrowsers();
             state = State.STOPPED;
         } finally {
             startStopLock.unlock();
@@ -119,7 +140,8 @@ public class Crawl implements AutoCloseable {
     }
 
     public BrowserProcess browserProcess() {
-        return browserProcess;
+        if (browserProcesses.isEmpty()) throw new RuntimeException("No browser processes are running");
+        return browserProcesses.getFirst();
     }
 
     public Config config() {

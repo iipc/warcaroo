@@ -20,6 +20,8 @@ public class Config {
     private int crawlDelay = 2000;
     private String browserBinary;
     private volatile CrawlSettings crawlSettings = CrawlSettings.DEFAULTS;
+    private List<BrowserSettings> browsers;
+    private List<BrowserSettings> browserSettings;
 
     public void addInclude(String regex) {
         includes.add(Pattern.compile(regex));
@@ -102,5 +104,13 @@ public class Config {
 
     public void setCrawlSettings(CrawlSettings crawlSettings) {
         this.crawlSettings = crawlSettings;
+    }
+
+    public void setBrowsers(List<BrowserSettings> browsers) {
+        this.browsers = browsers;
+    }
+
+    public List<BrowserSettings> getBrowsers() {
+        return browsers;
     }
 }

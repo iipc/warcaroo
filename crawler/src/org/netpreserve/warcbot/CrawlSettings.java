@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.util.function.Predicate;
 
 public record CrawlSettings(
-        int workers,
         String userAgent,
         boolean headless,
         Long pageLimit,
@@ -18,7 +17,6 @@ public record CrawlSettings(
         String warcPrefix
 ) {
     public CrawlSettings {
-        validate("workers", workers, w -> w > 0);
         validate("userAgent", userAgent, u -> u != null && !u.trim().isEmpty());
         validateIfNotNull("pageLimit", pageLimit, l -> l > 0);
         validateIfNotNull("sizeLimit", sizeLimit, l -> l > 0);
@@ -43,7 +41,7 @@ public record CrawlSettings(
         }
     }
 
-    public static final CrawlSettings DEFAULTS = new CrawlSettings(1, "warcbot", true,
+    public static final CrawlSettings DEFAULTS = new CrawlSettings("warcbot", true,
             null, null, null, null, null, null,
             null, null, null);
 }

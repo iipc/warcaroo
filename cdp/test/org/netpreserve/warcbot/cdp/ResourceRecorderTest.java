@@ -73,7 +73,7 @@ class ResourceRecorderTest {
                 new String(resource.requestHeader(), US_ASCII));
         assertEquals("HTTP/1.1 200 OK\r\n" +
                      "CONTENT-Type: text/html\r\n\r\n", new String(resource.responseHeader(), US_ASCII));
-        assertEquals("text/html", resource.responseType());
+        assertEquals("text/html", resource.responseType().value());
         assertEquals("1.2.3.4", resource.ipAddress());
         assertEquals("hihihi", new String(responseBodies.get(0), UTF_8));
     }

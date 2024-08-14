@@ -65,7 +65,7 @@ public class Frontier {
         });
     }
 
-    public synchronized @Nullable FrontierUrl takeNext(int workerId) {
+    public synchronized @Nullable FrontierUrl takeNext() {
         while (true) {
             Long hostId = db.hosts().findNextToVisit(Instant.now(), lockedHosts);
             if (hostId == null) return null;

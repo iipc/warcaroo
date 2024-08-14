@@ -79,7 +79,7 @@ class FrontierTest {
         Url url = new Url("http://example.com");
         frontier.addUrl(url, 0, null);
 
-        FrontierUrl takenUrl = frontier.takeNext(1);
+        FrontierUrl takenUrl = frontier.takeNext();
 
         assertNotNull(takenUrl);
         assertEquals(url, takenUrl.url());
@@ -87,7 +87,7 @@ class FrontierTest {
 
     @Test
     void testTakeNextWithNoAvailableUrls() {
-        FrontierUrl result = frontier.takeNext(1);
+        FrontierUrl result = frontier.takeNext();
         assertNull(result);
     }
 
@@ -95,7 +95,7 @@ class FrontierTest {
     void testRelease() {
         Url url = new Url("http://example.com");
         frontier.addUrl(url, 0, null);
-        FrontierUrl frontierUrl = frontier.takeNext(1);
+        FrontierUrl frontierUrl = frontier.takeNext();
         assertNotNull(frontierUrl);
 
         frontier.release(frontierUrl, FrontierUrl.State.CRAWLED);
@@ -135,7 +135,7 @@ class FrontierTest {
     void testCrawlDelay() {
         Url url = new Url("http://example.com");
         frontier.addUrl(url, 0, null);
-        FrontierUrl frontierUrl = frontier.takeNext(1);
+        FrontierUrl frontierUrl = frontier.takeNext();
         assertNotNull(frontierUrl);
 
         frontier.release(frontierUrl, FrontierUrl.State.CRAWLED);

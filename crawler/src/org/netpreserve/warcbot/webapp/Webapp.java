@@ -12,7 +12,9 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.netpreserve.jwarc.WarcDigest;
 import org.netpreserve.warcbot.*;
+import org.netpreserve.warcbot.cdp.BrowserProcess;
 import org.netpreserve.warcbot.cdp.NavigationException;
+import org.netpreserve.warcbot.cdp.domains.Browser;
 import org.netpreserve.warcbot.util.Url;
 import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
 import org.netpreserve.warcbot.webapp.Route.GET;
@@ -99,6 +101,19 @@ public class Webapp implements HttpHandler {
                                  Map<String, Map<FrontierUrl.State, Long>> queueStateCounts) {
             super(lastPage, lastRow, data);
             this.queueStateCounts = queueStateCounts;
+        }
+    }
+
+    @GET("/api/browsers")
+    List<BrowserInfo> getBrowsers() {
+        return crawl.browserProcesses().stream()
+                .map(BrowserInfo::new)
+                .toList();
+    }
+
+    record BrowserInfo(Browser.Version version) {
+        public BrowserInfo(BrowserProcess browserProcess) {
+            this(browserProcess.version());
         }
     }
 
@@ -226,7 +241,7 @@ public class Webapp implements HttpHandler {
 
     @POST("/api/start")
     @Doc(summary = "Start the crawl")
-    public void start() throws Crawl.BadStateException {
+    public void start() throws Crawl.BadStateException, IOException {
         crawl.start();
     }
 

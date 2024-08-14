@@ -15,7 +15,7 @@ import java.util.concurrent.TimeoutException;
 
 public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
-    final int id;
+    final String id;
     Navigator navigator;
     private final BrowserProcess browserProcess;
     private final Frontier frontier;
@@ -29,7 +29,7 @@ public class Worker {
     private final Set<String> outlinks = Collections.newSetFromMap(new ConcurrentSkipListMap<>());
     private volatile Info info;
 
-    public Worker(int id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
+    public Worker(String id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
         this.id = id;
         this.browserProcess = browserProcess;
         this.frontier = frontier;
@@ -89,7 +89,7 @@ public class Worker {
 
     void run() throws Exception {
         while (!closed) {
-            var frontierUrl = frontier.takeNext(id);
+            var frontierUrl = frontier.takeNext();
             if (frontierUrl == null) {
                 log.info("No work available for worker {}", id);
                 try {
@@ -216,7 +216,7 @@ public class Worker {
     }
 
     public record Info(
-            int id,
+            String id,
             Long pageId,
             Url url,
             Instant updateTime) {
