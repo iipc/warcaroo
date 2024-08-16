@@ -75,7 +75,7 @@ public class RobotsTxtChecker {
             storage.save(new Resource.Metadata(pageId, fetchTimeMs, ipAddress), response, responseTimeRef.get());
         } catch (InterruptedException e) {
             throw new IOException(e);
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             status = -1;
             body = new byte[0];
         }
