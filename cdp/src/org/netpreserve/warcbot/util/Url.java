@@ -9,6 +9,7 @@ import org.netpreserve.urlcanon.Canonicalizer;
 import org.netpreserve.urlcanon.ParsedUrl;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 
 /**
  * URL type which caches parsing.
@@ -34,9 +35,9 @@ public class Url {
         return new Url(url);
     }
 
-    public synchronized URI toURI() {
+    public synchronized URI toURI() throws URISyntaxException {
         if (uri == null) {
-            uri = URI.create(url);
+            uri = new URI(url);
         }
         return uri;
     }

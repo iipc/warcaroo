@@ -1,10 +1,13 @@
 package org.netpreserve.warcbot;
 
 import org.netpreserve.warcbot.util.Url;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -19,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class RobotsTxtChecker {
+    private static final Logger log = LoggerFactory.getLogger(RobotsTxtChecker.class);
     private final RobotsTxtDAO dao;
     private final HttpClient httpClient;
     private final Storage storage;
@@ -38,7 +42,14 @@ public class RobotsTxtChecker {
         Url robotsUrl = url.withPath("/robots.txt");
         var robots = dao.getRobotsTxt(robotsUrl.toString());
         if (robots == null || robots.lastChecked().isBefore(Instant.now().minus(Duration.ofDays(1)))) {
-            robots = fetch(pageId, robotsUrl.toURI(), robots);
+            URI robotsUri;
+            try {
+                robotsUri = robotsUrl.toURI();
+            } catch (URISyntaxException e) {
+                log.debug("Error parsing robots.txt URL: {}", robotsUrl, e);
+                return true;
+            }
+            robots = fetch(pageId, robotsUri, robots);
         }
         return robots.allows(url, userAgents);
     }

@@ -187,7 +187,7 @@ class NavigatorTest {
             assertTrue(requestedPaths.contains("/"));
 
             assertEquals(List.of("/link1", "/svglink"), navigator.extractLinks().stream()
-                    .map(link -> link.toURI().getPath()).toList());
+                    .map(link -> link.path()).toList());
 
             Thread.sleep(1000);
             assertTrue(requestedPaths.contains("/lazy.jpg"));
