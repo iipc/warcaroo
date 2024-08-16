@@ -101,7 +101,7 @@ public abstract class CDPBase {
     private void handleEvent(RPC.Event event) {
         if (log.isTraceEnabled()) {
             try {
-                log.trace("{}{}", event.method(), logJson.writeValueAsString(event.params()));
+                log.trace("{}{}", event.method(), ellipses(logJson.writeValueAsString(event.params())));
             } catch (JsonProcessingException ignored) {}
         }
         Consumer<JsonNode> handler = listeners.get(event.method());

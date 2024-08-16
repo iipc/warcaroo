@@ -2,7 +2,13 @@
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
+import ch.qos.logback.classic.filter.ThresholdFilter;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.ConsoleAppender;
+import ch.qos.logback.core.FileAppender;
 import com.sun.net.httpserver.HttpServer;
+import org.netpreserve.warcbot.cdp.protocol.CDPBase;
 import org.netpreserve.warcbot.webapp.Webapp;
 import org.slf4j.LoggerFactory;
 
@@ -13,7 +19,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Executors;
 
+import ch.qos.logback.classic.LoggerContext;
+
 public class WarcBot {
+
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(WarcBot.class);
 
     public static void main(String[] args) throws Exception {
         Config config = new Config();
@@ -29,6 +39,7 @@ public class WarcBot {
         String browserExecutable = null;
         String sshCommand = "ssh";
         String browserOptions = null;
+        String cdpTraceFile = null;
 
 
         for (int i = 0; i < args.length; i++) {
@@ -73,6 +84,7 @@ public class WarcBot {
                     case "--ssh" -> browsers.add(new BrowserSettings(args[++i], browserExecutable, browserOptions, Arrays.asList((sshCommand + " " + args[i]).split(" ")), workers, true));
                     case "--ssh-command" -> sshCommand = args[++i];
                     case "--trace-cdp" -> ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot.cdp.protocol.CDPBase")).setLevel(Level.TRACE);
+                    case "--trace-cdp-file" -> cdpTraceFile = args[++i];
                     case "-A", "--user-agent", "--userAgent" -> userAgent = args[++i];
                     case "--warc-prefix", "--warcPrefix" -> warcPrefix = args[++i];
                     case "-w", "--workers" -> workers = Integer.parseInt(args[++i]);
@@ -103,6 +115,10 @@ public class WarcBot {
             ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot")).setLevel(Level.DEBUG);
         }
 
+        if (cdpTraceFile != null) {
+            startCdpTraceFile(cdpTraceFile);
+        }
+
         if (workers > 0) {
             browsers.add(new BrowserSettings("Local", browserExecutable, browserOptions, null, workers, headless));
         }
@@ -131,6 +147,36 @@ public class WarcBot {
             httpServer.start();
         } else {
             crawl.start();
+        }
+    }
+
+    private static void startCdpTraceFile(String file) {
+        LoggerContext context = (LoggerContext) LoggerFactory.getILoggerFactory();
+
+        var encoder = new PatternLayoutEncoder();
+        encoder.setContext(context);
+        encoder.setPattern("%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %msg%n");
+        encoder.start();
+
+        var fileAppender = new FileAppender<ILoggingEvent>();
+        fileAppender.setContext(context);
+        fileAppender.setEncoder(encoder);
+        fileAppender.setName("cdp-trace-file");
+        fileAppender.setFile(file);
+        fileAppender.start();
+
+        var logger = (Logger) LoggerFactory.getLogger(CDPBase.class);
+        logger.addAppender(fileAppender);
+        if (logger.getEffectiveLevel().toInteger() != Level.TRACE_INT) {
+            ThresholdFilter filter = new ThresholdFilter();
+            filter.setLevel(logger.getEffectiveLevel().toString());
+            filter.start();
+            var stdoutAppender = (ConsoleAppender<ILoggingEvent>)context.getLogger(Logger.ROOT_LOGGER_NAME)
+                    .getAppender("STDOUT");
+            stdoutAppender.stop();
+            stdoutAppender.addFilter(filter);
+            stdoutAppender.start();
+            logger.setLevel(Level.TRACE);
         }
     }
 }
