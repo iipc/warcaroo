@@ -226,6 +226,11 @@ public class BrowserProcess implements AutoCloseable {
 
     @Override
     public void close() {
+        try {
+            cdp.close();
+        } catch (Exception e) {
+            log.warn("Error closing browser", e);
+        }
         if (process != null) {
             process.destroy();
             try {

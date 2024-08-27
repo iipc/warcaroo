@@ -41,4 +41,8 @@ public class CDPSession extends CDPBase {
         client.sessions.remove(sessionId);
         super.close();
     }
+
+    public String targetId() {
+        return targetId;
+    }
 }

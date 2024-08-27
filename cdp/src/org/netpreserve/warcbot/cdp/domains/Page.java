@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.jetbrains.annotations.NotNull;
 import org.netpreserve.warcbot.cdp.protocol.Unwrap;
+import org.netpreserve.warcbot.util.Url;
 
 import java.util.List;
 import java.util.Objects;
@@ -19,6 +20,11 @@ public interface Page {
     void enable();
 
     void onLifecycleEvent(Consumer<LifecycleEvent> handler);
+
+    void onFrameRequestedNavigation(Consumer<FrameRequestedNavigation> handler);
+
+    record FrameRequestedNavigation(FrameId frameId, String reason, Url url, String disposition) {
+    }
 
     @Unwrap
     FrameTree getFrameTree();

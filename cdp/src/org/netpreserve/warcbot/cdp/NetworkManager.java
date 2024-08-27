@@ -2,6 +2,7 @@ package org.netpreserve.warcbot.cdp;
 
 import org.netpreserve.warcbot.cdp.domains.*;
 import org.netpreserve.warcbot.cdp.protocol.CDPSession;
+import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,13 +30,16 @@ public class NetworkManager {
     private final Consumer<ResourceFetched> resourceHandler;
     private final RequestHandler requestHandler;
     private final Path downloadPath;
+    private final CDPSession cdpSession;
     private Predicate<String> blocker = url -> false;
     private volatile boolean captureResponseBodies = true;
     private volatile ResourceRecorder possibleDownloadRecorder = null;
+    private Url preventNavigationUrl;
 
     public NetworkManager(CDPSession cdpSession, IdleMonitor idleMonitor,
                           RequestHandler requestHandler, Consumer<ResourceFetched> resourceHandler,
                           Path downloadPath) {
+        this.cdpSession = cdpSession;
         this.requestHandler = requestHandler;
         this.browser = cdpSession.domain(Browser.class);
         this.fetch = cdpSession.domain(Fetch.class);
@@ -166,6 +170,13 @@ public class NetworkManager {
     }
 
     private void handleRequestPaused(Fetch.RequestPaused event) {
+        if (event.frameId().value().equals(cdpSession.targetId()) &&
+            event.resourceType().isDocument() &&
+            event.request().url().equals(preventNavigationUrl)) {
+            fetch.failRequestAsync(event.requestId(), "Aborted");
+            return;
+        }
+
         if (blocker.test(event.request().url().toString())) {
             log.debug("Blocked request for {}", event.request().url());
             fetch.failRequestAsync(event.requestId(), "BlockedByClient");
@@ -236,5 +247,12 @@ public class NetworkManager {
 
     public void captureResponseBodies(boolean captureResponseBodies) {
         this.captureResponseBodies = captureResponseBodies;
+    }
+
+    /**
+     * Aborts requests for top-level navigation to a given URL.
+     */
+    void preventNavigation(Url url) {
+        this.preventNavigationUrl = url;
     }
 }

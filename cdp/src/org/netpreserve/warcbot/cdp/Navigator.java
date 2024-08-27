@@ -35,6 +35,7 @@ public class Navigator implements AutoCloseable {
     private final NetworkManager networkManager;
     private final Page.FrameTree frameTree;
     private final Consumer<ResourceFetched> subresourceHandler;
+    private NavigationHandler navigationHandler;
     private volatile Runtime.ExecutionContextUniqueId isolatedContext;
     Duration pageLoadTimeout = Duration.ofSeconds(120);
 
@@ -63,6 +64,10 @@ public class Navigator implements AutoCloseable {
 
     public Page.FrameId mainFrameId() {
         return frameTree.frame().id();
+    }
+
+    public void setNavigationHandler(NavigationHandler navigationHandler) {
+        this.navigationHandler = navigationHandler;
     }
 
     public record Navigation(
@@ -102,6 +107,7 @@ public class Navigator implements AutoCloseable {
                 this::handleResource, Path.of("data", "downloads"));
 
         page.onLifecycleEvent(this::handleLifecycleEvent);
+        page.onFrameRequestedNavigation(this::handleFrameRequestedNavigation);
         page.enable();
         this.frameTree = page.getFrameTree();
         runtime.onExecutionContextCreated(event -> {
@@ -116,6 +122,20 @@ public class Navigator implements AutoCloseable {
         page.addScriptToEvaluateOnNewDocument(forceLoadScript, "warcbot");
 
         runtime.onConsoleAPICalled(event -> log.debug("Console: {} {}", event.type(), event.args()));
+    }
+
+    private void handleFrameRequestedNavigation(Page.FrameRequestedNavigation event) {
+        // cwe only care about top-level navigation events
+        if (event.frameId().value().equals(cdpSession.targetId())) {
+            // if JavaScript tries to navigate away before the load events fires it will never fire
+            // so let's just send one synthetically. Or perhaps this should be completeExceptionally?
+            currentNavigation.get().loadEvent().complete(new Network.MonotonicTime(0));
+
+            if (navigationHandler != null) {
+                boolean allowed = navigationHandler.handle(event.url());
+                if (!allowed) networkManager.preventNavigation(event.url());
+            }
+        }
     }
 
     private void handleResource(ResourceFetched resource) {

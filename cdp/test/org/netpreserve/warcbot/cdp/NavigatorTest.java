@@ -29,12 +29,15 @@ class NavigatorTest {
 
     @BeforeAll
     public static void setUp(@TempDir Path tempDir) throws IOException {
-        browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"), true);
+        browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"), false);
     }
 
     @AfterAll
-    static void tearDown() {
+    static void tearDown() throws InterruptedException {
         browserProcess.close();
+        // wait for browser child processes to exit is there a better way to do this?)
+        // otherwise deleting the tempdir fails because files are still open/locked
+        Thread.sleep(100);
     }
 
     @Test
@@ -241,6 +244,46 @@ class NavigatorTest {
             navigator.networkManager().waitForLoadingResources();
 
             assertEquals(1, subresources.size());
+        } finally {
+            httpServer.stop(0);
+        }
+    }
+
+    @Test
+    public void testNavigationLock() throws Exception {
+        var httpServer = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0, "/", exchange -> {
+            if (exchange.getRequestURI().toString().equals("/")) {
+                exchange.getResponseHeaders().add("Content-Type", "text/html");
+                exchange.sendResponseHeaders(200, 0);
+                var html = """
+                        <!doctype html>
+                        <title>Hello</title>
+                        
+                        <script>
+                            location.href = '/stop-me';
+                        </script>
+                        """;
+                exchange.getResponseBody().write(html.getBytes());
+            } else {
+                exchange.sendResponseHeaders(200, 0);
+                exchange.getResponseBody().write("oh no".getBytes());
+            }
+            exchange.close();
+        });
+        httpServer.start();
+        try (var navigator = browserProcess.newWindow(res -> {}, null)){
+
+            var navigationUrls = new ArrayList<Url>();
+            navigator.setNavigationHandler(url -> {
+                navigationUrls.add(url);
+                return false;
+            });
+            navigator.navigateTo(new Url("http://127.0.0.1:" + httpServer.getAddress().getPort() + "/")).loadEvent().get();
+
+            assertFalse(navigationUrls.isEmpty());
+            assertEquals("/stop-me", navigationUrls.get(0).path());
+            assertEquals("/", navigator.currentUrl().path());
+
         } finally {
             httpServer.stop(0);
         }

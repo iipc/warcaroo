@@ -119,6 +119,13 @@ public class Worker {
                 navigator.setUserAgent(config.getCrawlSettings().userAgent());
                 navigator.block(config.getBlockPredicate());
 
+                // prevent javascript or a meta refresh trying to navigate away and instead
+                // treat that as an outlink.
+                navigator.setNavigationHandler(url -> {
+                    outlinks.add(url.toString());
+                    return false;
+                });
+
                 log.info("Nav to {}", frontierUrl.url());
                 var navigation = navigator.navigateTo(frontierUrl.url());
                 navigation.loadEvent().get(120, TimeUnit.SECONDS);
