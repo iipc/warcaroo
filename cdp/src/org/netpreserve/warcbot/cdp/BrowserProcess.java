@@ -27,6 +27,18 @@ import java.util.function.Consumer;
 import static java.lang.ProcessBuilder.Redirect.*;
 import static java.util.stream.Collectors.joining;
 
+/**
+ * Launches and manages a browser process controlled via CDP.
+ *
+ * <p>Example usage:</p>
+ * <pre>{@code
+ *
+ * try (BrowserProcess browserProcess = BrowserProcess.start();
+ *      Navigator navigator = browserProcess.newWindow()) {
+ *     navigator.navigateTo(new Url("http://example.com/"));
+ * }
+ * }</pre>
+ */
 public class BrowserProcess implements AutoCloseable {
     private static final Logger log = LoggerFactory.getLogger(BrowserProcess.class);
     private static final List<String> BROWSER_EXECUTABLES = List.of(
@@ -42,7 +54,7 @@ public class BrowserProcess implements AutoCloseable {
     private final Target target;
     private Browser.Version version;
 
-    public BrowserProcess(Process process, CDPClient cdp) {
+    private BrowserProcess(Process process, CDPClient cdp) {
         this.process = process;
         this.cdp = cdp;
         this.browser = cdp.domain(Browser.class);
@@ -224,6 +236,9 @@ public class BrowserProcess implements AutoCloseable {
         return start(null, Path.of("data", "profile"));
     }
 
+    /**
+     * Closes the connection to the browser and terminates the process.
+     */
     @Override
     public void close() {
         try {
@@ -244,6 +259,9 @@ public class BrowserProcess implements AutoCloseable {
         }
     }
 
+    /**
+     * Opens a new browser window.
+     */
     public Navigator newWindow(Consumer<ResourceFetched> resourceHandler,
                                RequestHandler requestHandler) {
         String targetId = target.createTarget("about:blank", true, 1920, 1080).targetId();
