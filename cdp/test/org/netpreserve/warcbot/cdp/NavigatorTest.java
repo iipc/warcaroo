@@ -274,7 +274,7 @@ class NavigatorTest {
         try (var navigator = browserProcess.newWindow(res -> {}, null)){
 
             var navigationUrls = new ArrayList<Url>();
-            navigator.setNavigationHandler(url -> {
+            navigator.setNavigationHandler((url, reason) -> {
                 navigationUrls.add(url);
                 return false;
             });

@@ -1,6 +1,7 @@
 package org.netpreserve.warcbot;
 
 import org.netpreserve.warcbot.cdp.*;
+import org.netpreserve.warcbot.cdp.domains.Page;
 import org.netpreserve.warcbot.cdp.protocol.CDPException;
 import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
@@ -28,6 +29,7 @@ public class Worker {
     private volatile Long pageId;
     private final Set<String> outlinks = Collections.newSetFromMap(new ConcurrentSkipListMap<>());
     private volatile Info info;
+    private FrontierUrl frontierUrl;
 
     public Worker(String id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
         this.id = id;
@@ -89,7 +91,7 @@ public class Worker {
 
     void run() throws Exception {
         while (!closed) {
-            var frontierUrl = frontier.takeNext();
+            frontierUrl = frontier.takeNext();
             if (frontierUrl == null) {
                 log.info("No work available for worker {}", id);
                 try {
@@ -121,10 +123,7 @@ public class Worker {
 
                 // prevent javascript or a meta refresh trying to navigate away and instead
                 // treat that as an outlink.
-                navigator.setNavigationHandler(url -> {
-                    outlinks.add(url.toString());
-                    return false;
-                });
+                navigator.setNavigationHandler(this::handleNavigation);
 
                 log.info("Nav to {}", frontierUrl.url());
                 var navigation = navigator.navigateTo(frontierUrl.url());
@@ -204,6 +203,30 @@ public class Worker {
             navigator = null;
             outlinks.clear();
         }
+    }
+
+    /**
+     * Called when the page itself initiates navigation (e.g. due to a script or refresh meta tag).
+     * We prevent navigation by returning false and instead add the url as an outlink.
+     */
+    private boolean handleNavigation(Url url, Page.ClientNavigationReason reason) {
+        String linkContext = switch (reason) {
+            case anchorClick -> "a@href";
+            case metaTagRefresh -> "meta";
+            case httpHeaderRefresh -> "=HEADER_MISC";
+            case scriptInitiated, reload -> "=JS_MISC";
+            case formSubmissionGet, formSubmissionPost -> "form";
+            default -> "=OTHER_MISC";
+        };
+        String hop = switch (reason) {
+            case anchorClick -> "L";
+            case metaTagRefresh, httpHeaderRefresh, scriptInitiated -> "R";
+            case formSubmissionGet, formSubmissionPost -> "S";
+            default -> "X";
+        };
+        frontier.addUrls(List.of(url), frontierUrl.depth() + 1, frontierUrl.url());
+        outlinks.add(url + " " + hop + " " + linkContext);
+        return false;
     }
 
     private void updateInfo(Info info) {

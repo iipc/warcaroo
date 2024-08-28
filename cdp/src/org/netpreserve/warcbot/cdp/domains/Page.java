@@ -1,6 +1,7 @@
 package org.netpreserve.warcbot.cdp.domains;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.jetbrains.annotations.NotNull;
 import org.netpreserve.warcbot.cdp.protocol.Unwrap;
@@ -23,7 +24,17 @@ public interface Page {
 
     void onFrameRequestedNavigation(Consumer<FrameRequestedNavigation> handler);
 
-    record FrameRequestedNavigation(FrameId frameId, String reason, Url url, String disposition) {
+    record FrameRequestedNavigation(FrameId frameId, ClientNavigationReason reason, Url url,
+                                    ClientNavigationDisposition disposition) {
+    }
+
+    enum ClientNavigationDisposition {
+        currentTab, newTab, newWindow, download, @JsonEnumDefaultValue unknown
+    }
+
+    enum ClientNavigationReason {
+        anchorClick, formSubmissionGet, formSubmissionPost, httpHeaderRefresh, initialFrameNavigation, metaTagRefresh,
+        @JsonEnumDefaultValue other, pageBlockInterstitial, reload, scriptInitiated
     }
 
     @Unwrap

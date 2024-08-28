@@ -36,6 +36,7 @@ public interface RPC {
             .build())
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET)
+            .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE)
             .setSerializationInclusion(JsonInclude.Include.NON_NULL);
 
     void send(Command message) throws IOException;

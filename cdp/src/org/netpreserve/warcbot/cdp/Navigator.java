@@ -125,14 +125,14 @@ public class Navigator implements AutoCloseable {
     }
 
     private void handleFrameRequestedNavigation(Page.FrameRequestedNavigation event) {
-        // cwe only care about top-level navigation events
+        // we only care about top-level navigation events
         if (event.frameId().value().equals(cdpSession.targetId())) {
             // if JavaScript tries to navigate away before the load events fires it will never fire
             // so let's just send one synthetically. Or perhaps this should be completeExceptionally?
             currentNavigation.get().loadEvent().complete(new Network.MonotonicTime(0));
 
             if (navigationHandler != null) {
-                boolean allowed = navigationHandler.handle(event.url());
+                boolean allowed = navigationHandler.handle(event.url(), event.reason());
                 if (!allowed) networkManager.preventNavigation(event.url());
             }
         }
