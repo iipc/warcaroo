@@ -161,10 +161,10 @@
         </button>
     </nav>
     <nav class="tabs">
-        <a class="tab" target="contentFrame" href="frontier.html">Frontier</a>
-        <a class="tab" target="contentFrame" href="hosts.html">Hosts</a>
-        <a class="tab" target="contentFrame" href="pages.html">Pages</a>
-        <a class="tab" target="contentFrame" href="resources.html">Resources</a>
+        <a class="tab" target="contentFrame" href="frontier">Frontier</a>
+        <a class="tab" target="contentFrame" href="hosts">Hosts</a>
+        <a class="tab" target="contentFrame" href="pages">Pages</a>
+        <a class="tab" target="contentFrame" href="resources">Resources</a>
     </nav>
     <div id="download-speed">
         <canvas id="download-speed-sparkline"></canvas>
@@ -267,9 +267,11 @@
         } catch (e) {
             frameUrl = null;
             document.title = "WarcBot";
+            return;
         }
+        let frameUrlWithoutQuery = frameUrl.replaceAll(/[?#].*/g, "");
         tabLinks.forEach(link => {
-            if (link.href === frameUrl) {
+            if (link.href.replaceAll(/[?#].*/g, "") === frameUrlWithoutQuery) {
                 link.classList.add('active');
             } else {
                 link.classList.remove('active');
