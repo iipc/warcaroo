@@ -35,7 +35,7 @@ public class Config {
         Url cleanUrl = new Url(url).whatwg();
         seeds.add(cleanUrl);
         var prefix = cleanUrl.toString().replaceFirst("/[^/]*$", "/");
-        includes.add(Pattern.compile(Pattern.quote(prefix) + "(?:/|)"));
+        includes.add(Pattern.compile(Pattern.quote(prefix) + ".*"));
     }
 
     public List<Url> getSeeds() {
