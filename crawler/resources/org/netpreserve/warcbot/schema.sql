@@ -43,7 +43,7 @@ create table if not exists frontier
     depth      INTEGER NOT NULL,
     url        TEXT    NOT NULL UNIQUE,
     state      TEXT    NOT NULL DEFAULT 'PENDING' CHECK (state IN ('PENDING', 'IN_PROGRESS', 'CRAWLED', 'FAILED',
-                                                                   'ROBOTS_EXCLUDED')),
+                                                                   'ROBOTS_EXCLUDED', 'OUT_OF_SCOPE')),
     via        TEXT,
     time_added INTEGER,
 
