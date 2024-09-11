@@ -45,7 +45,7 @@ public interface Database extends AutoCloseable, Transactional<Database> {
     static Database open(String jdbcUrl) {
         HikariConfig config = new HikariConfig();
         config.setJdbcUrl(jdbcUrl);
-        config.setConnectionInitSql("PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON;");
+        config.setConnectionInitSql("PRAGMA synchronous = NORMAL; PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 60000;");
         config.setMaximumPoolSize(1);
         var dataSource = new HikariDataSource(config);
         var jdbi = Jdbi.create(dataSource);
