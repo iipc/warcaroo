@@ -23,6 +23,9 @@ public interface DomainDAO {
             """)
     void updateMetricsOnFrontierUrlStateChange(long domainId, FrontierUrl.State oldState, FrontierUrl.State newState);
 
+    @SqlQuery("SELECT * FROM domains WHERE id = ?")
+    Domain find(long domainId);
+
     @SqlQuery("SELECT * FROM domains WHERE rhost = ?")
     Domain findByRHost(String rhost);
 
