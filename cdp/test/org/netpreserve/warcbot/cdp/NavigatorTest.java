@@ -29,7 +29,7 @@ class NavigatorTest {
 
     @BeforeAll
     public static void setUp(@TempDir Path tempDir) throws IOException {
-        browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"), false);
+        browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"), true);
     }
 
     @AfterAll
