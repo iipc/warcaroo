@@ -11,6 +11,8 @@ import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
 
+import static org.netpreserve.warcbot.FrontierUrl.State.OUT_OF_SCOPE;
+
 public class Frontier {
     private static final Logger log = LoggerFactory.getLogger(Frontier.class);
     private static final PublicSuffixList publicSuffixList = new PublicSuffixListFactory().build();
@@ -75,6 +77,11 @@ public class Frontier {
                 continue;
             }
             lockedHosts.add(hostId);
+            // re-test scope in case it has changed
+            if (!scope.test(frontierUrl.url().toString())) {
+                release(frontierUrl, OUT_OF_SCOPE);
+                continue;
+            }
             return frontierUrl;
         }
     }

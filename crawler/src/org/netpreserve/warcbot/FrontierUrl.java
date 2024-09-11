@@ -25,6 +25,6 @@ public record FrontierUrl(
         State state
 ) {
     public enum State {
-        PENDING, CRAWLED, FAILED, ROBOTS_EXCLUDED
+        PENDING, CRAWLED, FAILED, OUT_OF_SCOPE, ROBOTS_EXCLUDED
     }
 }
