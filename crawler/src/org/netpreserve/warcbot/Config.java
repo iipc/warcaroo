@@ -50,7 +50,7 @@ public class Config {
     private static Predicate<String> patternsToPredicate(List<Pattern> patterns) {
         var predicate = (Predicate<String>) url -> false;
         for (var pattern: patterns) {
-            predicate = predicate.or(pattern.asPredicate());
+            predicate = predicate.or(pattern.asMatchPredicate());
         }
         return predicate;
     }
