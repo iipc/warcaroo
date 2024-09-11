@@ -174,7 +174,7 @@ public class Worker {
                     mainResourceId = storage.save(pageId, mainResource, metadata);
                 } catch (TimeoutException ignored) {
                     log.atWarn().addKeyValue("url", frontierUrl.url())
-                            .addKeyValue("paqgeId", pageId)
+                            .addKeyValue("pageId", pageId)
                             .log("No main resource captured");
                 }
 

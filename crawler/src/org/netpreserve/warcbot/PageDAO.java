@@ -20,16 +20,17 @@ import java.util.List;
 @RegisterConstructorMapper(Page.class)
 @RegisterConstructorMapper(Page.Ext.class)
 public interface PageDAO {
-    @Transaction
-    default void add(@BindMethods Page page) {
-        _addPage(page);
-        _addPageToHost(page);
-        _addPageToDomain(page);
-    }
-
     @SqlUpdate("INSERT INTO pages (url, host_id, domain_id, date) VALUES (:url, :hostId, :domainId, :date)")
     @GetGeneratedKeys
-    long create(Url url, long hostId, long domainId, Instant date);
+    long _create(Url url, long hostId, long domainId, Instant date);
+
+    @Transaction
+    default long create(Url url, long hostId, long domainId, Instant date) {
+        long id = _create(url, hostId, domainId, date);
+        _addPageToHost(hostId);
+        _addPageToDomain(domainId);
+        return id;
+    }
 
     @SqlUpdate("""
                UPDATE pages
@@ -46,11 +47,11 @@ public interface PageDAO {
 
     @SqlUpdate("UPDATE hosts SET pages = pages + 1 WHERE id = :hostId")
     @MustUpdate
-    void _addPageToHost(@BindMethods Page page);
+    void _addPageToHost(long hostId);
 
-    @SqlUpdate("UPDATE domains SET pages = pages + 1 WHERE id = :hostId")
+    @SqlUpdate("UPDATE domains SET pages = pages + 1 WHERE id = :domainId")
     @MustUpdate
-    void _addPageToDomain(@BindMethods Page page);
+    void _addPageToDomain(long domainId);
 
     String PAGES_WHERE = " WHERE (:hostId IS NULL OR pages.host_id = :hostId) ";
 
