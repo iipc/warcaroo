@@ -157,7 +157,7 @@ public interface RPC {
                     // Copy leftover data if we have an incomplete message
                     if (startOfMessage < bytesRead) {
                         if (partialMessage == null) partialMessage = new ByteArrayOutputStream();
-                        partialMessage.write(buffer, startOfMessage, bytesRead);
+                        partialMessage.write(buffer, startOfMessage, bytesRead - startOfMessage);
                     }
                 }
             } catch (IOException e) {
