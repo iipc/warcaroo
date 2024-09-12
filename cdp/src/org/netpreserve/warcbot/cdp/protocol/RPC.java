@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.StreamReadConstraints;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.apache.commons.lang3.ArrayUtils;
 import org.netpreserve.warcbot.util.LogUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -133,26 +134,45 @@ public interface RPC {
         }
 
         private void run() {
+            ByteArrayOutputStream partialMessage = null;
+            byte[] buffer = new byte[256 * 1024]; // 256 KiB
             try {
                 while (true) {
-                    var buffer = new ByteArrayOutputStream();
-                    while (true) {
-                        int b = inputStream.read();
-                        if (b < 0) return;
-                        if (b == 0) break;
-                        buffer.write(b);
+                    int bytesRead = inputStream.read(buffer);
+                    int startOfMessage = 0;
+                    for (int i = 0; i < bytesRead; i++) {
+                        if (buffer[i] == '\0') {
+                            if (partialMessage == null) {
+                                handleMessage(buffer, startOfMessage, i - startOfMessage);
+                            } else {
+                                partialMessage.write(buffer, startOfMessage, i - startOfMessage);
+                                byte[] message = partialMessage.toByteArray();
+                                handleMessage(message, 0, message.length);
+                                partialMessage = null;
+                            }
+                            startOfMessage = i + 1;
+                        }
                     }
-                    if (log.isTraceEnabled()) {
-                        log.trace("<- {}", LogUtils.ellipses(buffer.toString()));
+
+                    // Copy leftover data if we have an incomplete message
+                    if (startOfMessage < bytesRead) {
+                        if (partialMessage == null) partialMessage = new ByteArrayOutputStream();
+                        partialMessage.write(buffer, startOfMessage, bytesRead);
                     }
-                    var message = JSON.readValue(buffer.toByteArray(), ServerMessage.class);
-                    messageHandler.accept(message);
                 }
             } catch (IOException e) {
                 log.error("Error reading CDPPipe", e);
             } finally {
                 close();
             }
+        }
+
+        private void handleMessage(byte[] buffer, int offset, int len) throws IOException {
+            if (log.isTraceEnabled()) {
+                log.trace("<- {}", LogUtils.ellipses(new String(buffer, offset, len)));
+            }
+            var message = JSON.readValue(buffer, offset, len, ServerMessage.class);
+            messageHandler.accept(message);
         }
 
         @Override
