@@ -51,6 +51,9 @@ create table if not exists frontier
     FOREIGN KEY (domain_id) references domains (id)
 );
 
+-- For FrontierDAO.nextUrlForHost()
+CREATE INDEX IF NOT EXISTS frontier_host_state_depth_id ON frontier (host_id, state, depth, id);
+
 create table if not exists resources
 (
     id              INTEGER PRIMARY KEY,
