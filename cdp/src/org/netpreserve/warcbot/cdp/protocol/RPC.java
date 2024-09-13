@@ -139,6 +139,10 @@ public interface RPC {
             try {
                 while (true) {
                     int bytesRead = inputStream.read(buffer);
+                    if (bytesRead < 0) {
+                        log.info("Received end of stream");
+                        return;
+                    }
                     int startOfMessage = 0;
                     for (int i = 0; i < bytesRead; i++) {
                         if (buffer[i] == '\0') {
