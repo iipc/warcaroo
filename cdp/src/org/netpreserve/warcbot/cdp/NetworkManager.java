@@ -97,18 +97,23 @@ public class NetworkManager {
                 if (recorder != null) {
                     recorder.handleDownloadCompleted(event);
                 }
-                try {
-                    Files.deleteIfExists(downloadPath.resolve(event.guid()));
-                } catch (IOException e) {
-                    log.warn("Error deleting downloaded file", e);
-                }
+                cleanupDownload(event);
             }
             case "canceled" -> {
                 downloadRecorders.remove(event.guid());
+                cleanupDownload(event);
             }
             case "inProgress" -> {
             }
             default -> log.warn("Unexpected Network.downloadProgress state: {}", event.state());
+        }
+    }
+
+    private void cleanupDownload(Browser.DownloadProgress event) {
+        try {
+            Files.deleteIfExists(downloadPath.resolve(event.guid()));
+        } catch (IOException e) {
+            log.warn("Error deleting downloaded file", e);
         }
     }
 
