@@ -14,75 +14,43 @@ import java.io.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.nio.channels.Channels;
-import java.nio.channels.FileChannel;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
 
-import static java.nio.file.StandardOpenOption.*;
 import static org.netpreserve.jwarc.MediaType.HTTP_REQUEST;
 import static org.netpreserve.jwarc.MediaType.HTTP_RESPONSE;
 
 public class Storage implements Closeable {
     private final Logger log = LoggerFactory.getLogger(Storage.class);
-    private final Config config;
-    private WarcWriter warcWriter;
+    private final BlockingDeque<WarcRotator> warcPool;
     final Database db;
     private final TimeBasedEpochGenerator uuidGenerator;
-    private final static DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC);
-    private final SecureRandom random = new SecureRandom();
-    private String filename;
-    private final Path directory;
-    private final Lock lock = new ReentrantLock();
+    private final int poolSize = 8;
 
-    public Storage(Path directory, Database db, Config config) throws IOException {
-        this.directory = directory;
+    public Storage(Path directory, Database db, Config config) {
         this.db = db;
-        this.config = config;
         this.uuidGenerator = Generators.timeBasedEpochGenerator();
-    }
-
-    private void openWriter() throws IOException {
-        if (warcWriter != null) {
-            warcWriter.close();
+        warcPool = new LinkedBlockingDeque<>(poolSize);
+        String prefix = config.getCrawlSettings().warcPrefix();
+        if (prefix == null) prefix = "warcbot";
+        for (int i = 0; i < poolSize; i++) {
+            warcPool.add(new WarcRotator(directory, prefix));
         }
-        var warcPrefix = config.getCrawlSettings().warcPrefix();
-        if (warcPrefix == null) warcPrefix = "warcbot";
-        filename = warcPrefix + "-" + DATE_FORMAT.format(Instant.now()) + "-" + randomId() + ".warc.gz";
-        warcWriter = new WarcWriter(FileChannel.open(directory.resolve(filename),
-                WRITE, CREATE, TRUNCATE_EXISTING), WarcCompression.GZIP);
-        Warcinfo warcinfo = new Warcinfo.Builder()
-                .filename(filename)
-                .fields(Map.of("software", List.of("warcbot"),
-                        "format", List.of("WARC File Format 1.0"),
-                        "conformsTo", List.of("https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.0/")))
-                .build();
-        warcWriter.write(warcinfo);
-    }
-
-    private String randomId() {
-        String alphabet = "ABCDFGHJKLMNPQRSTVWXYZabcdfghjklmnpqrstvwxyz0123456789";
-        var sb = new StringBuilder();
-        for (int i = 0; i < 5; i++) {
-            sb.append(alphabet.charAt(random.nextInt(alphabet.length())));
-        }
-        return sb.toString();
     }
 
     @Override
     public void close() throws IOException {
-        lock.lock();
-        try {
-            if (warcWriter != null) warcWriter.close();
-        } finally {
-            lock.unlock();
+        for (int i = 0; i < poolSize; i++) {
+            try {
+                warcPool.take().close();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -131,11 +99,11 @@ public class Storage implements Closeable {
 
         for (var response : responses) {
             var request = response.request();
-            var httpResponse = new org.netpreserve.jwarc.HttpResponse.Builder(response.statusCode(), "")
+            var httpResponse = new HttpResponse.Builder(response.statusCode(), "")
                     .addHeaders(stripHttp2Headers(response.headers()))
                     .build();
 
-            var httpRequest = new org.netpreserve.jwarc.HttpRequest.Builder(request.method(), request.uri().getRawPath())
+            var httpRequest = new HttpRequest.Builder(request.method(), request.uri().getRawPath())
                     .addHeaders(stripHttp2Headers(request.headers()))
                     .build();
 
@@ -245,11 +213,16 @@ public class Storage implements Closeable {
         long requestLength;
         long metadataLength;
 
-        lock.lock();
+        String filename;
+        WarcRotator rotator;
         try {
-            if (warcWriter == null || warcWriter.position() > 1024 * 1024 * 1024) {
-                openWriter();
-            }
+            rotator = warcPool.takeFirst();
+        } catch (InterruptedException e) {
+            throw new IOException(e);
+        }
+        try {
+            var warcWriter = rotator.get();
+            filename = rotator.filename();
             responseOffset = warcWriter.position();
             warcWriter.write(warcResponse);
             responseLength = warcWriter.position() - responseOffset;
@@ -261,8 +234,12 @@ public class Storage implements Closeable {
             } else {
                 metadataLength = 0;
             }
+            if (warcWriter.position() > 1024 * 1024 * 1024) {
+                rotator.close();
+            }
         } finally {
-            lock.unlock();
+            // put it back at the front of the pool to minimize the number of active files
+            warcPool.addFirst(rotator);
         }
 
         return db.inTransaction(db -> {
