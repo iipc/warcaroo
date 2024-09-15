@@ -160,7 +160,7 @@ public class ResourceRecorder {
     }
 
     public void handleDataReceived(Network.DataReceived event) {
-        byte[] data = event.data();
+        byte[] data = event.decodeData();
         if (data != null && data.length > 0) {
             wrap(log.atDebug()).addKeyValue("dataLength", data.length).log("Received data");
             write(data);

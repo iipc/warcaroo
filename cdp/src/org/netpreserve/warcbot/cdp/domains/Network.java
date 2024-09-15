@@ -267,12 +267,9 @@ public interface Network {
     record Initiator() {
     }
 
-    record DataReceived(RequestId requestId, double timestamp, int dataLength, int encodedDataLength, byte[] data) {
-        // We take String instead of byte[] so we can use JVM's SIMD Base64 instead jackson's slower Base64Variant
-        public @JsonCreator DataReceived(RequestId requestId, double timestamp, int dataLength, int encodedDataLength,
-                                         @Nullable String data) {
-            this(requestId, timestamp, dataLength, encodedDataLength,
-                    data == null ? null : Base64.getDecoder().decode(data));
+    record DataReceived(RequestId requestId, double timestamp, int dataLength, int encodedDataLength, String data) {
+        public byte[] decodeData() {
+            return data == null ? null : Base64.getDecoder().decode(data);
         }
     }
 }
