@@ -12,6 +12,7 @@ import java.nio.channels.Channels;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -40,7 +41,7 @@ class ResourceRecorderTest {
         var requestPaused = new Fetch.RequestPaused(fetchId, request, null, null, null, 200,
                 "OK", List.of(), networkId, null);
         var responseReceived = new Network.ResponseReceived(networkId, null, 0, null, response, null);
-        var dataReceived = new Network.DataReceived(networkId, 0, data.length, data.length, data);
+        var dataReceived = new Network.DataReceived(networkId, 0, data.length, data.length, Base64.getEncoder().encodeToString(data));
         var loadingFinished = new Network.LoadingFinished(networkId, 0, 5);
 
         var resources = new ArrayList<ResourceFetched>();
