@@ -64,7 +64,7 @@ public class BrowserManager implements Closeable {
         try {
             return body.apply(browserProcess);
         } catch (UncheckedIOException e) {
-            if (e.getCause() != null && e.getCause().getMessage().equals("Stream closed")) {
+            if (e.getCause() != null && e.getCause().getMessage().equalsIgnoreCase("Stream closed")) {
                 restart(e);
                 return body.apply(browserProcess);
             }
