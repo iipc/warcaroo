@@ -18,7 +18,7 @@ public class Worker {
     private static final Logger log = LoggerFactory.getLogger(Worker.class);
     final String id;
     Navigator navigator;
-    private final BrowserProcess browserProcess;
+    private final BrowserManager browserManager;
     private final Frontier frontier;
     private final Storage storage;
     private final Database db;
@@ -31,9 +31,9 @@ public class Worker {
     private volatile Info info;
     private FrontierUrl frontierUrl;
 
-    public Worker(String id, BrowserProcess browserProcess, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
+    public Worker(String id, BrowserManager browserManager, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
         this.id = id;
-        this.browserProcess = browserProcess;
+        this.browserManager = browserManager;
         this.frontier = frontier;
         this.storage = storage;
         this.db = db;
@@ -116,7 +116,7 @@ public class Worker {
                 }
 
                 if (navigator == null) {
-                    navigator = browserProcess.newWindow(this::handleSubresource, null);
+                    navigator = browserManager.newWindow(this::handleSubresource, null);
                 }
                 navigator.setUserAgent(config.getCrawlSettings().userAgent());
                 navigator.block(config.getBlockPredicate());

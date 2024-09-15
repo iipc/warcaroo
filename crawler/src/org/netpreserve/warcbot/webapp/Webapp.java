@@ -106,14 +106,14 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/browsers")
     List<BrowserInfo> getBrowsers() {
-        return crawl.browserProcesses().stream()
+        return crawl.browserManagers().stream()
                 .map(BrowserInfo::new)
                 .toList();
     }
 
     record BrowserInfo(Browser.Version version) {
-        public BrowserInfo(BrowserProcess browserProcess) {
-            this(browserProcess.version());
+        public BrowserInfo(BrowserManager browserManager) {
+            this(browserManager.version());
         }
     }
 
@@ -181,7 +181,7 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/render")
     void render(HttpExchange exchange, RenderQuery query) throws NavigationException, InterruptedException, IOException {
-        var screenshot = Replay.render(crawl.db, crawl.browserProcess(), query.url);
+        var screenshot = Replay.render(crawl.db, crawl.browserManager(), query.url);
         exchange.getResponseHeaders().set("Content-Type", "image/webp");
         exchange.sendResponseHeaders(200, screenshot.length);
         exchange.getResponseBody().write(screenshot);

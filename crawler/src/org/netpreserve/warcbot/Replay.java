@@ -50,8 +50,8 @@ public class Replay {
         }
     }
 
-    public static byte[] render(Database db, BrowserProcess browserProcess, Url url) throws NavigationException, InterruptedException {
-        try (var window = browserProcess.newWindow(new Consumer<ResourceFetched>() {
+    public static byte[] render(Database db, BrowserManager browserManager, Url url) throws NavigationException, InterruptedException {
+        try (var window = browserManager.newWindow(new Consumer<ResourceFetched>() {
             @Override
             public void accept(ResourceFetched resourceFetched) {
                 log.info("Fetched {}", resourceFetched);

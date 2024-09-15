@@ -1,6 +1,5 @@
 package org.netpreserve.warcbot;
 
-import org.netpreserve.warcbot.cdp.BrowserProcess;
 import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
 import org.netpreserve.warcbot.webapp.Route.HttpError;
 import org.slf4j.LoggerFactory;
@@ -23,15 +22,15 @@ public class Crawl implements AutoCloseable {
     private final HttpClient httpClient;
     private final RobotsTxtChecker robotsTxtChecker;
     private final List<Worker> workers = new ArrayList<>();
-    private final List<BrowserProcess> browserProcesses = new ArrayList<>();
+    private final List<BrowserManager> browserManagers = new ArrayList<>();
     private final Config config;
     private volatile State state = State.STOPPED;
     private final Lock startStopLock = new ReentrantLock();
 
-    public List<BrowserProcess> browserProcesses() {
+    public List<BrowserManager> browserManagers() {
         startStopLock.lock();
         try {
-            return new ArrayList<>(browserProcesses);
+            return new ArrayList<>(browserManagers);
         } finally {
             startStopLock.unlock();
         }
@@ -84,15 +83,10 @@ public class Crawl implements AutoCloseable {
             state = State.STARTING;
             frontier.addUrls(config.getSeeds(), 0, null);
             for (var browserSettings : config.getBrowsers()) {
-                var browserProcess = BrowserProcess.start(
-                        browserSettings.executable(),
-                        browserSettings.options(),
-                        null,
-                        browserSettings.headless(),
-                        browserSettings.shell());
-                browserProcesses.add(browserProcess);
+                BrowserManager browserManager = new BrowserManager(browserSettings);
+                browserManagers.add(browserManager);
                 for (int i = 0; i < browserSettings.workers(); i++) {
-                    workers.add(new Worker(browserSettings.id() + "-" + i, browserProcess, frontier, storage, db, robotsTxtChecker, config));
+                    workers.add(new Worker(browserSettings.id() + "-" + i, browserManager, frontier, storage, db, robotsTxtChecker, config));
                 }
             }
             for (Worker worker : workers) {
@@ -115,13 +109,13 @@ public class Crawl implements AutoCloseable {
             }
         }
         workers.clear();
-        for (var browserProcess : browserProcesses) {
+        for (BrowserManager browserProcess : browserManagers) {
             try {
                 browserProcess.close();
             } catch (Exception ignored) {
             }
         }
-        browserProcesses.clear();
+        browserManagers.clear();
     }
 
     public void stop() throws BadStateException {
@@ -139,9 +133,9 @@ public class Crawl implements AutoCloseable {
         }
     }
 
-    public BrowserProcess browserProcess() {
-        if (browserProcesses.isEmpty()) throw new RuntimeException("No browser processes are running");
-        return browserProcesses.getFirst();
+    public BrowserManager browserManager() {
+        if (browserManagers.isEmpty()) throw new RuntimeException("No browser processes are running");
+        return browserManagers.getFirst();
     }
 
     public Config config() {
