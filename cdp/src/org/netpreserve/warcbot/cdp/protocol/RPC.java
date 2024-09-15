@@ -133,6 +133,13 @@ public interface RPC {
             thread.start();
         }
 
+        private static int findNullByte(byte[] buffer, int offset, int length) {
+            for (int i = offset; i < length; i++) {
+                if (buffer[i] == 0) return i;
+            }
+            return -1;
+        }
+
         private void run() {
             ByteArrayOutputStream partialMessage = null;
             byte[] buffer = new byte[256 * 1024]; // 256 KiB
@@ -144,18 +151,18 @@ public interface RPC {
                         return;
                     }
                     int startOfMessage = 0;
-                    for (int i = 0; i < bytesRead; i++) {
-                        if (buffer[i] == '\0') {
-                            if (partialMessage == null) {
-                                handleMessage(buffer, startOfMessage, i - startOfMessage);
-                            } else {
-                                partialMessage.write(buffer, startOfMessage, i - startOfMessage);
-                                byte[] message = partialMessage.toByteArray();
-                                handleMessage(message, 0, message.length);
-                                partialMessage = null;
-                            }
-                            startOfMessage = i + 1;
+                    while (true) {
+                        int endOfMessage = findNullByte(buffer, startOfMessage, bytesRead);
+                        if (endOfMessage == -1) break;
+                        if (partialMessage == null) {
+                            handleMessage(buffer, startOfMessage, endOfMessage - startOfMessage);
+                        } else {
+                            partialMessage.write(buffer, startOfMessage, endOfMessage - startOfMessage);
+                            byte[] message = partialMessage.toByteArray();
+                            handleMessage(message, 0, message.length);
+                            partialMessage = null;
                         }
+                        startOfMessage = endOfMessage + 1;
                     }
 
                     // Copy leftover data if we have an incomplete message
