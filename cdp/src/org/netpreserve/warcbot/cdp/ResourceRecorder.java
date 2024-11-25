@@ -225,7 +225,18 @@ public class ResourceRecorder {
         }
         if (!request.url().isHttp()) return;
         byte[] requestHeader = formatRequestHeader(request, fullRequestHeaders);
-        byte[] responseHeader = formatResponseHeader(response, rawResponseHeader);
+        Long replaceContentLength = null;
+
+        // If the browser removed encoding then we need to replace the Content-Length header to ensure it matches
+        // the body length that we're going to record.
+        // TODO: Handle truncated responses.
+        if (!request.method().equals("HEAD") &&
+            (response.headers().containsKey("Content-Encoding") ||
+             response.headers().containsKey("Transfer-Encoding"))) {
+            replaceContentLength = bytesWritten;
+        }
+
+        byte[] responseHeader = formatResponseHeader(response, rawResponseHeader, replaceContentLength);
         long fetchTimeMs = (System.nanoTime() - startNanos) / 1_000_000;
         String redirect = response.headers().get("location");
         var responseType = BareMediaType.of(response.headers().get("Content-Type"));
@@ -276,21 +287,27 @@ public class ResourceRecorder {
      * Formats the response header for a given fetch request, using the raw response header string if available.
      * Omits any "Content-Encoding" headers because the browser only gives us the decoded response body.
      */
-    static byte[] formatResponseHeader(Network.Response response, String rawResponseHeader) {
+    static byte[] formatResponseHeader(Network.Response response, String rawResponseHeader, Long replaceContentLength) {
         if (rawResponseHeader != null) {
             rawResponseHeader = rawResponseHeader.replaceAll("(?mi)^(Content|Transfer)-Encoding:.*?\\r?\\n", "");
+            if (replaceContentLength != null) {
+                rawResponseHeader = rawResponseHeader.replaceAll("(?mi)^(Content-Length:).*?(\\r?\\n)", "$1 " + replaceContentLength + "$2");
+            }
             return rawResponseHeader.getBytes(US_ASCII);
         }
-        return formatResponseHeader(response.status(), response.statusText(), response.headers());
+        return formatResponseHeader(response.status(), response.statusText(), response.headers(), replaceContentLength);
     }
 
-    static byte @NotNull [] formatResponseHeader(int status, String reason, Network.Headers headers) {
+    static byte @NotNull [] formatResponseHeader(int status, String reason, Network.Headers headers, Long replaceContentLength) {
         if (reason == null) reason = "";
         var builder = new StringBuilder();
         builder.append("HTTP/1.1 ").append(status).append(" ").append(reason).append("\r\n");
         headers.forEach((name, value) -> {
             if (name.equalsIgnoreCase("content-encoding")) return;
             if (name.equalsIgnoreCase("transfer-encoding")) return;
+            if (replaceContentLength != null && name.equalsIgnoreCase("content-length")) {
+                value = Long.toString(replaceContentLength);
+            }
             for (var line : value.split("\n")) {
                 builder.append(name).append(": ").append(line).append("\r\n");
             }

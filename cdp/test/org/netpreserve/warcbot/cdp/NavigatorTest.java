@@ -9,27 +9,32 @@ import org.netpreserve.warcbot.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.Channels;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 class NavigatorTest {
     private static final Logger log = LoggerFactory.getLogger(NavigatorTest.class);
     private static BrowserProcess browserProcess;
+    private static Path profileDir;
 
     @BeforeAll
     public static void setUp(@TempDir Path tempDir) throws IOException {
-        browserProcess = BrowserProcess.start(null, tempDir.resolve("profile"), true);
+        profileDir = tempDir.resolve("profile");
+        browserProcess = BrowserProcess.start(null, profileDir, true);
     }
 
     @AfterAll
@@ -128,40 +133,47 @@ class NavigatorTest {
             exchange.getResponseHeaders().add("Content-Type", "text/html");
             exchange.getResponseHeaders().add("Test", "1");
             exchange.getResponseHeaders().add("Test", "2");
-            exchange.sendResponseHeaders(200, 0);
-            exchange.getResponseBody().write("""
-                <!doctype html>
-                <title>Test page</title>
-                <style>.unused { background: url(bg.jpg) }</style>
-                <div style='height:4000px'></div>
-                <a href='link1'>Link1</a>
-                <svg><a href='svglink'><text y='25'>Svglink</text></a></svg>
-                <img loading=lazy src=lazy.jpg id=lazy>
-                <img id=scrollImg data-src=scroll.jpg width=50 height=50>
-                <img src=srcset1.jpg srcset="srcset2.jpg 100w, srcset3.jpg 200w">
-                <script>
-                    var observer = new IntersectionObserver(function(entries, observer) {
-                        entries.forEach(function(entry) {
-                            if (entry.isIntersecting) {
-                                const img = entry.target;
-                                img.src = img.dataset.src;
-                                observer.unobserve(img);
-                            }
-                        });
-                    });
-                    observer.observe(document.getElementById('scrollImg'));
-                    observer.observe(document.getElementById('lazy'));
-    
-                    const headers = new Headers();
-                    headers.append("Test-Header", 1);
-                    headers.append("Test-Header", 2);
-                    const body = new Int8Array(8);
-                    body[0] = 0xc3;
-                    body[1] = 0x28;
-    
-                    fetch("/post", {method: "POST", headers: headers, body: body});
-                </script>
-                """.getBytes());
+
+            // Send the body gzipped to test our handling of Content-Encoding
+            exchange.getResponseHeaders().add("Content-Encoding", "gzip");
+            var out = new ByteArrayOutputStream();
+            try (var gzipStrem = new GZIPOutputStream(out)) {
+                gzipStrem.write("""
+                        <!doctype html>
+                        <title>Test page</title>
+                        <style>.unused { background: url(bg.jpg) }</style>
+                        <div style='height:4000px'></div>
+                        <a href='link1'>Link1</a>
+                        <svg><a href='svglink'><text y='25'>Svglink</text></a></svg>
+                        <img loading=lazy src=lazy.jpg id=lazy>
+                        <img id=scrollImg data-src=scroll.jpg width=50 height=50>
+                        <img src=srcset1.jpg srcset="srcset2.jpg 100w, srcset3.jpg 200w">
+                        <script>
+                            var observer = new IntersectionObserver(function(entries, observer) {
+                                entries.forEach(function(entry) {
+                                    if (entry.isIntersecting) {
+                                        const img = entry.target;
+                                        img.src = img.dataset.src;
+                                        observer.unobserve(img);
+                                    }
+                                });
+                            });
+                            observer.observe(document.getElementById('scrollImg'));
+                            observer.observe(document.getElementById('lazy'));
+                        
+                            const headers = new Headers();
+                            headers.append("Test-Header", 1);
+                            headers.append("Test-Header", 2);
+                            const body = new Int8Array(8);
+                            body[0] = 0xc3;
+                            body[1] = 0x28;
+                        
+                            fetch("/post", {method: "POST", headers: headers, body: body});
+                        </script>
+                        """.getBytes());
+            }
+            exchange.sendResponseHeaders(200, out.size());
+            exchange.getResponseBody().write(out.toByteArray());
             exchange.close();
         });
         int port = httpServer.getAddress().getPort();
@@ -169,7 +181,13 @@ class NavigatorTest {
         var recordedPaths = new HashSet<String>();
         try (var navigator = browserProcess.newWindow(recording -> {
             recordedPaths.add(recording.url().path());
-            System.out.println("Got resource! " + recording);
+            try {
+                long bodySize = recording.responseBodyChannel().size();
+                System.out.println("Got resource! " + recording + " " + bodySize + " bytes");
+            } catch (IOException e) {
+                log.error("Error getting response body size", e);
+            }
+
         }, null)) {
 
             navigator.setUserAgent("test-agent");
@@ -183,7 +201,19 @@ class NavigatorTest {
 
 
             String baseUrl = "http://127.0.0.1:" + port + "/";
-            navigator.navigateTo(new Url(baseUrl)).loadEvent().get(10, TimeUnit.SECONDS);
+            var navigation = navigator.navigateTo(new Url(baseUrl));
+            navigation.loadEvent().get(10, TimeUnit.SECONDS);
+            var resource = navigation.mainResource().get(10, TimeUnit.SECONDS);
+
+            long bodySize = resource.responseBodyChannel().size();
+            String header = new String(resource.responseHeader(), StandardCharsets.US_ASCII);
+            Matcher matcher = Pattern.compile("(?mi)^Content-Length:\\s*(\\d+)$").matcher(header);
+            long contentLength = matcher.find() ? Long.parseLong(matcher.group(1)) : -1;
+            assertEquals(bodySize, contentLength,
+                    "Content-Length header should be adjusted to match body size");
+            assertFalse(header.toLowerCase(Locale.ROOT).contains("Content-Encoding:"),
+                    "Content-Encoding header should have been removed");
+
             title = navigator.title();
 
             assertEquals("Test page", navigator.title());
@@ -247,6 +277,9 @@ class NavigatorTest {
         } finally {
             httpServer.stop(0);
         }
+
+        System.out.println(Files.list(profileDir));
+
     }
 
     @Test
