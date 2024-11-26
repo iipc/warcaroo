@@ -5,11 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.netpreserve</groupId>
-        <artifactId>warcbot-parent</artifactId>
+        <artifactId>warcaroo-parent</artifactId>
         <version>0.1.0</version>
     </parent>
 
-    <artifactId>warcbot-cdp</artifactId>
+    <artifactId>warcaroo-cdp</artifactId>
 
     <properties>
         <maven.compiler.source>22</maven.compiler.source>

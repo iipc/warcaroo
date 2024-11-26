@@ -1,10 +1,10 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.BindFields;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
-import org.netpreserve.warcbot.webapp.Webapp;
+import org.netpreserve.warcaroo.webapp.Webapp;
 
 @RegisterConstructorMapper(Domain.class)
 public interface DomainDAO {

@@ -1,12 +1,12 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcaroo.cdp;
 
 import org.jetbrains.annotations.NotNull;
-import org.netpreserve.warcbot.cdp.domains.Browser;
-import org.netpreserve.warcbot.cdp.domains.Fetch;
-import org.netpreserve.warcbot.cdp.domains.Network;
-import org.netpreserve.warcbot.cdp.domains.Page;
-import org.netpreserve.warcbot.util.BareMediaType;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.domains.Browser;
+import org.netpreserve.warcaroo.cdp.domains.Fetch;
+import org.netpreserve.warcaroo.cdp.domains.Network;
+import org.netpreserve.warcaroo.cdp.domains.Page;
+import org.netpreserve.warcaroo.util.BareMediaType;
+import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.spi.LoggingEventBuilder;

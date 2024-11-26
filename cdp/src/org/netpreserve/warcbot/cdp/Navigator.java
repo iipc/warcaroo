@@ -1,12 +1,12 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcaroo.cdp;
 
 import org.intellij.lang.annotations.Language;
-import org.netpreserve.warcbot.cdp.domains.*;
-import org.netpreserve.warcbot.cdp.domains.Runtime;
-import org.netpreserve.warcbot.cdp.protocol.CDPException;
-import org.netpreserve.warcbot.cdp.protocol.CDPSession;
-import org.netpreserve.warcbot.cdp.protocol.CDPTimeoutException;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.domains.*;
+import org.netpreserve.warcaroo.cdp.domains.Runtime;
+import org.netpreserve.warcaroo.cdp.protocol.CDPException;
+import org.netpreserve.warcaroo.cdp.protocol.CDPSession;
+import org.netpreserve.warcaroo.cdp.protocol.CDPTimeoutException;
+import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -112,14 +112,14 @@ public class Navigator implements AutoCloseable {
         this.frameTree = page.getFrameTree();
         runtime.onExecutionContextCreated(event -> {
             var context = event.context();
-            if (context.auxData().frameId().equals(frameTree.frame().id()) && context.name().equals("warcbot")) {
+            if (context.auxData().frameId().equals(frameTree.frame().id()) && context.name().equals("warcaroo")) {
                 isolatedContext = context.uniqueId();
             }
         });
         runtime.enable();
         page.setLifecycleEventsEnabled(true);
-        page.createIsolatedWorld(frameTree.frame().id(), "warcbot", false);
-        page.addScriptToEvaluateOnNewDocument(forceLoadScript, "warcbot");
+        page.createIsolatedWorld(frameTree.frame().id(), "warcaroo", false);
+        page.addScriptToEvaluateOnNewDocument(forceLoadScript, "warcaroo");
 
         runtime.onConsoleAPICalled(event -> log.debug("Console: {} {}", event.type(), event.args()));
     }

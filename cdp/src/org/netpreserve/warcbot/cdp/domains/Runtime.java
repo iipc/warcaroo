@@ -1,10 +1,10 @@
-package org.netpreserve.warcbot.cdp.domains;
+package org.netpreserve.warcaroo.cdp.domains;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
-import org.netpreserve.warcbot.cdp.protocol.RPC;
+import org.netpreserve.warcaroo.cdp.protocol.RPC;
 
 import java.util.List;
 import java.util.Map;

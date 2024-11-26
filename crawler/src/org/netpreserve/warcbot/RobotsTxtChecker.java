@@ -1,6 +1,6 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

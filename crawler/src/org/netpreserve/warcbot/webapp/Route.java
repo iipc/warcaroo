@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.webapp;
+package org.netpreserve.warcaroo.webapp;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
@@ -124,7 +124,7 @@ public class Route implements HttpHandler {
         StringWriter writer = new StringWriter();
         cause.printStackTrace(new PrintWriter(writer));
         var body = writer.toString()
-                .replaceFirst("(?s)\n\tat org\\.netpreserve\\.warcbot\\.webapp\\.Webapp\\.handle.*", "\n")
+                .replaceFirst("(?s)\n\tat org\\.netpreserve\\.warcaroo\\.webapp\\.Webapp\\.handle.*", "\n")
                 .replaceAll("\n\tat java\\.base/jdk\\.internal\\.reflect\\..*", "")
                 .replaceAll("\n\tat java\\.base/java\\.lang\\.reflect\\.Method\\.invoke.*", "")
                 .getBytes(UTF_8);

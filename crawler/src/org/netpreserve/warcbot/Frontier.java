@@ -1,9 +1,9 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixList;
 import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixListFactory;
 import org.jetbrains.annotations.Nullable;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -11,7 +11,7 @@ import java.time.Instant;
 import java.util.*;
 import java.util.function.Predicate;
 
-import static org.netpreserve.warcbot.FrontierUrl.State.OUT_OF_SCOPE;
+import static org.netpreserve.warcaroo.FrontierUrl.State.OUT_OF_SCOPE;
 
 public class Frontier {
     private static final Logger log = LoggerFactory.getLogger(Frontier.class);

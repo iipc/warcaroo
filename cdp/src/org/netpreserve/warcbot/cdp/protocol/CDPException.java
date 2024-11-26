@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.cdp.protocol;
+package org.netpreserve.warcaroo.cdp.protocol;
 
 public class CDPException extends RuntimeException {
     private final int code;

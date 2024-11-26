@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;

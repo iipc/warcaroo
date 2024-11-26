@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.netpreserve.warcbot.robotstxt;
+package org.netpreserve.warcaroo.robotstxt;
 
 /**
  * Provides methods to calculate match priority for given directives against given path. It is

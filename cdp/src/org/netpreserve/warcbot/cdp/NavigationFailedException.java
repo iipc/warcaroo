@@ -1,6 +1,6 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcaroo.cdp;
 
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.util.Url;
 
 public class NavigationFailedException extends NavigationException {
     private final String errorText;

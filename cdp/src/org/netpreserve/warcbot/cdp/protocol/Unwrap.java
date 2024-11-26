@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.cdp.protocol;
+package org.netpreserve.warcaroo.cdp.protocol;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;

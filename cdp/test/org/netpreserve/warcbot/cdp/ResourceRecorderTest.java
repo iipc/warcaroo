@@ -1,10 +1,10 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcaroo.cdp;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.netpreserve.warcbot.cdp.domains.Fetch;
-import org.netpreserve.warcbot.cdp.domains.Network;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.domains.Fetch;
+import org.netpreserve.warcaroo.cdp.domains.Network;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;

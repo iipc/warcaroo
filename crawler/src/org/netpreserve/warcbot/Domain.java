@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

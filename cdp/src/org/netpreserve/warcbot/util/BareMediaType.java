@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.util;
+package org.netpreserve.warcaroo.util;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;

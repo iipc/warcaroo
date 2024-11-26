@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.cdp.domains;
+package org.netpreserve.warcaroo.cdp.domains;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

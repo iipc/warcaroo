@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -16,9 +16,9 @@ import org.jdbi.v3.sqlobject.locator.UseClasspathSqlLocator;
 import org.jdbi.v3.sqlobject.statement.SqlScript;
 import org.jdbi.v3.sqlobject.transaction.Transactional;
 import org.netpreserve.jwarc.WarcDigest;
-import org.netpreserve.warcbot.cdp.domains.Network;
-import org.netpreserve.warcbot.util.BareMediaType;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.domains.Network;
+import org.netpreserve.warcaroo.util.BareMediaType;
+import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

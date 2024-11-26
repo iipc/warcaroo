@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.util;
+package org.netpreserve.warcaroo.util;
 
 import org.jdbi.v3.core.statement.StatementContext;
 import org.jdbi.v3.core.statement.StatementCustomizer;

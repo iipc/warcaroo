@@ -1,8 +1,8 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import com.fasterxml.jackson.annotation.JsonUnwrapped;
 import org.jdbi.v3.core.mapper.Nested;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.time.Instant;
 

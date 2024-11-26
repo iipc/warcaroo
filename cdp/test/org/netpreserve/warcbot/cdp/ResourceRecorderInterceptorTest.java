@@ -1,8 +1,8 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcaroo.cdp;
 
 import org.junit.jupiter.api.Test;
-import org.netpreserve.warcbot.cdp.domains.Network;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.domains.Network;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

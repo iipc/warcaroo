@@ -1,10 +1,10 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.netpreserve.warcbot.util.Url;
-import org.netpreserve.warcbot.webapp.Webapp;
+import org.netpreserve.warcaroo.util.Url;
+import org.netpreserve.warcaroo.webapp.Webapp;
 
 import java.util.Arrays;
 

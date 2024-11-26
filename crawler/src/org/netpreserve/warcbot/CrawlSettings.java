@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import java.time.Duration;
 import java.util.function.Predicate;
@@ -41,7 +41,7 @@ public record CrawlSettings(
         }
     }
 
-    public static final CrawlSettings DEFAULTS = new CrawlSettings("warcbot", true,
+    public static final CrawlSettings DEFAULTS = new CrawlSettings("warcaroo", true,
             null, null, null, null, null, null,
             null, null, null);
 }

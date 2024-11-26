@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.netpreserve.warcbot.robotstxt;
+package org.netpreserve.warcaroo.robotstxt;
 
 /**
  * Implementation of matching strategy used in robots.txt matching. Implements longest-match

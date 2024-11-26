@@ -1,6 +1,6 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcaroo.cdp;
 
-import org.netpreserve.warcbot.cdp.domains.Network;
+import org.netpreserve.warcaroo.cdp.domains.Network;
 
 import java.net.http.HttpHeaders;
 

@@ -1,7 +1,7 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
-import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
-import org.netpreserve.warcbot.webapp.Route.HttpError;
+import org.netpreserve.warcaroo.webapp.OpenAPI.Doc;
+import org.netpreserve.warcaroo.webapp.Route.HttpError;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
@@ -47,7 +47,7 @@ public class Crawl implements AutoCloseable {
         this.frontier = new Frontier(db, config.getScope(), config);
         this.storage = new Storage(dataPath, db, config);
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage,
-                List.of("nla.gov.au_bot", "warcbot"), config);
+                List.of("nla.gov.au_bot", "warcaroo"), config);
     }
 
     public void close() {

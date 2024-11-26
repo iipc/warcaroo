@@ -1,8 +1,8 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.io.IOException;
 import java.nio.file.Files;

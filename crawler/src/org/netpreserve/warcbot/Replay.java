@@ -1,13 +1,13 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import org.netpreserve.jwarc.HttpResponse;
 import org.netpreserve.jwarc.WarcReader;
 import org.netpreserve.jwarc.WarcResponse;
-import org.netpreserve.warcbot.cdp.BrowserProcess;
-import org.netpreserve.warcbot.cdp.NavigationException;
-import org.netpreserve.warcbot.cdp.RequestHandler;
-import org.netpreserve.warcbot.cdp.ResourceFetched;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.BrowserProcess;
+import org.netpreserve.warcaroo.cdp.NavigationException;
+import org.netpreserve.warcaroo.cdp.RequestHandler;
+import org.netpreserve.warcaroo.cdp.ResourceFetched;
+import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import org.netpreserve.jwarc.WarcCompression;
 import org.netpreserve.jwarc.WarcWriter;
@@ -36,7 +36,7 @@ public class WarcRotator implements Closeable {
                 WRITE, CREATE, TRUNCATE_EXISTING), WarcCompression.GZIP);
         Warcinfo warcinfo = new Warcinfo.Builder()
                 .filename(filename)
-                .fields(Map.of("software", List.of("warcbot"),
+                .fields(Map.of("software", List.of("warcaroo"),
                         "format", List.of("WARC File Format 1.0"),
                         "conformsTo", List.of("https://iipc.github.io/warc-specifications/specifications/warc-format/warc-1.0/")))
                 .build();

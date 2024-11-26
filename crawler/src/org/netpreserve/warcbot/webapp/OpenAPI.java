@@ -1,11 +1,11 @@
-package org.netpreserve.warcbot.webapp;
+package org.netpreserve.warcaroo.webapp;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.github.victools.jsonschema.generator.*;
 import com.github.victools.jsonschema.generator.impl.module.SimpleTypeModule;
 import com.github.victools.jsonschema.module.jackson.JacksonModule;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.lang.annotation.Retention;
 import java.lang.reflect.Method;
@@ -61,7 +61,7 @@ public class OpenAPI {
     }
 
     public static class Info {
-        public String title = "WarcBot API";
+        public String title = "Warcaroo API";
         public String version = "1.0";
     }
 

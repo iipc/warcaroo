@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package org.netpreserve.warcbot.robotstxt;
+package org.netpreserve.warcaroo.robotstxt;
 
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.net.URI;
 import java.util.Collections;

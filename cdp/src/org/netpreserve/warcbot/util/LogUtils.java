@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.util;
+package org.netpreserve.warcaroo.util;
 
 import java.util.regex.Pattern;
 

@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.cdp.protocol;
+package org.netpreserve.warcaroo.cdp.protocol;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.json.JsonWriteFeature;
@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
-import static org.netpreserve.warcbot.util.LogUtils.ellipses;
+import static org.netpreserve.warcaroo.util.LogUtils.ellipses;
 
 public abstract class CDPBase {
     private static final Logger log = LoggerFactory.getLogger(CDPBase.class);

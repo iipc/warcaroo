@@ -1,9 +1,9 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcaroo.cdp;
 
-import org.netpreserve.warcbot.cdp.domains.Network;
-import org.netpreserve.warcbot.cdp.domains.Page.FrameId;
-import org.netpreserve.warcbot.util.BareMediaType;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.domains.Network;
+import org.netpreserve.warcaroo.cdp.domains.Page.FrameId;
+import org.netpreserve.warcaroo.util.BareMediaType;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.io.Closeable;
 import java.io.IOException;

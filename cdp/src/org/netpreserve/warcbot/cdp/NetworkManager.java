@@ -1,8 +1,8 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcaroo.cdp;
 
-import org.netpreserve.warcbot.cdp.domains.*;
-import org.netpreserve.warcbot.cdp.protocol.CDPSession;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.domains.*;
+import org.netpreserve.warcaroo.cdp.protocol.CDPSession;
+import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -1,9 +1,9 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.junit.jupiter.api.Test;
-import org.netpreserve.warcbot.webapp.QueryMapper;
+import org.netpreserve.warcaroo.webapp.QueryMapper;
 
 import static org.junit.jupiter.api.Assertions.*;
 

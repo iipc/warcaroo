@@ -1,12 +1,12 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import com.fasterxml.uuid.Generators;
 import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import org.netpreserve.jwarc.*;
-import org.netpreserve.warcbot.cdp.ResourceFetched;
-import org.netpreserve.warcbot.cdp.domains.Network;
-import org.netpreserve.warcbot.util.BareMediaType;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.ResourceFetched;
+import org.netpreserve.warcaroo.cdp.domains.Network;
+import org.netpreserve.warcaroo.util.BareMediaType;
+import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,7 +37,7 @@ public class Storage implements Closeable {
         this.uuidGenerator = Generators.timeBasedEpochGenerator();
         warcPool = new LinkedBlockingDeque<>(poolSize);
         String prefix = config.getCrawlSettings().warcPrefix();
-        if (prefix == null) prefix = "warcbot";
+        if (prefix == null) prefix = "warcaroo";
         for (int i = 0; i < poolSize; i++) {
             warcPool.add(new WarcRotator(directory, prefix));
         }

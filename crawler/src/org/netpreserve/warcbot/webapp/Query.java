@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.webapp;
+package org.netpreserve.warcaroo.webapp;
 
 import org.jdbi.v3.core.mapper.Nested;
 

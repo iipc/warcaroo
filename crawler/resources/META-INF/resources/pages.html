@@ -1,5 +1,5 @@
 <!doctype html>
-<title>Pages - WarcBot</title>
+<title>Pages - Warcaroo</title>
 <div id="myTable">
 </div>
 
@@ -14,9 +14,9 @@
     }
 </style>
 <script type="module">
-    import {WarcBotTabulator, formatSize} from "./tables.js";
+    import {WarcarooTabulator, formatSize} from "./tables.js";
 
-    const table = new WarcBotTabulator("#myTable", {
+    const table = new WarcarooTabulator("#myTable", {
         ajaxURL: '/api/pages',
         filterMode: "remote",
         height: '100%',

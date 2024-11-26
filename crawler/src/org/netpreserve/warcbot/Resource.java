@@ -1,11 +1,11 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.netpreserve.jwarc.WarcDigest;
-import org.netpreserve.warcbot.cdp.domains.Network;
-import org.netpreserve.warcbot.util.BareMediaType;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.domains.Network;
+import org.netpreserve.warcaroo.util.BareMediaType;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.time.Instant;
 import java.util.UUID;

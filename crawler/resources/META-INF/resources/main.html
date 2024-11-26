@@ -2,9 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>WarcBot</title>
+    <title>Warcaroo</title>
 
-    <link rel="stylesheet" href="warcbot.css">
+    <link rel="stylesheet" href="warcaroo.css">
     <style>
         html, body {
             height: 100%;
@@ -140,15 +140,15 @@
             }
         }
     </style>
-    <link rel='shortcut icon' type='image/svg+xml' href='warcbot.svg' />
+    <link rel='shortcut icon' type='image/svg+xml' href='warcaroo.svg' />
 </head>
 <body>
 
 <div class="toolbar">
     <nav class="controls">
-        <img src="warcbot.svg" style="height: 140%; position: relative; top: 2px; margin-left: 6px; aspect-ratio: 1">
+        <img src="warcaroo.svg" style="height: 140%; position: relative; top: 2px; margin-left: 6px; aspect-ratio: 1">
         <div class="logo">
-            WarcBot
+            Warcaroo
         </div>
         <button id=startButton title="Start" onclick="fetch('api/start', {method: 'POST'})">
             <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#play" /></svg>
@@ -266,7 +266,7 @@
             document.title = contentFrame.contentWindow.document.title;
         } catch (e) {
             frameUrl = null;
-            document.title = "WarcBot";
+            document.title = "Warcaroo";
             return;
         }
         let frameUrlWithoutQuery = frameUrl.replaceAll(/[?#].*/g, "");

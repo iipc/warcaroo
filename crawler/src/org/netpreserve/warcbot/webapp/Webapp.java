@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.webapp;
+package org.netpreserve.warcaroo.webapp;
 
 import com.fasterxml.jackson.annotation.JsonPropertyDescription;
 import com.fasterxml.jackson.core.JsonGenerator;
@@ -11,13 +11,13 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.netpreserve.jwarc.WarcDigest;
-import org.netpreserve.warcbot.*;
-import org.netpreserve.warcbot.cdp.BrowserProcess;
-import org.netpreserve.warcbot.cdp.NavigationException;
-import org.netpreserve.warcbot.cdp.domains.Browser;
-import org.netpreserve.warcbot.util.Url;
-import org.netpreserve.warcbot.webapp.OpenAPI.Doc;
-import org.netpreserve.warcbot.webapp.Route.GET;
+import org.netpreserve.warcaroo.*;
+import org.netpreserve.warcaroo.cdp.BrowserProcess;
+import org.netpreserve.warcaroo.cdp.NavigationException;
+import org.netpreserve.warcaroo.cdp.domains.Browser;
+import org.netpreserve.warcaroo.util.Url;
+import org.netpreserve.warcaroo.webapp.OpenAPI.Doc;
+import org.netpreserve.warcaroo.webapp.Route.GET;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,7 +27,7 @@ import java.net.URLConnection;
 import java.util.*;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.netpreserve.warcbot.webapp.Route.*;
+import static org.netpreserve.warcaroo.webapp.Route.*;
 
 public class Webapp implements HttpHandler {
     private static final Logger log = LoggerFactory.getLogger(Webapp.class);

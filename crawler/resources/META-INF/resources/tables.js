@@ -14,7 +14,7 @@ for (const cssFile of ["/webjars/tabulator-tables/6.2.1/dist/css/tabulator.min.c
 /**
  * @typedef {import("tabulator-tables").TabulatorFull} TabulatorFull
  */
-export class WarcBotTabulator extends TabulatorFull {
+export class WarcarooTabulator extends TabulatorFull {
     /**
      * @param {string | HTMLElement} element
      * @param {import("tabulator-tables").Options} options

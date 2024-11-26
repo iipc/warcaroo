@@ -1,9 +1,9 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.time.Instant;
 

@@ -1,11 +1,11 @@
-package org.netpreserve.warcbot.cdp.domains;
+package org.netpreserve.warcaroo.cdp.domains;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import org.jetbrains.annotations.Nullable;
-import org.netpreserve.warcbot.cdp.protocol.Unwrap;
-import org.netpreserve.warcbot.util.Url;
+import org.netpreserve.warcaroo.cdp.protocol.Unwrap;
+import org.netpreserve.warcaroo.util.Url;
 
 import java.time.Instant;
 import java.util.*;

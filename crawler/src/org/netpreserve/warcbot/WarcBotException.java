@@ -1,7 +1,7 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
-public abstract class WarcBotException extends Exception {
-    public WarcBotException(String message) {
+public abstract class WarcarooException extends Exception {
+    public WarcarooException(String message) {
         super(message);
     }
 

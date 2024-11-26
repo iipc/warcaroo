@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.util;
+package org.netpreserve.warcaroo.util;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.pattern.color.ForegroundCompositeConverterBase;

@@ -1,11 +1,11 @@
-package org.netpreserve.warcbot;
+package org.netpreserve.warcaroo;
 
-import org.netpreserve.warcbot.cdp.BrowserProcess;
-import org.netpreserve.warcbot.cdp.Navigator;
-import org.netpreserve.warcbot.cdp.RequestHandler;
-import org.netpreserve.warcbot.cdp.ResourceFetched;
-import org.netpreserve.warcbot.cdp.domains.Browser;
-import org.netpreserve.warcbot.cdp.protocol.CDPTimeoutException;
+import org.netpreserve.warcaroo.cdp.BrowserProcess;
+import org.netpreserve.warcaroo.cdp.Navigator;
+import org.netpreserve.warcaroo.cdp.RequestHandler;
+import org.netpreserve.warcaroo.cdp.ResourceFetched;
+import org.netpreserve.warcaroo.cdp.domains.Browser;
+import org.netpreserve.warcaroo.cdp.protocol.CDPTimeoutException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

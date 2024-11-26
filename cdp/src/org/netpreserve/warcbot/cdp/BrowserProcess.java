@@ -1,9 +1,9 @@
-package org.netpreserve.warcbot.cdp;
+package org.netpreserve.warcaroo.cdp;
 
-import org.netpreserve.warcbot.cdp.domains.Browser;
-import org.netpreserve.warcbot.cdp.protocol.CDPClient;
-import org.netpreserve.warcbot.cdp.protocol.CDPSession;
-import org.netpreserve.warcbot.cdp.domains.Target;
+import org.netpreserve.warcaroo.cdp.domains.Browser;
+import org.netpreserve.warcaroo.cdp.protocol.CDPClient;
+import org.netpreserve.warcaroo.cdp.protocol.CDPSession;
+import org.netpreserve.warcaroo.cdp.domains.Target;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,7 +72,7 @@ public class BrowserProcess implements AutoCloseable {
     public static BrowserProcess start(String executable, String options, Path profileDir, boolean headless, List<String> shell) throws IOException {
         boolean deleteProfileOnExit = false;
         if (profileDir == null) {
-            profileDir = Path.of("/tmp/warcbot-" + UUID.randomUUID());
+            profileDir = Path.of("/tmp/warcaroo-" + UUID.randomUUID());
             deleteProfileOnExit = true;
         }
         String preferences = "{\"plugins\":{\"always_open_pdf_externally\": true}}";

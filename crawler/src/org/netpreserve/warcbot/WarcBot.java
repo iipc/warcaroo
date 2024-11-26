@@ -1,4 +1,4 @@
-    package org.netpreserve.warcbot;
+    package org.netpreserve.warcaroo;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -8,8 +8,8 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.FileAppender;
 import com.sun.net.httpserver.HttpServer;
-import org.netpreserve.warcbot.cdp.protocol.CDPBase;
-import org.netpreserve.warcbot.webapp.Webapp;
+import org.netpreserve.warcaroo.cdp.protocol.CDPBase;
+import org.netpreserve.warcaroo.webapp.Webapp;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
@@ -21,9 +21,9 @@ import java.util.concurrent.Executors;
 
 import ch.qos.logback.classic.LoggerContext;
 
-public class WarcBot {
+public class Warcaroo {
 
-    private static final org.slf4j.Logger log = LoggerFactory.getLogger(WarcBot.class);
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(Warcaroo.class);
 
     public static void main(String[] args) throws Exception {
         Config config = new Config();
@@ -47,7 +47,7 @@ public class WarcBot {
                 switch (args[i]) {
                     case "-h", "--help" -> {
                         System.out.printf("""
-                                Usage: warcbot [options] seed-url...
+                                Usage: warcaroo [options] seed-url...
                                 
                                 Options:
                                   --block REGEX             Block fetching of resources that match the specified REGEX pattern.
@@ -68,7 +68,7 @@ public class WarcBot {
                                   -v, --verbose             Increase verbosity of the output.
                                 
                                 Examples:
-                                  warcbot --include "https?://([^/]+\\.)example\\.com/.*" -A "MyCrawler/1.0" -w 5
+                                  warcaroo --include "https?://([^/]+\\.)example\\.com/.*" -A "MyCrawler/1.0" -w 5
                                 """, workers);
                         return;
                     }
@@ -83,7 +83,7 @@ public class WarcBot {
                     case "--seed-file", "--seedFile" -> config.loadSeedFile(Path.of(args[++i]));
                     case "--ssh" -> browsers.add(new BrowserSettings(args[++i], browserExecutable, browserOptions, Arrays.asList((sshCommand + " " + args[i]).split(" ")), workers, true));
                     case "--ssh-command" -> sshCommand = args[++i];
-                    case "--trace-cdp" -> ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot.cdp.protocol.CDPBase")).setLevel(Level.TRACE);
+                    case "--trace-cdp" -> ((Logger)LoggerFactory.getLogger("org.netpreserve.warcaroo.cdp.protocol.CDPBase")).setLevel(Level.TRACE);
                     case "--trace-cdp-file" -> cdpTraceFile = args[++i];
                     case "-A", "--user-agent", "--userAgent" -> userAgent = args[++i];
                     case "--warc-prefix", "--warcPrefix" -> warcPrefix = args[++i];
@@ -91,28 +91,28 @@ public class WarcBot {
                     case "-v", "--verbose" -> verbosity++;
                     default -> {
                         if (args[i].startsWith("-")) {
-                            System.err.println("warcbot: unknown option " + args[i]);
+                            System.err.println("warcaroo: unknown option " + args[i]);
                             System.exit(1);
                         }
                         config.addSeed(args[i]);
                     }
                 }
             } catch (ArrayIndexOutOfBoundsException e) {
-                System.err.println("warcbot: Missing value for option " + args[i - 1]);
+                System.err.println("warcaroo: Missing value for option " + args[i - 1]);
                 System.exit(1);
             } catch (NumberFormatException e) {
-                System.err.println("warcbot: Invalid number format for option " + args[i - 1]);
+                System.err.println("warcaroo: Invalid number format for option " + args[i - 1]);
                 System.exit(1);
             } catch (IllegalArgumentException e) {
-                System.err.println("warcbot: " + e.getMessage() + " for option " + args[i - 1]);
+                System.err.println("warcaroo: " + e.getMessage() + " for option " + args[i - 1]);
                 System.exit(1);
             }
         }
 
         if (verbosity >= 2) {
-            ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot")).setLevel(Level.TRACE);
+            ((Logger)LoggerFactory.getLogger("org.netpreserve.warcaroo")).setLevel(Level.TRACE);
         } else if (verbosity == 1) {
-            ((Logger)LoggerFactory.getLogger("org.netpreserve.warcbot")).setLevel(Level.DEBUG);
+            ((Logger)LoggerFactory.getLogger("org.netpreserve.warcaroo")).setLevel(Level.DEBUG);
         }
 
         if (cdpTraceFile != null) {

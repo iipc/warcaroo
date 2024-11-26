@@ -1,4 +1,4 @@
-package org.netpreserve.warcbot.cdp.protocol;
+package org.netpreserve.warcaroo.cdp.protocol;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.lang3.ArrayUtils;
-import org.netpreserve.warcbot.util.LogUtils;
+import org.netpreserve.warcaroo.util.LogUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
