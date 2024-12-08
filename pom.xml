@@ -20,9 +20,19 @@
                 <version>${jackson.version}</version>
             </dependency>
             <dependency>
+                <groupId>org.netpreserve</groupId>
+                <artifactId>jwarc</artifactId>
+                <version>0.31.1</version>
+            </dependency>
+            <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>2.0.13</version>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.mockito</groupId>
@@ -45,6 +55,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jackson.version>2.17.2</jackson.version>
+        <slf4j.version>2.0.13</slf4j.version>
     </properties>
 
     <build>

@@ -12,6 +12,18 @@
     <artifactId>warcaroo-renderer</artifactId>
 
     <dependencies>
-
+        <dependency>
+            <groupId>org.netpreserve.warcaroo</groupId>
+            <artifactId>warcaroo-cdp</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.netpreserve</groupId>
+            <artifactId>jwarc</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-simple</artifactId>
+        </dependency>
     </dependencies>
 </project>
