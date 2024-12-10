@@ -112,3 +112,19 @@ create table if not exists robotstxt
     last_checked INTEGER          NOT NULL,
     body         BLOB             NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS progress
+(
+    id         INTEGER NOT NULL PRIMARY KEY,
+    date       INTEGER NULL,
+    runtime    INTEGER NOT NULL,
+    discovered INTEGER NOT NULL,
+    pending    INTEGER NOT NULL,
+    crawled    INTEGER NOT NULL,
+    failed     INTEGER NOT NULL,
+    resources  INTEGER NOT NULL,
+    size       INTEGER NOT NULL
+);
+
+INSERT OR IGNORE INTO progress(id, date, runtime, discovered, pending, crawled, failed, resources, size)
+VALUES (0, NULL, 0, 0, 0, 0, 0, 0, 0);

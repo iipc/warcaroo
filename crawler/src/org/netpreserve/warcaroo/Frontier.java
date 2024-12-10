@@ -62,6 +62,7 @@ public class Frontier {
             if (id != null) {
                 dao.hosts().incrementPendingAndInitNextVisit(hostId);
                 dao.domains().incrementPending(domainId);
+                dao.progress().incrementPendingAndDiscovered();
             }
             return id;
         });
@@ -92,6 +93,13 @@ public class Frontier {
             db.frontier().updateState(frontierUrl.id(), newState);
             db.hosts().updateOnFrontierUrlStateChange(frontierUrl.hostId(), frontierUrl.state(), newState, now, now.plusMillis(config.getCrawlDelay()));
             db.domains().updateMetricsOnFrontierUrlStateChange(frontierUrl.domainId(), frontierUrl.state(), newState);
+            if (newState == FrontierUrl.State.CRAWLED) {
+                db.progress().decrementPendingAndIncrementCrawled();
+            } else if (newState == FrontierUrl.State.FAILED) {
+                db.progress().decrementPendingAndIncrementFailed();
+            } else if (newState != FrontierUrl.State.PENDING) {
+                db.progress().decrementPending();
+            }
         });
         lockedHosts.remove(frontierUrl.hostId());
     }

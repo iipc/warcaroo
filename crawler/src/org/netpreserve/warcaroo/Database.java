@@ -119,6 +119,9 @@ public interface Database extends AutoCloseable, Transactional<Database> {
     PageDAO pages();
 
     @CreateSqlObject
+    ProgressDAO progress();
+
+    @CreateSqlObject
     ResourceDAO resources();
 
     @CreateSqlObject

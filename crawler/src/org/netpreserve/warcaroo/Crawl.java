@@ -26,6 +26,7 @@ public class Crawl implements AutoCloseable {
     private final Config config;
     private volatile State state = State.STOPPED;
     private final Lock startStopLock = new ReentrantLock();
+    private final ProgressTracker progressTracker;
 
     public List<BrowserManager> browserManagers() {
         startStopLock.lock();
@@ -34,6 +35,10 @@ public class Crawl implements AutoCloseable {
         } finally {
             startStopLock.unlock();
         }
+    }
+
+    public Progress progress() {
+        return progressTracker.current();
     }
 
     public enum State {
@@ -48,6 +53,7 @@ public class Crawl implements AutoCloseable {
         this.storage = new Storage(dataPath, db, config);
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage,
                 List.of("nla.gov.au_bot", "warcaroo"), config);
+        progressTracker = new ProgressTracker(db.progress());
     }
 
     public void close() {
@@ -70,6 +76,7 @@ public class Crawl implements AutoCloseable {
             } catch (Exception e) {
                 log.error("Failed to close http client", e);
             }
+            progressTracker.close();
             state = State.STOPPED;
         } finally {
             startStopLock.unlock();
@@ -81,6 +88,7 @@ public class Crawl implements AutoCloseable {
         try {
             if (state != State.STOPPED) throw new BadStateException("Can only start a STOPPED crawl");
             state = State.STARTING;
+            progressTracker.startSession();
             frontier.addUrls(config.getSeeds(), 0, null);
             for (var browserSettings : config.getBrowsers()) {
                 BrowserManager browserManager = new BrowserManager(browserSettings);
@@ -127,6 +135,7 @@ public class Crawl implements AutoCloseable {
                 worker.closeAsyncGraceful();
             }
             closeAllBrowsers();
+            progressTracker.stopSession();
             state = State.STOPPED;
         } finally {
             startStopLock.unlock();

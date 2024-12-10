@@ -168,6 +168,11 @@ public class Webapp implements HttpHandler {
         public String pageId;
     }
 
+    @GET("/api/progress")
+    Progress progress() {
+        return crawl.progress();
+    }
+
     @GET("/api/resources")
     Paginated<Resource> resources(ResourcesQuery query) throws IOException {
         long count = crawl.db.resources().count(query);
