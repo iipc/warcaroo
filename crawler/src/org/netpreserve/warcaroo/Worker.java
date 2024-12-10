@@ -1,5 +1,6 @@
 package org.netpreserve.warcaroo;
 
+import org.jetbrains.annotations.NotNull;
 import org.netpreserve.warcaroo.cdp.*;
 import org.netpreserve.warcaroo.cdp.domains.Page;
 import org.netpreserve.warcaroo.cdp.protocol.CDPException;
@@ -11,6 +12,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -27,7 +29,7 @@ public class Worker {
     private Thread thread;
     private volatile boolean closed = false;
     private volatile Long pageId;
-    private final Set<String> outlinks = Collections.newSetFromMap(new ConcurrentSkipListMap<>());
+    private final Set<OutLink> outlinks = Collections.newSetFromMap(new ConcurrentSkipListMap<>());
     private volatile Info info;
     private FrontierUrl frontierUrl;
 
@@ -43,7 +45,6 @@ public class Worker {
     }
 
     private void handleSubresource(ResourceFetched resource) {
-        if (pageId == null) return;
         String hopType;
         if (resource.method().equals("GET")) {
             if (resource.type().value().equals("Manifest")) {
@@ -54,9 +55,9 @@ public class Worker {
         } else {
             hopType = "S";
         }
-        outlinks.add(resource.url() + " " + hopType + " =" + resource.type().value());
+        outlinks.add(new OutLink(resource.url(), hopType, "=" + resource.type().value(), true));
         try {
-            storage.save(pageId, resource, null);
+            if (storage != null && pageId != null) storage.save(pageId, resource, null);
         } catch (IOException e) {
             log.error("Failed to save resource", e);
         }
@@ -103,7 +104,6 @@ public class Worker {
             }
 
             pageId = db.pages().create(frontierUrl.url(), frontierUrl.hostId(), frontierUrl.domainId(), Instant.now());
-            var startTime = System.nanoTime();
 
             updateInfo(new Info(id, pageId, frontierUrl.url(), Instant.now()));
 
@@ -115,71 +115,16 @@ public class Worker {
                     continue;
                 }
 
-                if (navigator == null) {
-                    navigator = browserManager.newWindow(this::handleSubresource, null);
-                }
-                navigator.setUserAgent(config.getCrawlSettings().userAgent());
-                navigator.block(config.getBlockPredicate());
+                var visit = visit(frontierUrl.url());
 
-                // prevent javascript or a meta refresh trying to navigate away and instead
-                // treat that as an outlink.
-                navigator.setNavigationHandler(this::handleNavigation);
-
-                log.info("Nav to {}", frontierUrl.url());
-                var navigation = navigator.navigateTo(frontierUrl.url());
-                navigation.loadEvent().get(120, TimeUnit.SECONDS);
-                log.info("Load event");
-
-                Thread.sleep(200);
-
-                try {
-                    navigator.scrollToBottom();
-                } catch (CDPException e) {
-                    if (!e.getMessage().contains("uniqueContextId not found") &&
-                        !e.getMessage().contains("Execution context was destroyed.")) {
-                        throw e;
-                    }
-                }
-
-                navigator.waitForRequestInterceptorIdle();
-
-                try {
-                    List<Url> links = navigator.extractLinks();
-                    if (log.isTraceEnabled()) {
-                        for (var link : links) {
-                            log.trace("Link: {}", link);
-                        }
-                    }
-                    frontier.addUrls(links, frontierUrl.depth() + 1, frontierUrl.url());
-                    for (Url link : links) {
-                        outlinks.add(link.toString() + " L a/@href");
-                    }
-                } catch (CDPException e) {
-                    if (!e.getMessage().contains("uniqueContextId not found")) {
-                        throw e;
-                    }
-                }
-
-                // Prepare WARC metadata record
-                var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
-                var metadata = new TreeMap<String, List<String>>();
-                metadata.put("outlink", new ArrayList<>(outlinks));
-                if (frontierUrl.via() != null) metadata.put("via", List.of(frontierUrl.via().toString()));
-                metadata.put("visitTimeMs", List.of(String.valueOf(visitTimeMs)));
-
-                // Save the main resource
-                Long mainResourceId = null;
-                try {
-                    var mainResource = navigation.mainResource().get(5, TimeUnit.SECONDS);
-                    mainResourceId = storage.save(pageId, mainResource, metadata);
-                } catch (TimeoutException ignored) {
-                    log.atWarn().addKeyValue("url", frontierUrl.url())
-                            .addKeyValue("pageId", pageId)
-                            .log("No main resource captured");
-                }
+                // Enqueue non-subresource links
+                List<Url> urlsToEnqueue = outlinks.stream()
+                        .filter(link -> !link.subresource())
+                        .map(OutLink::url).toList();
+                frontier.addUrls(urlsToEnqueue, frontierUrl.depth() + 1, frontierUrl.url());
 
                 // Update the database
-                db.pages().finish(pageId, navigator.title(), visitTimeMs, mainResourceId);
+                db.pages().finish(pageId, navigator.title(), visit.visitTimeMs(), visit.mainResourceId());
                 frontier.release(frontierUrl, FrontierUrl.State.CRAWLED);
             } catch (NavigationException e) {
                 log.error("NavigationException {}", e.getMessage());
@@ -205,6 +150,88 @@ public class Worker {
         }
     }
 
+    public Visit visit(Url url) throws NavigationException, InterruptedException, ExecutionException, TimeoutException, IOException {
+        var startTime = System.nanoTime();
+
+        if (navigator == null) {
+            navigator = browserManager.newWindow(this::handleSubresource, null);
+        }
+        navigator.setUserAgent(config.getCrawlSettings().userAgent());
+        navigator.block(config.getBlockPredicate());
+
+        // prevent javascript or a meta refresh trying to navigate away and instead
+        // treat that as an outlink.
+        navigator.setNavigationHandler(this::handleNavigation);
+
+        log.info("Nav to {}", url);
+        var navigation = navigator.navigateTo(url);
+        navigation.loadEvent().get(120, TimeUnit.SECONDS);
+        log.info("Load event");
+
+        Thread.sleep(200);
+
+        try {
+            navigator.scrollToBottom();
+        } catch (CDPException e) {
+            if (!e.getMessage().contains("uniqueContextId not found") &&
+                !e.getMessage().contains("Execution context was destroyed.")) {
+                throw e;
+            }
+        }
+
+        navigator.waitForRequestInterceptorIdle();
+
+        try {
+            List<Url> links = navigator.extractLinks();
+            if (log.isTraceEnabled()) {
+                for (var link : links) {
+                    log.trace("Link: {}", link);
+                }
+            }
+            for (Url link : links) {
+                outlinks.add(new OutLink(link,  "L", "a/@href", false));
+            }
+        } catch (CDPException e) {
+            if (!e.getMessage().contains("uniqueContextId not found")) {
+                throw e;
+            }
+        }
+
+        // Prepare WARC metadata record
+        var visitTimeMs = (System.nanoTime() - startTime) / 1_000_000;
+        var metadata = new TreeMap<String, List<String>>();
+        metadata.put("outlink", outlinks.stream().map(OutLink::toMetadataString).toList());
+        if (frontierUrl != null && frontierUrl.via() != null) metadata.put("via", List.of(frontierUrl.via().toString()));
+        metadata.put("visitTimeMs", List.of(String.valueOf(visitTimeMs)));
+
+        // Save the main resource
+        Long mainResourceId = null;
+        try {
+            var mainResource = navigation.mainResource().get(5, TimeUnit.SECONDS);
+            if (storage != null) mainResourceId = storage.save(pageId, mainResource, metadata).id();
+        } catch (TimeoutException ignored) {
+            log.atWarn().addKeyValue("url", frontierUrl.url())
+                    .addKeyValue("pageId", pageId)
+                    .log("No main resource captured");
+        }
+
+        return new Visit(mainResourceId, outlinks, visitTimeMs);
+    }
+
+    record Visit(Long mainResourceId, Set<OutLink> outlinks, long visitTimeMs) {
+    }
+
+    record OutLink(Url url, String hopType, String context, boolean subresource) implements Comparable<OutLink> {
+        @Override
+        public int compareTo(@NotNull Worker.OutLink o) {
+            return url.toString().compareTo(o.url.toString());
+        }
+
+        public String toMetadataString() {
+            return url + " " + hopType + " " + context;
+        }
+    }
+
     /**
      * Called when the page itself initiates navigation (e.g. due to a script or refresh meta tag).
      * We prevent navigation by returning false and instead add the url as an outlink.
@@ -225,7 +252,7 @@ public class Worker {
             default -> "X";
         };
         frontier.addUrls(List.of(url), frontierUrl.depth() + 1, frontierUrl.url());
-        outlinks.add(url + " " + hop + " " + linkContext);
+        outlinks.add(new OutLink(url, hop, linkContext, false));
         return false;
     }
 

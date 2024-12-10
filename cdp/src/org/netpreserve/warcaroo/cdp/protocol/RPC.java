@@ -22,6 +22,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.WebSocket;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -43,6 +44,8 @@ public interface RPC {
     void send(Command message) throws IOException;
 
     void close();
+
+    void waitClose(Duration timeout) throws InterruptedException, TimeoutException;
 
     record Command(long id, String method, Map<String, Object> params, String sessionId) {
     }
@@ -90,6 +93,11 @@ public interface RPC {
             webSocket.abort();
         }
 
+        @Override
+        public void waitClose(Duration timeout) throws InterruptedException {
+            // TODO
+        }
+
         private class Listener implements WebSocket.Listener {
             private final StringBuilder buffer = new StringBuilder();
 
@@ -123,12 +131,13 @@ public interface RPC {
         private final OutputStream outputStream;
         private final Consumer<ServerMessage> messageHandler;
         private final Lock writeLock = new ReentrantLock();
+        private final Thread thread;
 
         public Pipe(InputStream inputStream, OutputStream outputStream, Consumer<ServerMessage> messageHandler) {
             this.inputStream = inputStream;
             this.outputStream = outputStream;
             this.messageHandler = messageHandler;
-            var thread = new Thread(this::run, "CDP.Pipe");
+            this.thread = new Thread(this::run, "CDP.Pipe");
             thread.setDaemon(true);
             thread.start();
         }
@@ -213,6 +222,11 @@ public interface RPC {
             } catch (IOException e) {
                 // ignore
             }
+        }
+
+        @Override
+        public void waitClose(Duration timeout) throws InterruptedException, TimeoutException {
+            if (!thread.join(timeout)) throw new TimeoutException("Timed out");
         }
     }
 }

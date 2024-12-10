@@ -13,6 +13,7 @@ import java.util.UUID;
 import static java.util.Objects.requireNonNull;
 
 public record Resource(
+        Long id,
         @NotNull UUID responseUuid,
         @NotNull long pageId,
         @NotNull String method,
@@ -42,5 +43,12 @@ public record Resource(
         return responseLength + requestLength + metadataLength;
     }
     public record Metadata(long pageId, long fetchTimeMs, String ipAddress) {
+    }
+
+    public Resource withId(Long id) {
+        return new Resource(id, responseUuid, pageId, method, url, hostId, domainId,
+                date, filename, responseOffset, responseLength, requestLength, metadataLength,
+                status, redirect, payloadType, payloadSize, payloadDigest, fetchTimeMs,
+                ipAddress, type, protocol, transferred);
     }
 }

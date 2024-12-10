@@ -9,4 +9,7 @@ public record BrowserSettings(
         List<String> shell,
         int workers,
         boolean headless) {
+    public BrowserSettings() {
+        this("Local", null, null, null, 1, true);
+    }
 }

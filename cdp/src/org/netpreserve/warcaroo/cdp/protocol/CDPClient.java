@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
+import java.time.Duration;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicLong;
@@ -52,5 +53,9 @@ public class CDPClient extends CDPBase implements AutoCloseable {
     @Override
     protected long nextCommandId() {
         return idSeq.incrementAndGet();
+    }
+
+    public void waitClose(Duration timeout) throws InterruptedException, TimeoutException {
+        rpc.waitClose(timeout);
     }
 }

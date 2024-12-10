@@ -148,7 +148,7 @@ public class Storage implements Closeable {
         }
     }
 
-    public Long save(long pageId, ResourceFetched fetch, Map<String, List<String>> metadata) throws IOException {
+    public Resource save(long pageId, ResourceFetched fetch, Map<String, List<String>> metadata) throws IOException {
         long responseBodyLength;
         WarcDigest responseDigest;
         if (fetch.responseBodyChannel() != null) {
@@ -246,6 +246,7 @@ public class Storage implements Closeable {
             long hostId = db.hosts().insertOrGetId(fetch.url().rhost());
             long domainId = db.domains().insertOrGetId(fetch.url().rdomain());
             Resource resource = new Resource(
+                    null,
                     responseUuid,
                     pageId,
                     fetch.method(),
@@ -270,7 +271,8 @@ public class Storage implements Closeable {
                     fetch.transferred());
             long id = db.resources().add(resource);
             db.pages().addResourceToPage(pageId, resource.payloadSize());
-            return id;
+            db.progress().addResourceProgress(resource.payloadSize());
+            return resource.withId(id);
         });
     }
 }

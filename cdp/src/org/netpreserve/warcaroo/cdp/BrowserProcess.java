@@ -14,6 +14,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -241,11 +242,20 @@ public class BrowserProcess implements AutoCloseable {
      */
     @Override
     public void close() {
+        // try a graceful close command first
+        try {
+            browser.close();
+            cdp.waitClose(Duration.ofMillis(1000));
+        } catch (Exception e) {
+            log.warn("Error quitting browser", e);
+        }
+        // now close our end of the CDP connection
         try {
             cdp.close();
         } catch (Exception e) {
-            log.warn("Error closing browser", e);
+            log.warn("Error closing browser CDP connection", e);
         }
+        // finally kill the process if it's still running
         if (process != null) {
             process.destroy();
             try {
