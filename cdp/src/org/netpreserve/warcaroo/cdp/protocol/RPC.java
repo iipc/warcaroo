@@ -130,13 +130,16 @@ public interface RPC {
         private final InputStream inputStream;
         private final OutputStream outputStream;
         private final Consumer<ServerMessage> messageHandler;
+        private final Runnable closeHandler;
         private final Lock writeLock = new ReentrantLock();
         private final Thread thread;
 
-        public Pipe(InputStream inputStream, OutputStream outputStream, Consumer<ServerMessage> messageHandler) {
+        public Pipe(InputStream inputStream, OutputStream outputStream, Consumer<ServerMessage> messageHandler,
+                    Runnable closeHandler) {
             this.inputStream = inputStream;
             this.outputStream = outputStream;
             this.messageHandler = messageHandler;
+            this.closeHandler = closeHandler;
             this.thread = new Thread(this::run, "CDP.Pipe");
             thread.setDaemon(true);
             thread.start();
@@ -184,6 +187,11 @@ public interface RPC {
                 log.error("Error reading CDPPipe", e);
             } finally {
                 close();
+                try {
+                    closeHandler.run();
+                } catch (Exception e) {
+                    log.error("Error running close handler", e);
+                }
             }
         }
 

@@ -46,8 +46,8 @@ public class ProgressTracker implements AutoCloseable {
         if (sessionStartTime == null) return;
         snapshotTask.cancel(false);
         snapshotTask = null;
-        sessionStartTime = null;
         dao.addSessionRuntime(Duration.between(sessionStartTime, Instant.now()).toMillis());
+        sessionStartTime = null;
     }
 
     private synchronized void snapshot() {

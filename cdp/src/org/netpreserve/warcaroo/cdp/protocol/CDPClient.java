@@ -23,7 +23,12 @@ public class CDPClient extends CDPBase implements AutoCloseable {
     }
 
     public CDPClient(InputStream inputStream, OutputStream outputStream) {
-        this.rpc = new RPC.Pipe(inputStream, outputStream, this::handleMessage);
+        this.rpc = new RPC.Pipe(inputStream, outputStream, this::handleMessage, this::handleRpcClose);
+    }
+
+    protected void handleRpcClose() {
+        super.handleRpcClose();
+        sessions.values().forEach(CDPBase::handleRpcClose);
     }
 
     @Override

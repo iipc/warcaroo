@@ -235,4 +235,9 @@ public abstract class CDPBase {
     protected void close() {
         executor.shutdown();
     }
+
+    protected void handleRpcClose() {
+        commands.values().forEach(command ->
+                command.completeExceptionally(new CDPClosedException()));
+    }
 }

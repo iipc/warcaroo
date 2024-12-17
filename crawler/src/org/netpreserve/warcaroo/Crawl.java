@@ -62,11 +62,6 @@ public class Crawl implements AutoCloseable {
             state = State.STOPPING;
             closeAllBrowsers();
             try {
-                db.close();
-            } catch (Exception e) {
-                log.error("Failed to close database", e);
-            }
-            try {
                 storage.close();
             } catch (Exception e) {
                 log.error("Failed to close storage", e);
@@ -77,6 +72,11 @@ public class Crawl implements AutoCloseable {
                 log.error("Failed to close http client", e);
             }
             progressTracker.close();
+            try {
+                db.close();
+            } catch (Exception e) {
+                log.error("Failed to close database", e);
+            }
             state = State.STOPPED;
         } finally {
             startStopLock.unlock();

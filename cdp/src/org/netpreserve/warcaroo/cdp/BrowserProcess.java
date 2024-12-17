@@ -2,6 +2,7 @@ package org.netpreserve.warcaroo.cdp;
 
 import org.netpreserve.warcaroo.cdp.domains.Browser;
 import org.netpreserve.warcaroo.cdp.protocol.CDPClient;
+import org.netpreserve.warcaroo.cdp.protocol.CDPClosedException;
 import org.netpreserve.warcaroo.cdp.protocol.CDPSession;
 import org.netpreserve.warcaroo.cdp.domains.Target;
 import org.slf4j.Logger;
@@ -246,6 +247,8 @@ public class BrowserProcess implements AutoCloseable {
         try {
             browser.close();
             cdp.waitClose(Duration.ofMillis(1000));
+        } catch (CDPClosedException e) {
+            // browser's already gone. that's ok.
         } catch (Exception e) {
             log.warn("Error quitting browser", e);
         }
