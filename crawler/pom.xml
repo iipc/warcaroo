@@ -31,12 +31,17 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <transformers>
+                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>org.netpreserve.warcaroo.Warcaroo</mainClass>
+                                </transformer>
+                            </transformers>
                             <filters>
                                 <filter>
-                                    <artifact>org.webjars.npm:feather-icons</artifact>
+                                    <artifact>org.webjars.npm:lucide-static</artifact>
                                     <includes>
-                                        <include>META-INF/resources/webjars/feather-icons/*/LICENSE</include>
-                                        <include>META-INF/resources/webjars/feather-icons/*/dist/feather-sprite.svg</include>
+                                        <include>META-INF/resources/webjars/lucide-static/*/LICENSE</include>
+                                        <include>META-INF/resources/webjars/lucide-static/*/sprite.svg</include>
                                     </includes>
                                 </filter>
                                 <filter>
@@ -114,8 +119,8 @@
         </dependency>
         <dependency>
             <groupId>org.webjars.npm</groupId>
-            <artifactId>feather-icons</artifactId>
-            <version>4.29.1</version>
+            <artifactId>lucide-static</artifactId>
+            <version>0.468.0</version>
             <exclusions>
                 <exclusion>
                     <groupId>*</groupId>

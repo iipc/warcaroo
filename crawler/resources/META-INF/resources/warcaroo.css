@@ -3,11 +3,11 @@
 }
 
 .feather {
-    width: 16px;
-    height: 16px;
+    width: 24px;
+    height: 24px;
     stroke: currentColor;
-    stroke-width: 2;
+    fill: none;
+    stroke-width: 1;
     stroke-linecap: round;
     stroke-linejoin: round;
-    fill: none;
 }

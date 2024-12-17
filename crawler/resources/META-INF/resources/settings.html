@@ -88,19 +88,27 @@
 <body>
 <form id="settingsForm">
     <div class="tabs">
+        <button type="button" data-tab="seedsTab">
+            <svg class="feather"><use href="webjars/lucide-static/0.468.0/sprite.svg#sprout" /></svg>
+            Seeds
+        </button>
         <button type="button" data-tab="limitsTab">
-            <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#sliders" /></svg>
+            <svg class="feather"><use href="webjars/lucide-static/0.468.0/sprite.svg#sliders-vertical" /></svg>
             Limits
         </button>
         <button type="button" data-tab="browserTab">
-            <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#globe" /></svg>
+            <svg class="feather"><use href="webjars/lucide-static/0.468.0/sprite.svg#globe" /></svg>
             Browser
         </button>
         <button type="button" data-tab="storageTab">
-            <svg class="feather"><use href="webjars/feather-icons/4.29.1/dist/feather-sprite.svg#archive" /></svg>
+            <svg class="feather"><use href="webjars/lucide-static/0.468.0/sprite.svg#archive" /></svg>
             Storage
         </button>
     </div>
+
+    <section class="tab" id="seedsTab">
+        <textarea></textarea>
+    </section>
 
     <section class="tab" id="limitsTab">
         <fieldset>
