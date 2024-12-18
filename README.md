@@ -3,10 +3,10 @@ Warcaroo
 <img src="roo.svg" align="right" width="200" height="200" alt="Kangaroo on a laptop">
 
 Warcaroo is an experimental browser-based web crawler designed to archive web content into 
-[WARC](https://en.wikipedia.org/wiki/WARC_(file_format)) (Web ARChive) files for preservation. Currently:
+[WARC](https://en.wikipedia.org/wiki/WARC_(file_format)) files. Currently:
 
 * Crawl state is stored in an SQLite database
-* Per-host crawl queues
+* Uses per-host crawl queues
 * Runs Chromium-based browsers locally or on multiple servers via SSH
 * Web interface for inspecting progress and searching queues (not fully functional)
 * REST API (OpenAPI documentation at /api and /scalar.html)
@@ -15,7 +15,7 @@ Warcaroo is an experimental browser-based web crawler designed to archive web co
 Building
 --------
 
-Currently, there are no releases so you need to build from source.
+Currently there are no releases so you need to build from source.
 
 Install [OpenJDK 21 or newer](https://adoptium.net/) and [Apache Maven](https://maven.apache.org/).
 
@@ -71,7 +71,7 @@ Running browsers remotely over SSH
 ----------------------------------
 
 As browsing is CPU intensive it can be useful to the run the browser on a cluster of servers. Warcaroo can
-launch a browsers on remote servers via SSH using the `--ssh` option. The remote server does not need 
+launch browsers on remote servers via SSH using the `--ssh` option. The remote server does not need 
 Warcaroo or Java installed, just the browser.
 
 **Example:** Run 3 browsers: server1, server2 and local
@@ -96,7 +96,7 @@ You can set custom SSH options using `--ssh-command`:
 
     java -jar warcaroo.jar --ssh-command 'ssh -i id_rsa -p 2222' --ssh server1.example.org
 
-You can even use SSH's SOCKS feature to proxy web requests through via the machine warcaroo is running on.
+You can even use SSH's SOCKS feature to proxy web requests back through the machine warcaroo is running on.
 This can be useful if you want all the requests to come from a single IP address or if the remote servers do not have
 direct internet access.
 
