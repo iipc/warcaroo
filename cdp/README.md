@@ -2,10 +2,10 @@ warcaroo-cdp
 ===========
 
 This is a client for the [CDP protocol](https://chromedevtools.github.io/devtools-protocol/). It's not
-intended to cover the full full API, just the parts that Warcaroo uses. In the future, we might switch to the
+intended to cover the full API, just the parts that Warcaroo uses. In the future, we might switch to the
 [webdriver-bidi protocol](https://github.com/w3c/webdriver-bidi) once it covers everything we need.
 
-There is higher-level Navigator API which  state tracking and the rest of Warcaroo should use this rather than calling
+There is a higher-level Navigator API which handles things like request state tracking and the rest of Warcaroo should use this instead of calling
 CDP domain methods directly.
 
 ```mermaid
