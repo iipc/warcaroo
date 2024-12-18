@@ -168,7 +168,7 @@ public class Storage implements Closeable {
                 responseDigest == null ? null : responseDigest.prefixedBase32());
         if (existingDuplicate != null) {
             log.debug("Not saving duplicate of resource {}: {}", existingDuplicate.responseUuid(), fetch.url());
-            return null;
+            return existingDuplicate;
         }
 
         Instant responseTime = fetch.responseTime();
