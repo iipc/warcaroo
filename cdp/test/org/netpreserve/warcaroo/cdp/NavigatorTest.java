@@ -51,8 +51,9 @@ class NavigatorTest {
             switch (exchange.getRequestURI().toString()) {
                 case "/redirect1" -> {
                     exchange.getResponseHeaders().add("Location", "/redirect2");
-                    exchange.sendResponseHeaders(301, 0);
-                    exchange.getResponseBody().write("r1 body".getBytes());
+                    byte[] body = "r1 body".getBytes();
+                    exchange.sendResponseHeaders(301, body.length);
+                    exchange.getResponseBody().write(body);
                 }
                 case "/redirect2" -> {
                     exchange.getResponseHeaders().add("Location", "/end");
@@ -78,6 +79,11 @@ class NavigatorTest {
                 var resource = subresources.get(0);
                 assertEquals("/redirect1", resource.url().path());
                 assertEquals("/redirect2", resource.redirect());
+                var responseHeader = new String(resource.responseHeader(), StandardCharsets.US_ASCII);
+                var matcher = Pattern.compile("(?mi)^Content-Length: ([0-9]+)$").matcher(responseHeader);
+                assertTrue(matcher.find());
+                var contentLength = Integer.parseInt(matcher.group(1));
+                assertEquals(0, contentLength, "content-length should be zero as browser removes body");
             }
             {
                 var resource = subresources.get(1);

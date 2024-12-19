@@ -236,6 +236,11 @@ public class ResourceRecorder {
             replaceContentLength = bytesWritten;
         }
 
+        // For redirects we need to replace the Content-Length header because the browser removes the redirect body
+        if (response.headers().containsKey("Content-Length") && response.status() >= 300 && response.status() <= 399) {
+            replaceContentLength = bytesWritten;
+        }
+
         byte[] responseHeader = formatResponseHeader(response, rawResponseHeader, replaceContentLength);
         long fetchTimeMs = (System.nanoTime() - startNanos) / 1_000_000;
         String redirect = response.headers().get("location");
