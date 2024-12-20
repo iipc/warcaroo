@@ -14,6 +14,7 @@ import java.io.*;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
 import java.nio.channels.Channels;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -32,14 +33,18 @@ public class Storage implements Closeable {
     private final TimeBasedEpochGenerator uuidGenerator;
     private final int poolSize = 8;
 
-    public Storage(Path directory, Database db, Config config) {
+    public Storage(Path directory, Database db, Config config) throws IOException {
         this.db = db;
         this.uuidGenerator = Generators.timeBasedEpochGenerator();
         warcPool = new LinkedBlockingDeque<>(poolSize);
+
+        Path warcsDir = directory.resolve("warcs");
+        Files.createDirectories(warcsDir);
+
         String prefix = config.getCrawlSettings().warcPrefix();
         if (prefix == null) prefix = "warcaroo";
         for (int i = 0; i < poolSize; i++) {
-            warcPool.add(new WarcRotator(directory, prefix));
+            warcPool.add(new WarcRotator(warcsDir, prefix));
         }
     }
 
