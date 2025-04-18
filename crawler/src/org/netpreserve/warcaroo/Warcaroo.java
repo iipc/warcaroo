@@ -31,11 +31,35 @@ public class Warcaroo {
     public static void main(String[] args) throws Exception {
         String host = "localhost";
         Integer port = 8008;
+        Path jobDir = Path.of(".");
+
+        for (int i = 0; i < args.length; i++) {
+            switch (args[i]) {
+                case "--port" -> port = Integer.parseInt(args[++i]);
+                case "--help", "-h" -> {
+                    System.out.println("Usage: warcaroo [job-dir]");
+                    System.out.println("Options:");
+                    System.out.println("  --help");
+                    System.out.println("  --trace-cdp <file>   Write CDP trace to file");
+                    System.exit(0);
+                }
+                case "--trace-cdp" -> {
+                    startCdpTraceFile(args[++i]);
+                }
+                default -> {
+                    if (args[i].startsWith("-")) {
+                        System.err.println("Unknown option: " + args[i]);
+                        System.exit(1);
+                    }
+                    jobDir = Path.of(args[i]);
+                }
+            }
+        }
 
         var mapper = new ObjectMapper(new YAMLFactory()).findAndRegisterModules();
-        JobConfig config = mapper.readValue(Path.of("config.yaml").toFile(), JobConfig.class);
+        JobConfig config = mapper.readValue(jobDir.resolve("config.yaml").toFile(), JobConfig.class);
 
-        Job job = new Job(Path.of("data"), config);
+        Job job = new Job(jobDir, config);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 job.close();

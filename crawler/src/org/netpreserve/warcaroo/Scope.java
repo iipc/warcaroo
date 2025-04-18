@@ -13,8 +13,16 @@ public class Scope implements Predicate<Url> {
     private final List<MatchRule> excludes;
 
     public Scope(ScopeConfig config) {
-        includes = config.include();
-        excludes = config.exclude();
+        if (config == null || config.include() == null) {
+            includes = List.of(new MatchRule.All());
+        } else {
+            includes = config.include();
+        }
+        if (config == null || config.exclude() == null) {
+            excludes = List.of();
+        } else {
+            excludes = config.exclude();
+        }
     }
 
     public Scope(ResourcesConfig config) {

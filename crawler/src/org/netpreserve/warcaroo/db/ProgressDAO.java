@@ -1,8 +1,10 @@
-package org.netpreserve.warcaroo;
+package org.netpreserve.warcaroo.db;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+import org.netpreserve.warcaroo.Progress;
+
 import java.time.Instant;
 
 @RegisterConstructorMapper(Progress.class)

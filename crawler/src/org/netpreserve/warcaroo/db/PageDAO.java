@@ -1,4 +1,4 @@
-package org.netpreserve.warcaroo;
+package org.netpreserve.warcaroo.db;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.BindFields;
@@ -8,6 +8,7 @@ import org.jdbi.v3.sqlobject.statement.GetGeneratedKeys;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
 import org.jdbi.v3.sqlobject.transaction.Transaction;
+import org.netpreserve.warcaroo.Page;
 import org.netpreserve.warcaroo.util.MustUpdate;
 import org.netpreserve.warcaroo.util.Url;
 import org.netpreserve.warcaroo.webapp.Webapp;

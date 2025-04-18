@@ -92,7 +92,7 @@ public class Job implements AutoCloseable {
             state = State.STARTING;
             progressTracker.startSession();
             frontier.addUrls(config.seeds().stream().map(Url::new).toList(), 0, null);
-            for (var browserConfig : config.browsers()) {
+            for (var browserConfig : config.browsersOrDefault()) {
                 BrowserManager browserManager = new BrowserManager(browserConfig);
                 browserManagers.add(browserManager);
                 for (int i = 0; i < browserConfig.workers(); i++) {

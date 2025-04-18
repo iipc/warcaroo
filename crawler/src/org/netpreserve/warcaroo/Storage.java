@@ -42,8 +42,7 @@ public class Storage implements Closeable {
         Path warcsDir = directory.resolve("warcs");
         Files.createDirectories(warcsDir);
 
-        String prefix = config.prefix();
-        if (prefix == null) prefix = "warcaroo";
+        String prefix = config != null && config.prefix() != null ? config.prefix() : "warcaroo-";
         for (int i = 0; i < poolSize; i++) {
             warcPool.add(new WarcRotator(warcsDir, prefix));
         }

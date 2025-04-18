@@ -1,5 +1,7 @@
 package org.netpreserve.warcaroo;
 
+import org.netpreserve.warcaroo.db.ProgressDAO;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.Executors;

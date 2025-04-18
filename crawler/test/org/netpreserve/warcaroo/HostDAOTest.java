@@ -2,6 +2,7 @@ package org.netpreserve.warcaroo;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.netpreserve.warcaroo.db.HostDAO;
 import org.netpreserve.warcaroo.util.Url;
 import org.netpreserve.warcaroo.webapp.Webapp;
 

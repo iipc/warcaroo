@@ -1,4 +1,4 @@
-package org.netpreserve.warcaroo;
+package org.netpreserve.warcaroo.db;
 
 import org.jdbi.v3.sqlobject.config.RegisterConstructorMapper;
 import org.jdbi.v3.sqlobject.customizer.BindFields;
@@ -7,6 +7,8 @@ import org.jdbi.v3.sqlobject.customizer.Define;
 import org.jdbi.v3.sqlobject.customizer.DefineNamedBindings;
 import org.jdbi.v3.sqlobject.statement.SqlQuery;
 import org.jdbi.v3.sqlobject.statement.SqlUpdate;
+import org.netpreserve.warcaroo.FrontierUrl;
+import org.netpreserve.warcaroo.Host;
 import org.netpreserve.warcaroo.webapp.Webapp;
 
 import java.time.Instant;

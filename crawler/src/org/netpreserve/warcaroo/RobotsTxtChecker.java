@@ -1,5 +1,6 @@
 package org.netpreserve.warcaroo;
 
+import org.netpreserve.warcaroo.db.RobotsTxtDAO;
 import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,14 +12,11 @@ import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.net.http.HttpResponse.BodyHandlers;
 import java.sql.SQLException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.Period;
 import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class RobotsTxtChecker {

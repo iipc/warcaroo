@@ -11,8 +11,16 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
         @JsonSubTypes.Type(value = MatchRule.Regex.class)
 })
 @JsonTypeInfo(use = JsonTypeInfo.Id.DEDUCTION)
-public sealed interface MatchRule permits MatchRule.Host, MatchRule.Regex {
+public sealed interface MatchRule permits MatchRule.Host, MatchRule.Regex, MatchRule.All {
     boolean matches(Url url);
+
+    record All() implements MatchRule {
+
+        @Override
+        public boolean matches(Url url) {
+            return true;
+        }
+    }
 
     record Host(String host) implements MatchRule {
         @Override
