@@ -34,7 +34,7 @@ class NavigatorTest {
     @BeforeAll
     public static void setUp(@TempDir Path tempDir) throws IOException {
         profileDir = tempDir.resolve("profile");
-        browserProcess = BrowserProcess.start(null, profileDir, true);
+        browserProcess = BrowserProcess.startHeadless(null, profileDir);
     }
 
     @AfterAll
@@ -318,6 +318,8 @@ class NavigatorTest {
                 return false;
             });
             navigator.navigateTo(new Url("http://127.0.0.1:" + httpServer.getAddress().getPort() + "/")).loadEvent().get();
+
+//            Thread.sleep(100);
 
             assertFalse(navigationUrls.isEmpty());
             assertEquals("/stop-me", navigationUrls.get(0).path());

@@ -27,15 +27,15 @@ public class RobotsTxtChecker {
     private final HttpClient httpClient;
     private final Storage storage;
     private final List<String> userAgents;
-    private final Config config;
+    private final String fetchUserAgent;
 
     public RobotsTxtChecker(RobotsTxtDAO dao, HttpClient httpClient, Storage storage, List<String> userAgents,
-                            Config config) {
+                            String fetchUserAgent) {
         this.dao = dao;
         this.httpClient = httpClient;
         this.storage = storage;
         this.userAgents = userAgents;
-        this.config = config;
+        this.fetchUserAgent = fetchUserAgent;
     }
 
     boolean checkAllowed(long pageId, Url url) throws SQLException, IOException {
@@ -63,7 +63,7 @@ public class RobotsTxtChecker {
             long fetchStart = System.currentTimeMillis();
             var response = httpClient.send(HttpRequest.newBuilder(robotsUri)
                     .timeout(Duration.ofSeconds(30))
-                    .header("User-Agent", config.getCrawlSettings().userAgent())
+                    .header("User-Agent", fetchUserAgent)
                     .build(), responseInfo -> {
                 responseTimeRef.set(Instant.now());
                 return HttpResponse.BodySubscribers.ofByteArray();

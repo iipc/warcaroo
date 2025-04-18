@@ -1,5 +1,7 @@
 package org.netpreserve.warcaroo;
 
+import org.netpreserve.warcaroo.config.JobConfig;
+import org.netpreserve.warcaroo.util.Url;
 import org.netpreserve.warcaroo.webapp.OpenAPI.Doc;
 import org.netpreserve.warcaroo.webapp.Route.HttpError;
 import org.slf4j.LoggerFactory;
@@ -14,8 +16,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 
-public class Crawl implements AutoCloseable {
-    private static final Logger log = LoggerFactory.getLogger(Crawl.class);
+public class Job implements AutoCloseable {
+    private static final Logger log = LoggerFactory.getLogger(Job.class);
     public final Database db;
     private final Frontier frontier;
     private final Storage storage;
@@ -23,7 +25,7 @@ public class Crawl implements AutoCloseable {
     private final RobotsTxtChecker robotsTxtChecker;
     private final List<Worker> workers = new ArrayList<>();
     private final List<BrowserManager> browserManagers = new ArrayList<>();
-    private final Config config;
+    private final JobConfig config;
     private volatile State state = State.STOPPED;
     private final Lock startStopLock = new ReentrantLock();
     private final ProgressTracker progressTracker;
@@ -45,14 +47,14 @@ public class Crawl implements AutoCloseable {
         STOPPED, STARTING, RUNNING, STOPPING
     }
 
-    public Crawl(Path dataPath, Config config) throws IOException {
+    public Job(Path dataPath, JobConfig config) throws IOException {
         this.config = config;
         this.db = Database.open(dataPath.resolve("db.sqlite3"));
         this.httpClient = HttpClient.newHttpClient();
-        this.frontier = new Frontier(db, config.getScope(), config);
-        this.storage = new Storage(dataPath, db, config);
+        this.frontier = new Frontier(db, new Scope(config.scope()), config.crawl());
+        this.storage = new Storage(dataPath, db, config.storage());
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage,
-                List.of("nla.gov.au_bot", "warcaroo"), config);
+                List.of("nla.gov.au_bot", "warcaroo"), config.crawl().userAgent());
         progressTracker = new ProgressTracker(db.progress());
     }
 
@@ -89,12 +91,12 @@ public class Crawl implements AutoCloseable {
             if (state != State.STOPPED) throw new BadStateException("Can only start a STOPPED crawl");
             state = State.STARTING;
             progressTracker.startSession();
-            frontier.addUrls(config.getSeeds(), 0, null);
-            for (var browserSettings : config.getBrowsers()) {
-                BrowserManager browserManager = new BrowserManager(browserSettings);
+            frontier.addUrls(config.seeds().stream().map(Url::new).toList(), 0, null);
+            for (var browserConfig : config.browsers()) {
+                BrowserManager browserManager = new BrowserManager(browserConfig);
                 browserManagers.add(browserManager);
-                for (int i = 0; i < browserSettings.workers(); i++) {
-                    workers.add(new Worker(browserSettings.id() + "-" + i, browserManager, frontier, storage, db, robotsTxtChecker, config));
+                for (int i = 0; i < browserConfig.workers(); i++) {
+                    workers.add(new Worker(browserConfig.id() + "-" + i, browserManager, frontier, storage, db, robotsTxtChecker, this));
                 }
             }
             for (Worker worker : workers) {
@@ -147,7 +149,7 @@ public class Crawl implements AutoCloseable {
         return browserManagers.getFirst();
     }
 
-    public Config config() {
+    public JobConfig config() {
         return config;
     }
 

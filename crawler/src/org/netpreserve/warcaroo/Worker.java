@@ -25,7 +25,7 @@ public class Worker {
     private final Storage storage;
     private final Database db;
     private final RobotsTxtChecker robotsTxtChecker;
-    private final Config config;
+    private final Job job;
     private Thread thread;
     private volatile boolean closed = false;
     private volatile Long pageId;
@@ -33,14 +33,14 @@ public class Worker {
     private volatile Info info;
     private FrontierUrl frontierUrl;
 
-    public Worker(String id, BrowserManager browserManager, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Config config) {
+    public Worker(String id, BrowserManager browserManager, Frontier frontier, Storage storage, Database db, RobotsTxtChecker robotsTxtChecker, Job job) {
         this.id = id;
         this.browserManager = browserManager;
         this.frontier = frontier;
         this.storage = storage;
         this.db = db;
         this.robotsTxtChecker = robotsTxtChecker;
-        this.config = config;
+        this.job = job;
         info = new Info(id, null, null, Instant.now());
     }
 
@@ -156,8 +156,10 @@ public class Worker {
         if (navigator == null) {
             navigator = browserManager.newWindow(this::handleSubresource, null);
         }
-        navigator.setUserAgent(config.getCrawlSettings().userAgent());
-        navigator.block(config.getBlockPredicate());
+        navigator.setUserAgent(job.config().crawl().userAgent());
+        if (job.config().resources() != null) {
+            navigator.block(new Scope(job.config().resources()));
+        }
 
         // prevent javascript or a meta refresh trying to navigate away and instead
         // treat that as an outlink.

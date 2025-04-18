@@ -54,7 +54,7 @@ public class Navigator implements AutoCloseable {
         emulation.setUserAgentOverride(userAgent);
     }
 
-    public void block(Predicate<String> predicate) {
+    public void block(Predicate<Url> predicate) {
         networkManager.block(predicate);
     }
 

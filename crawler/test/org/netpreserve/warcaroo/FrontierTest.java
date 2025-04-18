@@ -3,10 +3,14 @@ package org.netpreserve.warcaroo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.netpreserve.warcaroo.config.CrawlConfig;
+import org.netpreserve.warcaroo.config.MatchRule;
+import org.netpreserve.warcaroo.config.ScopeConfig;
 import org.netpreserve.warcaroo.util.Url;
 import org.netpreserve.warcaroo.webapp.Webapp;
 
 import java.util.Arrays;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -14,8 +18,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class FrontierTest {
 
     private final Database database;
-    private Config config;
     private Frontier frontier;
+    private CrawlConfig crawlConfig;
 
     FrontierTest(Database database) {
         this.database = database;
@@ -23,11 +27,10 @@ class FrontierTest {
 
     @BeforeEach
     void setUp() {
-        config = new Config();
-        config.setCrawlDelay(1000);
-        config.addInclude("^https?://(www\\.)?example\\.(com|org)");
+        this.crawlConfig = new CrawlConfig("test", null, null, null, 5, 1000);
 
-        frontier = new Frontier(database, config.getScope(), config);
+        frontier = new Frontier(database, new Scope(new ScopeConfig(List.of(new MatchRule.Regex("^https?://(www\\.)?example\\.(com|org)")),
+                List.of())), crawlConfig);
 
         // Clear relevant tables before each test
         database.useHandle(handle -> {
@@ -75,7 +78,7 @@ class FrontierTest {
     }
 
     @Test
-    void testTakeNext() {
+    void testTakeNext() throws CrawlLimitException {
         Url url = new Url("http://example.com");
         frontier.addUrl(url, 0, null);
 
@@ -86,13 +89,13 @@ class FrontierTest {
     }
 
     @Test
-    void testTakeNextWithNoAvailableUrls() {
+    void testTakeNextWithNoAvailableUrls() throws CrawlLimitException {
         FrontierUrl result = frontier.takeNext();
         assertNull(result);
     }
 
     @Test
-    void testRelease() {
+    void testRelease() throws CrawlLimitException {
         Url url = new Url("http://example.com");
         frontier.addUrl(url, 0, null);
         FrontierUrl frontierUrl = frontier.takeNext();
@@ -132,7 +135,7 @@ class FrontierTest {
     }
 
     @Test
-    void testCrawlDelay() {
+    void testCrawlDelay() throws CrawlLimitException {
         Url url = new Url("http://example.com");
         frontier.addUrl(url, 0, null);
         FrontierUrl frontierUrl = frontier.takeNext();
@@ -143,6 +146,6 @@ class FrontierTest {
         Host host = database.hosts().findByRHost(Url.reverseHost("example.com"));
         assertNotNull(host);
         assertNotNull(host.nextVisit());
-        assertTrue(host.nextVisit().equals(host.lastVisit().plusMillis(config.getCrawlDelay())));
+        assertTrue(host.nextVisit().equals(host.lastVisit().plusMillis(crawlConfig.delayOrDefault())));
     }
 }

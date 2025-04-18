@@ -31,7 +31,7 @@ public class NetworkManager {
     private final RequestHandler requestHandler;
     private final Path downloadPath;
     private final CDPSession cdpSession;
-    private Predicate<String> blocker = url -> false;
+    private Predicate<Url> blocker = url -> false;
     private volatile boolean captureResponseBodies = true;
     private volatile ResourceRecorder possibleDownloadRecorder = null;
     private Url preventNavigationUrl;
@@ -117,7 +117,7 @@ public class NetworkManager {
         }
     }
 
-    public void block(Predicate<String> predicate) {
+    public void block(Predicate<Url> predicate) {
         this.blocker = predicate;
     }
 
@@ -182,7 +182,7 @@ public class NetworkManager {
             return;
         }
 
-        if (blocker.test(event.request().url().toString())) {
+        if (blocker.test(event.request().url())) {
             log.debug("Blocked request for {}", event.request().url());
             fetch.failRequestAsync(event.requestId(), "BlockedByClient");
             return;

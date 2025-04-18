@@ -6,12 +6,14 @@ import org.netpreserve.warcaroo.cdp.RequestHandler;
 import org.netpreserve.warcaroo.cdp.ResourceFetched;
 import org.netpreserve.warcaroo.cdp.domains.Browser;
 import org.netpreserve.warcaroo.cdp.protocol.CDPTimeoutException;
+import org.netpreserve.warcaroo.config.BrowserConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -20,11 +22,15 @@ import java.util.function.Function;
  */
 public class BrowserManager implements Closeable {
     private static final Logger log = LoggerFactory.getLogger(BrowserManager.class);
-    private final BrowserSettings browserSettings;
+    private final BrowserConfig config;
     private volatile BrowserProcess browserProcess;
 
-    public BrowserManager(BrowserSettings browserSettings) throws IOException {
-        this.browserSettings = browserSettings;
+    public BrowserManager() throws IOException {
+        this(new BrowserConfig("test", null, List.of("--headless=new", "--disable-gpu"), null, 1));
+    }
+
+    public BrowserManager(BrowserConfig config) throws IOException {
+        this.config = config;
         start();
     }
 
@@ -40,11 +46,10 @@ public class BrowserManager implements Closeable {
 
     private void start() throws IOException {
         browserProcess = BrowserProcess.start(
-                browserSettings.executable(),
-                browserSettings.options(),
+                config.executable(),
+                config.options(),
                 null,
-                browserSettings.headless(),
-                browserSettings.shell());
+                config.shell());
     }
 
     public Navigator newWindow(Consumer<ResourceFetched> resourceHandler, RequestHandler requestHandler) {

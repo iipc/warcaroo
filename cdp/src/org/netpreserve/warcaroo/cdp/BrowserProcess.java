@@ -63,15 +63,15 @@ public class BrowserProcess implements AutoCloseable {
         this.target = cdp.domain(Target.class);
     }
 
+    public static BrowserProcess startHeadless(String executable, Path profileDir) throws IOException {
+        return start(executable, List.of("--headless=new", "--disable-gpu"), profileDir, null);
+    }
+
     public static BrowserProcess start(String executable, Path profileDir) throws IOException {
-        return start(executable, profileDir, false);
+        return start(executable, null, profileDir, null);
     }
 
-    public static BrowserProcess start(String executable, Path profileDir, boolean headless) throws IOException {
-        return start(executable, null, profileDir, headless, null);
-    }
-
-    public static BrowserProcess start(String executable, String options, Path profileDir, boolean headless, List<String> shell) throws IOException {
+    public static BrowserProcess start(String executable, List<String> options, Path profileDir, List<String> shell) throws IOException {
         boolean deleteProfileOnExit = false;
         if (profileDir == null) {
             profileDir = Path.of("/tmp/warcaroo-" + UUID.randomUUID());
@@ -103,12 +103,8 @@ public class BrowserProcess implements AutoCloseable {
                 "--user-data-dir=" + profileDir,
                 "--disable-blink-features=AutomationControlled",
                 "--window-size=1920,1080"));
-        if (headless) {
-            command.add("--headless=new");
-            command.add("--disable-gpu");
-        }
         if (options != null) {
-            command.addAll(Arrays.asList(options.split(" ")));
+            command.addAll(options);
         }
         if (shell != null) {
             // In pipe mode the browser expects to read CDP from FD 3 and write CDP to FD 4

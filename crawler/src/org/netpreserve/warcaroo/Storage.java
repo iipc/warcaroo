@@ -5,6 +5,7 @@ import com.fasterxml.uuid.impl.TimeBasedEpochGenerator;
 import org.netpreserve.jwarc.*;
 import org.netpreserve.warcaroo.cdp.ResourceFetched;
 import org.netpreserve.warcaroo.cdp.domains.Network;
+import org.netpreserve.warcaroo.config.StorageConfig;
 import org.netpreserve.warcaroo.util.BareMediaType;
 import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
@@ -33,7 +34,7 @@ public class Storage implements Closeable {
     private final TimeBasedEpochGenerator uuidGenerator;
     private final int poolSize = 8;
 
-    public Storage(Path directory, Database db, Config config) throws IOException {
+    public Storage(Path directory, Database db, StorageConfig config) throws IOException {
         this.db = db;
         this.uuidGenerator = Generators.timeBasedEpochGenerator();
         warcPool = new LinkedBlockingDeque<>(poolSize);
@@ -41,7 +42,7 @@ public class Storage implements Closeable {
         Path warcsDir = directory.resolve("warcs");
         Files.createDirectories(warcsDir);
 
-        String prefix = config.getCrawlSettings().warcPrefix();
+        String prefix = config.prefix();
         if (prefix == null) prefix = "warcaroo";
         for (int i = 0; i < poolSize; i++) {
             warcPool.add(new WarcRotator(warcsDir, prefix));

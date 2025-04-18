@@ -3,6 +3,8 @@ package org.netpreserve.warcaroo;
 import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixList;
 import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixListFactory;
 import org.jetbrains.annotations.Nullable;
+import org.netpreserve.warcaroo.config.CrawlConfig;
+import org.netpreserve.warcaroo.config.LimitsConfig;
 import org.netpreserve.warcaroo.util.Url;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,14 +19,14 @@ public class Frontier {
     private static final Logger log = LoggerFactory.getLogger(Frontier.class);
     private static final PublicSuffixList publicSuffixList = new PublicSuffixListFactory().build();
     private final Database db;
-    private final Predicate<String> scope;
-    private final Config config;
+    private final Predicate<Url> scope;
     private final Set<Long> lockedHosts = new HashSet<>();
+    private final CrawlConfig crawlConfig;
 
-    public Frontier(Database db, Predicate<String> scope, Config config) {
+    public Frontier(Database db, Predicate<Url> scope, CrawlConfig crawlConfig) {
         this.db = db;
         this.scope = scope;
-        this.config = config;
+        this.crawlConfig = crawlConfig;
     }
 
     public void addUrl(Url url, int depth, Url via) {
@@ -36,7 +38,7 @@ public class Frontier {
         for (var url : urls) {
             if (!url.isHttp()) continue;
             url = url.withoutFragment();
-            if (!scope.test(url.toString())) continue;
+            if (!scope.test(url)) continue;
 
             String domain = publicSuffixList.getRegistrableDomain(url.host());
             if (domain == null) {
@@ -68,8 +70,17 @@ public class Frontier {
         });
     }
 
-    public synchronized @Nullable FrontierUrl takeNext() {
+    public synchronized @Nullable FrontierUrl takeNext() throws CrawlLimitException {
         while (true) {
+            LimitsConfig limits = crawlConfig.limits();
+            if (limits != null) {
+                Progress progress = db.progress().current();
+                if (limits.pages() != null && progress.crawled() >= limits.pages()) {
+                    throw new CrawlLimitException("page limit reached");
+                } else if (limits.bytes() != null && progress.size() >= limits.bytes()) {
+                    throw new CrawlLimitException("size limit reached");
+                }
+            }
             Long hostId = db.hosts().findNextToVisit(Instant.now(), lockedHosts);
             if (hostId == null) return null;
             FrontierUrl frontierUrl = db.frontier().nextUrlForHost(hostId);
@@ -79,7 +90,7 @@ public class Frontier {
             }
             lockedHosts.add(hostId);
             // re-test scope in case it has changed
-            if (!scope.test(frontierUrl.url().toString())) {
+            if (!scope.test(frontierUrl.url())) {
                 release(frontierUrl, OUT_OF_SCOPE);
                 continue;
             }
@@ -91,7 +102,7 @@ public class Frontier {
         Instant now = Instant.now();
         db.useTransaction(db -> {
             db.frontier().updateState(frontierUrl.id(), newState);
-            db.hosts().updateOnFrontierUrlStateChange(frontierUrl.hostId(), frontierUrl.state(), newState, now, now.plusMillis(config.getCrawlDelay()));
+            db.hosts().updateOnFrontierUrlStateChange(frontierUrl.hostId(), frontierUrl.state(), newState, now, now.plusMillis(crawlConfig.delayOrDefault()));
             db.domains().updateMetricsOnFrontierUrlStateChange(frontierUrl.domainId(), frontierUrl.state(), newState);
             if (newState == FrontierUrl.State.CRAWLED) {
                 db.progress().decrementPendingAndIncrementCrawled();

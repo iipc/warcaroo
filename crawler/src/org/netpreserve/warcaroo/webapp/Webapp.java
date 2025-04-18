@@ -12,9 +12,9 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import org.netpreserve.jwarc.WarcDigest;
 import org.netpreserve.warcaroo.*;
-import org.netpreserve.warcaroo.cdp.BrowserProcess;
 import org.netpreserve.warcaroo.cdp.NavigationException;
 import org.netpreserve.warcaroo.cdp.domains.Browser;
+import org.netpreserve.warcaroo.config.JobConfig;
 import org.netpreserve.warcaroo.util.Url;
 import org.netpreserve.warcaroo.webapp.OpenAPI.Doc;
 import org.netpreserve.warcaroo.webapp.Route.GET;
@@ -43,12 +43,12 @@ public class Webapp implements HttpHandler {
                 }
             }));
     static final ObjectMapper JSON_NO_INDENT = JSON.copy().disable(SerializationFeature.INDENT_OUTPUT);
-    private final Crawl crawl;
+    private final Job job;
     private final Map<String, Route> routes = buildMap(this);
     private final OpenAPI openapi = new OpenAPI(routes);
 
-    public Webapp(Crawl crawl) {
-        this.crawl = crawl;
+    public Webapp(Job job) {
+        this.job = job;
     }
 
     @Override
@@ -89,8 +89,8 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/frontier")
     Paginated<FrontierUrl> frontier(FrontierQuery query) throws IOException {
-        long count = crawl.db.frontier().count(query);
-        var rows = crawl.db.frontier().query(query.orderBy(FrontierUrl.class), query);
+        long count = job.db.frontier().count(query);
+        var rows = job.db.frontier().query(query.orderBy(FrontierUrl.class), query);
         return new Paginated<>(count / query.limit + 1, count, rows);
     }
 
@@ -106,7 +106,7 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/browsers")
     List<BrowserInfo> getBrowsers() {
-        return crawl.browserManagers().stream()
+        return job.browserManagers().stream()
                 .map(BrowserInfo::new)
                 .toList();
     }
@@ -118,8 +118,8 @@ public class Webapp implements HttpHandler {
     }
 
     @GET("/api/config")
-    Config getConfig() {
-        return crawl.config();
+    JobConfig getConfig() {
+        return job.config();
     }
 
     public static class HostsQuery extends Query {
@@ -134,20 +134,10 @@ public class Webapp implements HttpHandler {
         }
     }
 
-    @GET("/api/crawlsettings")
-    CrawlSettings getCrawlSettings() {
-        return crawl.config().getCrawlSettings();
-    }
-
-    @PUT("/api/crawlsettings")
-    void putCrawlSettings(CrawlSettings crawlSettings) {
-        crawl.config().setCrawlSettings(crawlSettings);
-    }
-
     @GET("/api/hosts")
     Paginated<Host> hosts(HostsQuery query) {
-        long count = crawl.db.hosts().count(query);
-        var rows = crawl.db.hosts().queryHosts(query.orderBy(Host.class), query);
+        long count = job.db.hosts().count(query);
+        var rows = job.db.hosts().queryHosts(query.orderBy(Host.class), query);
         return new Paginated(count / query.limit + 1, count, rows);
     }
 
@@ -157,8 +147,8 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/pages")
     Paginated<Page> pages(PagesQuery query) throws IOException {
-        long count = crawl.db.pages().count(query);
-        var rows = crawl.db.pages().query(query, query.orderBy(Page.class), query.limit, (query.page - 1) * query.limit);
+        long count = job.db.pages().count(query);
+        var rows = job.db.pages().query(query, query.orderBy(Page.class), query.limit, (query.page - 1) * query.limit);
         return new Paginated(count / query.limit + 1, count, rows);
     }
 
@@ -170,13 +160,13 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/progress")
     Progress progress() {
-        return crawl.progress();
+        return job.progress();
     }
 
     @GET("/api/resources")
     Paginated<Resource> resources(ResourcesQuery query) throws IOException {
-        long count = crawl.db.resources().count(query);
-        var rows = crawl.db.resources().query(query.orderBy(Resource.class), query);
+        long count = job.db.resources().count(query);
+        var rows = job.db.resources().query(query.orderBy(Resource.class), query);
         return new Paginated(count / query.limit + 1, count, rows);
     }
 
@@ -186,7 +176,7 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/render")
     void render(HttpExchange exchange, RenderQuery query) throws NavigationException, InterruptedException, IOException {
-        var screenshot = Replay.render(crawl.db, crawl.browserManager(), query.url);
+        var screenshot = Replay.render(job.db, job.browserManager(), query.url);
         exchange.getResponseHeaders().set("Content-Type", "image/webp");
         exchange.sendResponseHeaders(200, screenshot.length);
         exchange.getResponseBody().write(screenshot);
@@ -194,7 +184,7 @@ public class Webapp implements HttpHandler {
 
     @GET("/api/workers")
     List<Worker.Info> render(HttpExchange exchange) {
-        return crawl.workerInfo();
+        return job.workerInfo();
     }
 
     @GET("/")
@@ -235,7 +225,7 @@ public class Webapp implements HttpHandler {
 
             writer.write("event: progress\ndata: ");
             JSON_NO_INDENT.writeValue(writer, Map.of("speed", averageDownloadSpeed,
-                    "state", crawl.state()));
+                    "state", job.state()));
             writer.write("\n\n");
             writer.flush();
 
@@ -246,16 +236,16 @@ public class Webapp implements HttpHandler {
 
     @POST("/api/start")
     @Doc(summary = "Start the crawl")
-    public void start() throws Crawl.BadStateException, IOException {
-        crawl.start();
+    public void start() throws Job.BadStateException, IOException {
+        job.start();
     }
 
     @POST("/api/stop")
     @Doc(summary = "Stop the crawl",
             value = "Waits for currently in progress page processing to complete. Once stopped the crawl can be " +
                     "started again later.")
-    public void stop() throws Crawl.BadStateException {
-        crawl.stop();
+    public void stop() throws Job.BadStateException {
+        job.stop();
     }
 
     public record Sort(String field, Direction dir) {

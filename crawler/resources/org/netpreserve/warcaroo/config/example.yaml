@@ -1,0 +1,32 @@
+seeds:
+  - 'http://example.com/'
+
+scope:
+  include:
+    - host: example.com
+    - regex: 'https?://example\.org/.*\.pdf'
+  exclude:
+    - host: blog.example.com
+
+resources:
+  include:
+    - host: cdn.example.com
+  exclude:
+    - regex: '.*\.mov'
+
+crawl:
+  depth: 10
+  userAgent: "my-crawler/1.0"
+  limits:
+    pages: 10000
+    bytes: 10GB
+    time: 4h
+  perHost:
+    pages: 100
+    bytes: 100MB
+  perDomain:
+    pages: 1000
+    bytes: 1GB
+
+storage:
+  prefix: mycrawl
