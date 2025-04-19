@@ -55,7 +55,7 @@ Running browsers remotely over SSH
 ----------------------------------
 
 As browsing is CPU intensive it can be useful to the run the browser on a cluster of servers. Warcaroo can
-launch browsers on remote servers via SSH using the `--ssh` option. The remote server does not need 
+launch browsers on remote servers via SSH using the `shell` option. The remote server does not need 
 Warcaroo or Java installed, just the browser.
 
 **Example:** Run 3 browsers: server1, server2 and local
@@ -63,17 +63,17 @@ Warcaroo or Java installed, just the browser.
 ```yaml
 browsers:
   - workers: 4
-  - shell: ['ssh', 'server1.example.org']
-  - shell: ['ssh', 'server2.example.org']
+  - shell: ssh server1.example.org
+  - shell: ssh server2.example.org
 ```
 
 **Example:** Run 4 workers on server1, 3 workers on server2 and no browser locally:
 
 ```yaml
 browsers:
-  - shell: ['ssh', 'server1.example.org']
+  - shell: ssh server1.example.org
     workers: 4
-  - shell: ['ssh', 'server2.example.org']
+  - shell: ssh server2.example.org
     workers: 3
 ```
 
@@ -81,8 +81,8 @@ browsers:
 
 ```yaml
 browsers:
-  - executable: 'google-chrome-stable'
-  - shell: ['ssh', 'server1.example.org']
+  - executable: google-chrome-stable
+  - shell: ssh server1.example.org
     executable: chromium
 ```
 
@@ -90,7 +90,7 @@ browsers:
 
 ```yaml
 browsers:
-  - shell: ['ssh', '-i', 'id_rsa', '-p', '2222', 'server1.example.org']
+  - shell: ssh -i id_rsa -p2222 server1.example.org
 ```
 
 You can even use SSH's SOCKS feature to proxy web requests back through the machine warcaroo is running on.
@@ -101,6 +101,6 @@ direct internet access.
 
 ```yaml
 browsers:
-  - shell: ['ssh', '-R', '1080', 'server1.example.org']
-    options: ['--proxy-server=socks://127.0.0.1:1080']
+  - shell: ssh -R1080 server1.example.org
+    options: --proxy-server=socks://127.0.0.1:1080
 ```

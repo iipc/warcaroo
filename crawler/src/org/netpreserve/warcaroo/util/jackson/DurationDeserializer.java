@@ -1,4 +1,4 @@
-package org.netpreserve.warcaroo.util;
+package org.netpreserve.warcaroo.util.jackson;
 
 import com.fasterxml.jackson.core.JacksonException;
 import com.fasterxml.jackson.core.JsonParser;

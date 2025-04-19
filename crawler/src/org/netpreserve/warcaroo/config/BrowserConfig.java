@@ -1,5 +1,8 @@
 package org.netpreserve.warcaroo.config;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import org.netpreserve.warcaroo.util.jackson.ShellCommandDeserializer;
+
 import java.util.List;
 
 /**
@@ -14,7 +17,9 @@ import java.util.List;
 public record BrowserConfig(
         String id,
         String executable,
+        @JsonDeserialize(using = ShellCommandDeserializer.class)
         List<String> options,
+        @JsonDeserialize(using = ShellCommandDeserializer.class)
         List<String> shell,
         int workers
 ) {

@@ -1,8 +1,8 @@
 package org.netpreserve.warcaroo.config;
 
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
-import org.netpreserve.warcaroo.util.ByteSizeDeserializer;
-import org.netpreserve.warcaroo.util.DurationDeserializer;
+import org.netpreserve.warcaroo.util.jackson.ByteSizeDeserializer;
+import org.netpreserve.warcaroo.util.jackson.DurationDeserializer;
 
 import java.time.Duration;
 

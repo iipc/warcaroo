@@ -30,3 +30,7 @@ crawl:
 
 storage:
   prefix: mycrawl
+
+browsers:
+  - shell: ssh -i "key file" user@host
+    options: --proxy-server=socks://127.0.0.1:1080
