@@ -84,7 +84,7 @@ public sealed interface UrlMatcher extends Predicate<Url> {
                 case Domain domain -> {
                     String lowerCaseDomain = domain.domain().toLowerCase(Locale.ROOT);
                     hosts.add(lowerCaseDomain);
-                    reversedDomainPrefixes.add(Url.reverseHost(lowerCaseDomain) + ".");
+                    reversedDomainPrefixes.add(Url.reverseHost(lowerCaseDomain));
                 }
                 case Exact exact -> urls.add(exact.url.toString());
                 case Prefix prefix -> prefixes.add(prefix.prefix().toString());
