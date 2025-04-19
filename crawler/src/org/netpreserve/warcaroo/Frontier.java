@@ -29,6 +29,10 @@ public class Frontier {
         this.crawlConfig = crawlConfig;
     }
 
+    public Scope scope() {
+        return (Scope) scope;
+    }
+
     public void addUrl(Url url, int depth, Url via) {
         addUrls(Collections.singleton(url), depth, via);
     }

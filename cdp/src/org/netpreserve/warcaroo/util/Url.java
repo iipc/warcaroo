@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixList;
 import de.malkusch.whoisServerList.publicSuffixList.PublicSuffixListFactory;
-import org.jetbrains.annotations.NotNull;
 import org.netpreserve.urlcanon.Canonicalizer;
 import org.netpreserve.urlcanon.ParsedUrl;
 
@@ -212,5 +211,27 @@ public class Url {
 
     public String path() {
         return parse().getPath();
+    }
+
+    public Url directoryPrefix() {
+        ParsedUrl parsed = parse();
+        String path = parsed.getPath();
+        path = path.isEmpty() ? "/" : path.replaceFirst("/[^/]*$", "/");
+        ParsedUrl copy = new ParsedUrl(parsedUrl);
+        copy.setPath(path);
+        copy.setQuery("");
+        copy.setHashSign("");
+        copy.setFragment("");
+        copy.setQuestionMark("");
+        return new Url(copy);
+    }
+
+    public boolean startsWith(Url prefix) {
+        ParsedUrl parsed = parse();
+        ParsedUrl prefixParsed = prefix.parse();
+        return parsed.getScheme().equals(prefixParsed.getScheme()) &&
+               parsed.getHost().equals(prefixParsed.getHost()) &&
+               parsed.getPort().equals(prefixParsed.getPort()) &&
+               parsed.getPath().startsWith(prefixParsed.getPath());
     }
 }

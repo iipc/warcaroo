@@ -1,5 +1,7 @@
 package org.netpreserve.warcaroo.config;
 
+import org.netpreserve.warcaroo.UrlMatcher;
+
 import java.util.List;
 
 /**
@@ -9,7 +11,7 @@ import java.util.List;
  * @param exclude rules for URLs to exclude (overrides includes)
  */
 public record ScopeConfig(
-        List<MatchRule> include,
-        List<MatchRule> exclude
+        List<UrlMatcher> include,
+        List<UrlMatcher> exclude
 ) {
 }

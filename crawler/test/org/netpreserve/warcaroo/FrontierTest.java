@@ -4,7 +4,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.netpreserve.warcaroo.config.CrawlConfig;
-import org.netpreserve.warcaroo.config.MatchRule;
 import org.netpreserve.warcaroo.config.ScopeConfig;
 import org.netpreserve.warcaroo.util.Url;
 import org.netpreserve.warcaroo.webapp.Webapp;
@@ -29,7 +28,7 @@ class FrontierTest {
     void setUp() {
         this.crawlConfig = new CrawlConfig("test", null, null, null, 5, 1000);
 
-        frontier = new Frontier(database, new Scope(new ScopeConfig(List.of(new MatchRule.Regex("^https?://(www\\.)?example\\.(com|org)")),
+        frontier = new Frontier(database, new Scope(null, new ScopeConfig(List.of(new UrlMatcher.Regex("^https?://(www\\.)?example\\.(com|org)")),
                 List.of())), crawlConfig);
 
         // Clear relevant tables before each test

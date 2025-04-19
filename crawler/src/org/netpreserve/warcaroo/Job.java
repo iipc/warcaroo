@@ -55,7 +55,7 @@ public class Job implements AutoCloseable {
         this.config = config;
         this.db = Database.open(dataPath.resolve("db.sqlite3"));
         this.httpClient = HttpClient.newHttpClient();
-        this.frontier = new Frontier(db, new Scope(config.scope()), config.crawl());
+        this.frontier = new Frontier(db, new Scope(config.seeds(), config.scope()), config.crawl());
         this.storage = new Storage(dataPath, db, config.storage());
         this.robotsTxtChecker = new RobotsTxtChecker(db.robotsTxt(), httpClient, storage,
                 List.of("nla.gov.au_bot", "warcaroo"), config.crawl().userAgent());

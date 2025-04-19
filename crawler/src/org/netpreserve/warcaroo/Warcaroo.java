@@ -39,10 +39,12 @@ public class Warcaroo {
         Path jobDir = Path.of("data");
         var seeds = new ArrayList<Url>();
         boolean dumpConfig = false;
+        boolean dumpScope = false;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
                 case "--dump-config" -> dumpConfig = true;
+                case "--dump-scope" -> dumpScope = true;
                 case "--host" -> host = args[++i];
                 case "--job-dir", "-j" -> jobDir = Path.of(args[++i]);
                 case "--port" -> port = Integer.parseInt(args[++i]);
@@ -85,6 +87,10 @@ public class Warcaroo {
 
         Job job = new Job(jobDir, config);
         job.frontier().addUrls(seeds, 0, null);
+
+        if (dumpScope) {
+            job.frontier().scope().dump();
+        }
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {

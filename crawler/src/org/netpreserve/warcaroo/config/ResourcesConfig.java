@@ -1,9 +1,11 @@
 package org.netpreserve.warcaroo.config;
 
+import org.netpreserve.warcaroo.UrlMatcher;
+
 import java.util.List;
 
 public record ResourcesConfig(
-        List<MatchRule> include,
-        List<MatchRule> exclude
+        List<UrlMatcher> include,
+        List<UrlMatcher> exclude
 ) {
 }
