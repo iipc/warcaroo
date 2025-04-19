@@ -1,4 +1,5 @@
 seeds: []
+scopeType: prefix
 crawl:
   userAgent: warcaroo
   delay: 2000

@@ -1,5 +1,7 @@
 package org.netpreserve.warcaroo.config;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.util.List;
 
 /**
@@ -12,6 +14,7 @@ import java.util.List;
  */
 public record JobConfig(
         List<SeedConfig> seeds,
+        @NotNull ScopeType scopeType,
         ScopeConfig scope,
         ResourcesConfig resources,
         CrawlConfig crawl,
@@ -20,7 +23,7 @@ public record JobConfig(
         List<SheetConfig> sheets
 ) {
     public JobConfig() {
-        this(List.of(), null, null, null, null, null, null);
+        this(List.of(), ScopeType.PAGE, null, null, null, null, null, null);
     }
 
     public List<BrowserConfig> browsersOrDefault() {

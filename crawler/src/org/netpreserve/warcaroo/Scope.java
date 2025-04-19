@@ -2,10 +2,10 @@ package org.netpreserve.warcaroo;
 
 import org.netpreserve.warcaroo.config.ResourcesConfig;
 import org.netpreserve.warcaroo.config.ScopeConfig;
+import org.netpreserve.warcaroo.config.ScopeType;
 import org.netpreserve.warcaroo.config.SeedConfig;
 import org.netpreserve.warcaroo.util.Url;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -13,10 +13,10 @@ public class Scope implements Predicate<Url> {
     private final UrlMatcher.Multi includes = new UrlMatcher.Multi();
     private final UrlMatcher.Multi excludes = new UrlMatcher.Multi();
 
-    public Scope(List<SeedConfig> seeds, ScopeConfig config) {
+    public Scope(List<SeedConfig> seeds, ScopeConfig config, ScopeType parentType) {
         if (seeds != null) {
             for (var seed: seeds) {
-                includes.add(seed.toUrlMatcher());
+                includes.add(seed.toUrlMatcher(parentType));
             }
         }
         if (config != null) {

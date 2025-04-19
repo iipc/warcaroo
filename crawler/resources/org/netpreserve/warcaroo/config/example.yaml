@@ -1,6 +1,8 @@
 seeds:
   - 'http://example.com/'
 
+scopeType: prefix
+
 scope:
   include:
     - host: example.com
