@@ -7,15 +7,20 @@ import ch.qos.logback.classic.filter.ThresholdFilter;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.FileAppender;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.sun.net.httpserver.HttpServer;
 import org.netpreserve.warcaroo.cdp.protocol.CDPBase;
 import org.netpreserve.warcaroo.config.JobConfig;
+import org.netpreserve.warcaroo.util.Url;
 import org.netpreserve.warcaroo.webapp.Webapp;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -30,17 +35,25 @@ public class Warcaroo {
 
     public static void main(String[] args) throws Exception {
         String host = "localhost";
-        Integer port = 8008;
-        Path jobDir = Path.of(".");
+        Integer port = null;
+        Path jobDir = Path.of("data");
+        var seeds = new ArrayList<Url>();
+        boolean dumpConfig = false;
 
         for (int i = 0; i < args.length; i++) {
             switch (args[i]) {
+                case "--dump-config" -> dumpConfig = true;
+                case "--host" -> host = args[++i];
+                case "--job-dir", "-j" -> jobDir = Path.of(args[++i]);
                 case "--port" -> port = Integer.parseInt(args[++i]);
                 case "--help", "-h" -> {
-                    System.out.println("Usage: warcaroo [job-dir]");
+                    System.out.println("Usage: warcaroo [URL...]");
                     System.out.println("Options:");
-                    System.out.println("  --help");
-                    System.out.println("  --trace-cdp <file>   Write CDP trace to file");
+                    System.out.println("  -h, --help");
+                    System.out.println("      --host HOST          Host for web UI");
+                    System.out.println("  -j, --job-dir DIR        Directory for job data");
+                    System.out.println("  -p, --port PORT          Port for web UI");
+                    System.out.println("      --trace-cdp <file>   Write CDP trace to file");
                     System.exit(0);
                 }
                 case "--trace-cdp" -> {
@@ -51,15 +64,28 @@ public class Warcaroo {
                         System.err.println("Unknown option: " + args[i]);
                         System.exit(1);
                     }
-                    jobDir = Path.of(args[i]);
+                    seeds.add(new Url(args[i]));
                 }
             }
         }
 
-        var mapper = new ObjectMapper(new YAMLFactory()).findAndRegisterModules();
-        JobConfig config = mapper.readValue(jobDir.resolve("config.yaml").toFile(), JobConfig.class);
+        var mapper = new ObjectMapper(new YAMLFactory())
+                .findAndRegisterModules()
+                .setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        Path configFile = jobDir.resolve("config.yaml");
+        var configTree = mapper.readTree(Warcaroo.class.getResourceAsStream("config/defaults.yaml"));
+        if (Files.exists(configFile)) {
+            configTree = deepMerge(configTree, mapper.readTree(configFile.toFile()));
+        }
+        JobConfig config = mapper.treeToValue(configTree, JobConfig.class);
+        if (dumpConfig) {
+            System.out.println(mapper.writerWithDefaultPrettyPrinter().writeValueAsString(config));
+            System.exit(0);
+        }
 
         Job job = new Job(jobDir, config);
+        job.frontier().addUrls(seeds, 0, null);
+
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 job.close();
@@ -80,6 +106,25 @@ public class Warcaroo {
         } else {
             job.start();
         }
+    }
+
+    private static JsonNode deepMerge(JsonNode base, JsonNode override) {
+        if (!base.isObject() || !override.isObject()) {
+            // for simple values or arrays, always take override
+            return override;
+        }
+        ObjectNode merged = ((ObjectNode) base).deepCopy();
+        override.fields().forEachRemaining(entry -> {
+            String key = entry.getKey();
+            JsonNode overrideValue = entry.getValue();
+            if (merged.has(key)) {
+                JsonNode baseValue = merged.get(key);
+                merged.set(key, deepMerge(baseValue, overrideValue));
+            } else {
+                merged.set(key, overrideValue);
+            }
+        });
+        return merged;
     }
 
     private static void startCdpTraceFile(String file) {

@@ -1,0 +1,4 @@
+seeds: []
+crawl:
+  userAgent: warcaroo
+  delay: 2000

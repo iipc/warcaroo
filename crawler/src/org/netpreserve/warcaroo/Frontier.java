@@ -102,7 +102,7 @@ public class Frontier {
         Instant now = Instant.now();
         db.useTransaction(db -> {
             db.frontier().updateState(frontierUrl.id(), newState);
-            db.hosts().updateOnFrontierUrlStateChange(frontierUrl.hostId(), frontierUrl.state(), newState, now, now.plusMillis(crawlConfig.delayOrDefault()));
+            db.hosts().updateOnFrontierUrlStateChange(frontierUrl.hostId(), frontierUrl.state(), newState, now, now.plusMillis(crawlConfig.delay()));
             db.domains().updateMetricsOnFrontierUrlStateChange(frontierUrl.domainId(), frontierUrl.state(), newState);
             if (newState == FrontierUrl.State.CRAWLED) {
                 db.progress().decrementPendingAndIncrementCrawled();

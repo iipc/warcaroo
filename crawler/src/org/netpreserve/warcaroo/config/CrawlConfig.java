@@ -3,9 +3,6 @@ package org.netpreserve.warcaroo.config;
 
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
-import java.util.function.Predicate;
-
 /**
  * Configuration for how the crawl should behave.
  *
@@ -22,10 +19,5 @@ public record CrawlConfig(
         LocalLimitsConfig perDomain,
         LocalLimitsConfig perHost,
         @Nullable Integer depth,
-        @Nullable Integer delay) {
-    private static final int DEFAULT_DELAY = 1000;
-
-    public int delayOrDefault() {
-        return delay == null ? DEFAULT_DELAY : delay;
-    }
+        int delay) {
 }

@@ -11,7 +11,7 @@ import java.util.List;
  * @param sheets   override sheets for pages matching certain criteria
  */
 public record JobConfig(
-        List<String> seeds,
+        List<SeedConfig> seeds,
         ScopeConfig scope,
         ResourcesConfig resources,
         CrawlConfig crawl,
@@ -19,6 +19,10 @@ public record JobConfig(
         List<BrowserConfig> browsers,
         List<SheetConfig> sheets
 ) {
+    public JobConfig() {
+        this(List.of(), null, null, null, null, null, null);
+    }
+
     public List<BrowserConfig> browsersOrDefault() {
         if (browsers == null) {
             return List.of(new BrowserConfig("local", null, List.of("--headless=new", "--disable-gpu"),

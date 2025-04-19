@@ -43,6 +43,10 @@ public class Job implements AutoCloseable {
         return progressTracker.current();
     }
 
+    public Frontier frontier() {
+        return frontier;
+    }
+
     public enum State {
         STOPPED, STARTING, RUNNING, STOPPING
     }
@@ -91,7 +95,7 @@ public class Job implements AutoCloseable {
             if (state != State.STOPPED) throw new BadStateException("Can only start a STOPPED crawl");
             state = State.STARTING;
             progressTracker.startSession();
-            frontier.addUrls(config.seeds().stream().map(Url::new).toList(), 0, null);
+            frontier.addUrls(config.seeds().stream().map(seed -> seed.url()).toList(), 0, null);
             for (var browserConfig : config.browsersOrDefault()) {
                 BrowserManager browserManager = new BrowserManager(browserConfig);
                 browserManagers.add(browserManager);

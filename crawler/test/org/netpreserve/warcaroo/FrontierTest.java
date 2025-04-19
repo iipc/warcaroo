@@ -146,6 +146,6 @@ class FrontierTest {
         Host host = database.hosts().findByRHost(Url.reverseHost("example.com"));
         assertNotNull(host);
         assertNotNull(host.nextVisit());
-        assertTrue(host.nextVisit().equals(host.lastVisit().plusMillis(crawlConfig.delayOrDefault())));
+        assertTrue(host.nextVisit().equals(host.lastVisit().plusMillis(crawlConfig.delay())));
     }
 }
