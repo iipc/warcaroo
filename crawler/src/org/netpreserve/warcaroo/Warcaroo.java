@@ -47,7 +47,7 @@ public class Warcaroo {
                 case "--dump-scope" -> dumpScope = true;
                 case "--host" -> host = args[++i];
                 case "--job-dir", "-j" -> jobDir = Path.of(args[++i]);
-                case "--port" -> port = Integer.parseInt(args[++i]);
+                case "--port", "-p" -> port = Integer.parseInt(args[++i]);
                 case "--help", "-h" -> {
                     System.out.println("Usage: warcaroo [URL...]");
                     System.out.println("Options:");
